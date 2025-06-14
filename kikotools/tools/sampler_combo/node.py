@@ -156,9 +156,7 @@ class SamplerComboNode(ComfyAssetsBaseNode):
         Returns:
             Dictionary with min, max, and default steps
         """
-        min_steps, max_steps, default_steps = get_recommended_steps_range(
-            sampler_name
-        )
+        min_steps, max_steps, default_steps = get_recommended_steps_range(sampler_name)
         return {
             "min": min_steps,
             "max": max_steps,
@@ -204,12 +202,8 @@ class SamplerComboNode(ComfyAssetsBaseNode):
             "scheduler": scheduler,
             "steps": steps,
             "cfg": cfg,
-            "valid": validate_sampler_settings(
-                sampler_name, scheduler, steps, cfg
-            ),
-            "scheduler_suggestions": self.get_scheduler_suggestions(
-                sampler_name
-            ),
+            "valid": validate_sampler_settings(sampler_name, scheduler, steps, cfg),
+            "scheduler_suggestions": self.get_scheduler_suggestions(sampler_name),
             "steps_rec": self.get_steps_recommendation(sampler_name),
             "cfg_rec": self.get_cfg_recommendation(sampler_name),
         }
@@ -220,9 +214,7 @@ class SamplerComboNode(ComfyAssetsBaseNode):
 
         # Add performance assessment
         steps_rec = self.get_steps_recommendation(sampler_name)
-        analysis["steps_optimal"] = (
-            steps_rec["min"] <= steps <= steps_rec["max"]
-        )
+        analysis["steps_optimal"] = steps_rec["min"] <= steps <= steps_rec["max"]
 
         cfg_rec = self.get_cfg_recommendation(sampler_name)
         analysis["cfg_optimal"] = cfg_rec["min"] <= cfg <= cfg_rec["max"]

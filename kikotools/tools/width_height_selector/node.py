@@ -35,9 +35,10 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
                     preset_keys,
                     {
                         "default": "custom",
-                        "tooltip": "Select from optimized resolution presets or use custom dimensions. "
-                        "SDXL presets are ~1MP, FLUX presets are higher resolution, "
-                        "Ultra-wide presets support modern aspect ratios.",
+                        "tooltip": "Select from optimized resolution presets or use "
+                        "custom dimensions. SDXL presets are ~1MP, FLUX presets are "
+                        "higher resolution, Ultra-wide presets support modern "
+                        "aspect ratios.",
                     },
                 ),
                 "width": (
@@ -48,7 +49,8 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
                         "max": 8192,
                         "step": 8,
                         "tooltip": "Custom width in pixels (must be multiple of 8). "
-                        "Used when preset is 'custom' or as fallback for invalid presets.",
+                        "Used when preset is 'custom' or as fallback for invalid "
+                        "presets.",
                     },
                 ),
                 "height": (
@@ -59,7 +61,8 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
                         "max": 8192,
                         "step": 8,
                         "tooltip": "Custom height in pixels (must be multiple of 8). "
-                        "Used when preset is 'custom' or as fallback for invalid presets.",
+                        "Used when preset is 'custom' or as fallback for invalid "
+                        "presets.",
                     },
                 ),
             }
