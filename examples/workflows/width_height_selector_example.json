@@ -1,0 +1,422 @@
+{
+  "last_node_id": 12,
+  "last_link_id": 12,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "WidthHeightSelector",
+      "pos": [100, 100],
+      "size": [300, 180],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "links": [1, 7],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": [2, 8],
+          "shape": 3,
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "WidthHeightSelector"
+      },
+      "widgets_values": [
+        "1920×1080",
+        1024,
+        1024
+      ],
+      "title": "Width Height Selector (FLUX HD)"
+    },
+    {
+      "id": 2,
+      "type": "WidthHeightSelector",
+      "pos": [100, 350],
+      "size": [300, 180],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "links": [3, 9],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": [4, 10],
+          "shape": 3,
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "WidthHeightSelector"
+      },
+      "widgets_values": [
+        "832×1216",
+        1024,
+        1024
+      ],
+      "title": "Width Height Selector (SDXL Portrait) - Use swap button!"
+    },
+    {
+      "id": 3,
+      "type": "WidthHeightSelector",
+      "pos": [100, 600],
+      "size": [300, 180],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "links": [5, 11],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": [6, 12],
+          "shape": 3,
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "WidthHeightSelector"
+      },
+      "widgets_values": [
+        "custom",
+        1536,
+        768
+      ],
+      "title": "Width Height Selector (Custom 2:1)"
+    },
+    {
+      "id": 4,
+      "type": "EmptyLatentImage",
+      "pos": [500, 100],
+      "size": [300, 100],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "link": 1,
+          "widget": {
+            "name": "width"
+          }
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "link": 2,
+          "widget": {
+            "name": "height"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage"
+      },
+      "widgets_values": [
+        1920,
+        1080,
+        1
+      ],
+      "title": "FLUX HD Latent (1920×1080)"
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "pos": [500, 350],
+      "size": [300, 100],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "link": 3,
+          "widget": {
+            "name": "width"
+          }
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "link": 4,
+          "widget": {
+            "name": "height"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage"
+      },
+      "widgets_values": [
+        832,
+        1216,
+        1
+      ],
+      "title": "SDXL Portrait Latent (832×1216)"
+    },
+    {
+      "id": 6,
+      "type": "EmptyLatentImage",
+      "pos": [500, 600],
+      "size": [300, 100],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "link": 5,
+          "widget": {
+            "name": "width"
+          }
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "link": 6,
+          "widget": {
+            "name": "height"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage"
+      },
+      "widgets_values": [
+        1536,
+        768,
+        1
+      ],
+      "title": "Custom Latent (1536×768)"
+    },
+    {
+      "id": 7,
+      "type": "ResolutionCalculator",
+      "pos": [900, 100],
+      "size": [300, 150],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "links": [],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": [],
+          "shape": 3,
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ResolutionCalculator"
+      },
+      "widgets_values": [
+        1.5
+      ],
+      "title": "Resolution Calculator Demo (1.5x)"
+    },
+    {
+      "id": 8,
+      "type": "ShowText",
+      "pos": [900, 350],
+      "size": [300, 100],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "text"
+          }
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "ShowText"
+      },
+      "widgets_values": [
+        "Width Height Selector outputs clean INT values ready for any ComfyUI node"
+      ],
+      "title": "Usage Note"
+    },
+    {
+      "id": 9,
+      "type": "ShowText",
+      "pos": [900, 500],
+      "size": [300, 150],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "text"
+          }
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "ShowText"
+      },
+      "widgets_values": [
+        "Instructions:\n1. Select presets from dropdown\n2. Use blue swap button (bottom-right) to change orientation\n3. Choose 'custom' for manual dimensions\n4. Connect width/height to any node needing dimensions"
+      ],
+      "title": "How to Use"
+    },
+    {
+      "id": 10,
+      "type": "PrimitiveNode",
+      "pos": [900, 700],
+      "size": [300, 100],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [7, 8, 9, 10, 11, 12],
+          "shape": 3,
+          "slot_index": 0,
+          "widget": {
+            "name": "value"
+          }
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveNode"
+      },
+      "widgets_values": [
+        1024
+      ],
+      "title": "Connected Outputs Demo"
+    }
+  ],
+  "links": [
+    [1, 1, 0, 4, 0, "INT"],
+    [2, 1, 1, 4, 1, "INT"],
+    [3, 2, 0, 5, 0, "INT"],
+    [4, 2, 1, 5, 1, "INT"],
+    [5, 3, 0, 6, 0, "INT"],
+    [6, 3, 1, 6, 1, "INT"],
+    [7, 1, 0, 10, 0, "INT"],
+    [8, 1, 1, 10, 0, "INT"],
+    [9, 2, 0, 10, 0, "INT"],
+    [10, 2, 1, 10, 0, "INT"],
+    [11, 3, 0, 10, 0, "INT"],
+    [12, 3, 1, 10, 0, "INT"]
+  ],
+  "groups": [
+    {
+      "title": "Width Height Selector Examples",
+      "bounding": [80, 40, 360, 780],
+      "color": "#3f789e",
+      "font_size": 24,
+      "locked": false
+    },
+    {
+      "title": "Example Usage in Workflows",
+      "bounding": [480, 40, 360, 280],
+      "color": "#8A5A2B",
+      "font_size": 24,
+      "locked": false
+    },
+    {
+      "title": "Documentation & Demos",
+      "bounding": [880, 40, 360, 780],
+      "color": "#8B5A8C",
+      "font_size": 24,
+      "locked": false
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1,
+      "offset": [0, 0]
+    },
+    "groupNodes": {},
+    "info": {
+      "name": "width_height_selector_example",
+      "author": "ComfyUI-KikoTools",
+      "description": "Demonstrates Width Height Selector with swap button functionality and various preset options. Shows integration with EmptyLatentImage and other nodes.",
+      "version": "2.0",
+      "created": "2024-12-14",
+      "modified": "2024-12-14"
+    }
+  },
+  "version": 0.4
+}
