@@ -44,6 +44,22 @@ Advanced preset-based dimension selection with visual swap button.
 - Mobile and ultra-wide format support
 - Integration with upscaling pipelines
 
+#### 🎲 Seed History
+Advanced seed tracking with interactive history management and UI.
+
+- **Automatic Tracking**: Monitors all seed changes with timestamps
+- **Interactive History**: Click any historical seed to reload instantly
+- **Smart Deduplication**: 500ms window prevents duplicate rapid additions
+- **Persistent Storage**: History survives browser sessions and ComfyUI restarts
+- **Auto-Hide UI**: Clean interface that hides after 2.5 seconds of inactivity
+- **Visual Feedback**: Toast notifications and selection highlighting
+
+**Use Cases:**
+- Track promising seeds during creative exploration
+- Quickly return to successful generation parameters
+- Maintain reproducibility across sessions
+- Compare results from different seeds efficiently
+
 ### 🔧 Architecture Highlights
 
 - **Modular Design**: Each tool is self-contained and independently testable
@@ -97,6 +113,18 @@ preset: "1920×1080"   ↘ 1920×1080      ↗
 **Output:** 1920×1080 (16:9 cinematic)  
 **Swap Button:** Click to get 1080×1920 (9:16 portrait)
 
+### Seed History Example
+
+```
+Seed History → KSampler → VAE Decode → Save Image
+🎲 12345    ↘ seed    ↗
+[History UI: 54321, 99999, 11111...]
+```
+
+**Current Seed:** 12345  
+**History:** Auto-tracked previous seeds with timestamps  
+**Interaction:** Click any historical seed to reload instantly
+
 ### Common Workflows
 
 <details>
@@ -135,6 +163,7 @@ preset: "1920×1080"   ↘ 1920×1080      ↗
 |------|-------------|--------|---------------|
 | **Resolution Calculator** | Calculate upscaled dimensions with model optimization | ✅ Complete | [Docs](examples/documentation/resolution_calculator.md) |
 | **Width Height Selector** | Preset-based dimension selection with 26 curated options | ✅ Complete | [Docs](examples/documentation/width_height_selector.md) |
+| **Seed History** | Advanced seed tracking with interactive history management | ✅ Complete | [Docs](examples/documentation/seed_history.md) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
@@ -177,6 +206,28 @@ preset: "1920×1080"   ↘ 1920×1080      ↗
 - SDXL Presets (9): 1024×1024 to 1536×640 (~1MP optimized)
 - FLUX Presets (8): 1920×1080 to 1152×1728 (high resolution)
 - Ultra-Wide (8): 2560×1080 to 768×2304 (modern ratios)
+
+#### Seed History
+
+**Inputs:**
+- `seed` (INT): 0 to 18,446,744,073,709,551,615, default 12345
+
+**Outputs:**
+- `seed` (INT): Validated and processed seed value
+
+**UI Features:**
+- Interactive history display with timestamps
+- Generate random seed button (🎲 Generate)
+- Clear history button (🗑️ Clear)
+- Auto-hide after 2.5 seconds of inactivity
+- Click-to-restore hidden history
+
+**History Management:**
+- Maximum 10 entries for optimal performance
+- Smart deduplication with 500ms window
+- Persistent localStorage storage
+- Newest entries displayed first
+- Human-readable time formatting (5m ago, 2h ago)
 
 ## 🛠️ Development
 
@@ -298,9 +349,10 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 2 (Resolution Calculator, Width Height Selector)
+- **Nodes**: 3 (Resolution Calculator, Width Height Selector, Seed History)
 - **Presets**: 26 curated resolution presets
-- **Test Coverage**: 100%
+- **Interactive Features**: 2 (Swap Button, History UI)
+- **Test Coverage**: 100% (150+ comprehensive tests)
 - **Python Version**: 3.8+
 - **ComfyUI Compatibility**: Latest
 - **Dependencies**: Minimal (PyTorch, NumPy)
