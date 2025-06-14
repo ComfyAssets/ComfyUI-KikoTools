@@ -4,8 +4,7 @@ Tests the shared functionality for all ComfyAssets tools
 """
 
 import pytest
-import logging
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from kikotools.base import ComfyAssetsBaseNode
 

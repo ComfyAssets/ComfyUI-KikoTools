@@ -1,7 +1,6 @@
 """Tests for Seed History tool."""
 
 import time
-from unittest.mock import Mock
 
 from kikotools.tools.seed_history.node import SeedHistoryNode
 from kikotools.tools.seed_history.logic import (
@@ -24,8 +23,6 @@ class TestSeedHistoryNode:
 
     def test_node_structure(self):
         """Test that node has correct ComfyUI structure."""
-        node = SeedHistoryNode()
-
         # Test class attributes
         assert hasattr(SeedHistoryNode, "INPUT_TYPES")
         assert hasattr(SeedHistoryNode, "RETURN_TYPES")

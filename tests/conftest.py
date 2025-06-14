@@ -5,8 +5,6 @@ Provides mock ComfyUI environments and test data
 
 import pytest
 import torch
-import numpy as np
-from typing import Dict, Any
 from unittest.mock import MagicMock
 
 

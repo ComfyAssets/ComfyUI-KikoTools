@@ -1,7 +1,5 @@
 """Tests for Width Height Selector tool."""
 
-import pytest
-from unittest.mock import Mock
 from kikotools.tools.width_height_selector.node import WidthHeightSelectorNode
 from kikotools.tools.width_height_selector.logic import (
     get_preset_dimensions,
