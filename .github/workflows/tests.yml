@@ -1,0 +1,194 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run core functionality tests
+        run: |
+          python -c "
+          import sys
+          import os
+          sys.path.insert(0, os.getcwd())
+
+          # Test imports
+          from kikotools.base import ComfyAssetsBaseNode
+          from kikotools.tools.resolution_calculator.logic import extract_dimensions, calculate_scaled_dimensions
+          from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode
+          import torch
+
+          print('✓ All imports successful')
+
+          # Test base node
+          assert ComfyAssetsBaseNode.CATEGORY == 'ComfyAssets'
+          print('✓ Base node tests passed')
+
+          # Test dimension extraction
+          mock_image = torch.randn(1, 1216, 832, 3)
+          width, height = extract_dimensions(image=mock_image)
+          assert width == 832 and height == 1216
+          print('✓ Dimension extraction tests passed')
+
+          # Test scaling
+          new_width, new_height = calculate_scaled_dimensions(832, 1216, 1.5)
+          assert new_width % 8 == 0 and new_height % 8 == 0
+          print('✓ Scaling tests passed')
+
+          # Test node interface
+          node = ResolutionCalculatorNode()
+          result_width, result_height = node.calculate_resolution(1.5, image=mock_image)
+          assert isinstance(result_width, int) and isinstance(result_height, int)
+          assert result_width % 8 == 0 and result_height % 8 == 0
+          print('✓ Node interface tests passed')
+
+          # Test user scenario
+          width, height = node.calculate_resolution(1.53, image=mock_image)
+          print(f'✓ User scenario test: 832×1216 → {width}×{height} (1.53x scale)')
+
+          print('🎉 All tests passed!')
+          "
+
+      - name: Test error handling
+        run: |
+          python -c "
+          import sys
+          import os
+          sys.path.insert(0, os.getcwd())
+
+          from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode
+
+          node = ResolutionCalculatorNode()
+
+          # Test error handling
+          try:
+              node.calculate_resolution(2.0)  # No input provided
+              assert False, 'Should have raised ValueError'
+          except ValueError:
+              print('✓ Error handling test passed')
+
+          # Test invalid scale factor
+          try:
+              node.calculate_resolution(0.0)  # Invalid scale
+              assert False, 'Should have raised ValueError'
+          except ValueError:
+              print('✓ Scale factor validation test passed')
+
+          print('✓ All error handling tests passed')
+          "
+
+      - name: Test ComfyUI integration readiness
+        run: |
+          python -c "
+          import sys
+          import os
+          sys.path.insert(0, os.getcwd())
+
+          from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode
+
+          # Test ComfyUI interface requirements
+          node_class = ResolutionCalculatorNode
+
+          # Check required class attributes
+          assert hasattr(node_class, 'INPUT_TYPES')
+          assert hasattr(node_class, 'RETURN_TYPES')
+          assert hasattr(node_class, 'RETURN_NAMES')
+          assert hasattr(node_class, 'FUNCTION')
+          assert hasattr(node_class, 'CATEGORY')
+
+          # Check INPUT_TYPES structure
+          input_types = node_class.INPUT_TYPES()
+          assert 'required' in input_types
+          assert 'optional' in input_types
+          assert 'scale_factor' in input_types['required']
+          assert 'image' in input_types['optional']
+          assert 'latent' in input_types['optional']
+
+          # Check return types
+          assert node_class.RETURN_TYPES == ('INT', 'INT')
+          assert node_class.RETURN_NAMES == ('width', 'height')
+          assert node_class.CATEGORY == 'ComfyAssets'
+
+          print('✓ ComfyUI integration readiness tests passed')
+          "
+
+  test-package-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Test package structure
+        run: |
+          # Check required files exist
+          test -f README.md || (echo "README.md missing" && exit 1)
+          test -f LICENSE || (echo "LICENSE missing" && exit 1)
+          test -f requirements-dev.txt || (echo "requirements-dev.txt missing" && exit 1)
+
+          # Check directory structure
+          test -d kikotools || (echo "kikotools directory missing" && exit 1)
+          test -d kikotools/base || (echo "kikotools/base directory missing" && exit 1)
+          test -d kikotools/tools || (echo "kikotools/tools directory missing" && exit 1)
+          test -d kikotools/tools/resolution_calculator || (echo "resolution_calculator directory missing" && exit 1)
+          test -d tests || (echo "tests directory missing" && exit 1)
+          test -d examples || (echo "examples directory missing" && exit 1)
+
+          # Check key files
+          test -f kikotools/__init__.py || (echo "kikotools/__init__.py missing" && exit 1)
+          test -f kikotools/base/base_node.py || (echo "base_node.py missing" && exit 1)
+          test -f kikotools/tools/resolution_calculator/node.py || (echo "node.py missing" && exit 1)
+          test -f kikotools/tools/resolution_calculator/logic.py || (echo "logic.py missing" && exit 1)
+
+          echo "✓ Package structure tests passed"
+
+  test-documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test documentation completeness
+        run: |
+          # Check documentation files
+          test -f examples/documentation/resolution_calculator.md || (echo "Resolution calculator docs missing" && exit 1)
+          test -f examples/workflows/resolution_calculator_example.json || (echo "Example workflow missing" && exit 1)
+
+          # Check README has key sections
+          grep -q "Installation" README.md || (echo "README missing Installation section" && exit 1)
+          grep -q "Quick Start" README.md || (echo "README missing Quick Start section" && exit 1)
+          grep -q "Development" README.md || (echo "README missing Development section" && exit 1)
+          grep -q "Contributing" README.md || (echo "README missing Contributing section" && exit 1)
+
+          echo "✓ Documentation tests passed"

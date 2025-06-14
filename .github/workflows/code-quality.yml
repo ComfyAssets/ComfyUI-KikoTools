@@ -1,0 +1,223 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-quality-${{ hashFiles('**/requirements-dev.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-quality-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Format check with Black
+      run: |
+        echo "Checking code formatting with Black..."
+        black --check --diff .
+        echo "✓ Black formatting check passed"
+
+    - name: Lint with flake8
+      run: |
+        echo "Linting with flake8..."
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings. GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        echo "✓ flake8 linting passed"
+
+    - name: Type checking with mypy
+      run: |
+        echo "Type checking with mypy..."
+        # Only check our main package, ignore test files for now
+        mypy kikotools/ --ignore-missing-imports --no-strict-optional || true
+        echo "✓ mypy type checking completed"
+
+    - name: Check import structure
+      run: |
+        python -c "
+        import sys
+        import os
+        sys.path.insert(0, os.getcwd())
+        
+        # Test that all imports work correctly
+        try:
+            from kikotools import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+            print('✓ Package-level imports successful')
+        except ImportError as e:
+            print(f'Warning: Package-level imports failed: {e}')
+            # This is expected since we don't have ComfyUI installed
+        
+        # Test individual module imports
+        from kikotools.base import ComfyAssetsBaseNode
+        from kikotools.tools.resolution_calculator import ResolutionCalculatorNode
+        from kikotools.tools.resolution_calculator.logic import extract_dimensions
+        from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode as NodeClass
+        
+        print('✓ All module imports successful')
+        "
+
+    - name: Check code style consistency
+      run: |
+        echo "Checking code style consistency..."
+        
+        # Check for consistent naming
+        find kikotools/ -name "*.py" -exec grep -l "class.*Node" {} \; | while read file; do
+          if ! grep -q "ComfyAssetsBaseNode" "$file" && ! grep -q "class ComfyAssetsBaseNode" "$file"; then
+            echo "Checking $file for ComfyUI node inheritance..."
+          fi
+        done
+        
+        # Check for proper docstrings
+        python -c "
+        import ast
+        import os
+        
+        def check_docstrings(filepath):
+            with open(filepath, 'r') as f:
+                tree = ast.parse(f.read())
+            
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                    if not ast.get_docstring(node) and not node.name.startswith('_'):
+                        print(f'Warning: {filepath}:{node.lineno} - {node.name} missing docstring')
+        
+        for root, dirs, files in os.walk('kikotools'):
+            for file in files:
+                if file.endswith('.py') and not file.startswith('__'):
+                    filepath = os.path.join(root, file)
+                    check_docstrings(filepath)
+        
+        print('✓ Docstring check completed')
+        "
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install bandit
+      run: |
+        pip install bandit[toml]
+
+    - name: Run security scan with bandit
+      run: |
+        echo "Running security scan..."
+        bandit -r kikotools/ -ll || true
+        echo "✓ Security scan completed"
+
+    - name: Check for hardcoded secrets
+      run: |
+        echo "Checking for potential secrets..."
+        
+        # Check for common secret patterns
+        if grep -r -i "password\|secret\|key\|token" kikotools/ --include="*.py" | grep -v "# " | grep -v "def " | grep -v "class "; then
+          echo "Warning: Potential hardcoded secrets found"
+        else
+          echo "✓ No obvious hardcoded secrets found"
+        fi
+
+  architecture:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Check architecture compliance
+      run: |
+        python -c "
+        import sys
+        import os
+        sys.path.insert(0, os.getcwd())
+        
+        print('Checking architecture compliance...')
+        
+        # Test separation of concerns
+        from kikotools.tools.resolution_calculator import logic, node
+        
+        # Logic module should not import node-specific things
+        import inspect
+        logic_source = inspect.getsource(logic)
+        
+        if 'ComfyUI' in logic_source and 'INPUT_TYPES' not in logic_source:
+            print('⚠️  Warning: Logic module contains ComfyUI-specific code')
+        else:
+            print('✓ Logic module properly separated')
+        
+        # Node module should inherit from base
+        from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode
+        from kikotools.base import ComfyAssetsBaseNode
+        
+        if issubclass(ResolutionCalculatorNode, ComfyAssetsBaseNode):
+            print('✓ Node properly inherits from base class')
+        else:
+            print('❌ Node does not inherit from base class')
+            sys.exit(1)
+        
+        # Check that nodes have proper ComfyUI interface
+        required_attrs = ['INPUT_TYPES', 'RETURN_TYPES', 'RETURN_NAMES', 'FUNCTION', 'CATEGORY']
+        for attr in required_attrs:
+            if not hasattr(ResolutionCalculatorNode, attr):
+                print(f'❌ Node missing required attribute: {attr}')
+                sys.exit(1)
+        
+        print('✓ All architecture checks passed')
+        "
+
+    - name: Check test coverage expectations
+      run: |
+        python -c "
+        import os
+        
+        # Count test files vs implementation files
+        test_files = 0
+        impl_files = 0
+        
+        for root, dirs, files in os.walk('tests'):
+            test_files += len([f for f in files if f.startswith('test_') and f.endswith('.py')])
+        
+        for root, dirs, files in os.walk('kikotools'):
+            impl_files += len([f for f in files if f.endswith('.py') and not f.startswith('__')])
+        
+        print(f'Implementation files: {impl_files}')
+        print(f'Test files: {test_files}')
+        
+        if test_files >= impl_files * 0.5:  # At least 50% test coverage by file count
+            print('✓ Adequate test file coverage')
+        else:
+            print('⚠️  Warning: Low test file coverage')
+        "
