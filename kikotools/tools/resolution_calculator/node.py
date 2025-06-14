@@ -42,7 +42,8 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
                         "max": 8.0,
                         "step": 0.1,
                         "display": "slider",
-                        "tooltip": "Factor to scale the resolution by (e.g., 2.0 for 2x upscale)",
+                        "tooltip": "Factor to scale the resolution by "
+                        "(e.g., 2.0 for 2x upscale)",
                     },
                 ),
             },
@@ -93,7 +94,8 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
                 else "LATENT" if latent is not None else "NONE"
             )
             self.log_info(
-                f"Calculating resolution with scale_factor={scale_factor}, input_type={input_type}"
+                f"Calculating resolution with scale_factor={scale_factor}, "
+                f"input_type={input_type}"
             )
 
             # Calculate the resolution
@@ -147,7 +149,8 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
 
             if len(image.shape) != 4:
                 raise ValueError(
-                    f"image tensor must have 4 dimensions [batch, height, width, channels], got {len(image.shape)}"
+                    f"image tensor must have 4 dimensions "
+                    f"[batch, height, width, channels], got {len(image.shape)}"
                 )
 
         if latent is not None:
@@ -160,12 +163,14 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
             samples = latent["samples"]
             if not isinstance(samples, torch.Tensor):
                 raise ValueError(
-                    f"latent['samples'] must be a torch.Tensor, got {type(samples).__name__}"
+                    f"latent['samples'] must be a torch.Tensor, "
+                    f"got {type(samples).__name__}"
                 )
 
             if len(samples.shape) != 4:
                 raise ValueError(
-                    f"latent samples tensor must have 4 dimensions [batch, channels, height, width], got {len(samples.shape)}"
+                    f"latent samples tensor must have 4 dimensions "
+                    f"[batch, channels, height, width], got {len(samples.shape)}"
                 )
 
 

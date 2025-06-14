@@ -5,7 +5,6 @@ Following TDD principles - these tests define the expected behavior
 
 import pytest
 import torch
-from unittest.mock import patch, MagicMock
 
 # Import the modules we're going to test (they don't exist yet - TDD!)
 from kikotools.tools.resolution_calculator.logic import (
@@ -172,8 +171,6 @@ class TestResolutionCalculatorNode:
 
     def test_node_has_correct_comfyui_attributes(self):
         """Test node has all required ComfyUI attributes"""
-        node = ResolutionCalculatorNode()
-
         # Check class attributes exist
         assert hasattr(ResolutionCalculatorNode, "INPUT_TYPES")
         assert hasattr(ResolutionCalculatorNode, "RETURN_TYPES")

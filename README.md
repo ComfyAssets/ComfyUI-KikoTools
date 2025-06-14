@@ -60,6 +60,22 @@ Advanced seed tracking with interactive history management and UI.
 - Maintain reproducibility across sessions
 - Compare results from different seeds efficiently
 
+#### ⚙️ Sampler Combo
+Unified sampling configuration interface combining sampler, scheduler, steps, and CFG.
+
+- **All-in-One Interface**: Single node for complete sampling configuration
+- **Smart Recommendations**: Optimal settings suggestions per sampler type
+- **Compatibility Validation**: Ensures sampler/scheduler combinations work well
+- **Intelligent Defaults**: Context-aware parameter recommendations
+- **Range Validation**: Prevents invalid parameter combinations
+- **Comprehensive Tooltips**: Detailed guidance for each parameter
+
+**Use Cases:**
+- Simplify complex sampling workflows
+- Ensure optimal sampler/scheduler combinations
+- Reduce node clutter in workflows
+- Quick sampling parameter experimentation
+
 ### 🔧 Architecture Highlights
 
 - **Modular Design**: Each tool is self-contained and independently testable
@@ -125,6 +141,17 @@ Seed History → KSampler → VAE Decode → Save Image
 **History:** Auto-tracked previous seeds with timestamps  
 **Interaction:** Click any historical seed to reload instantly
 
+### Sampler Combo Example
+
+```
+Sampler Combo → KSampler → VAE Decode → Save Image
+⚙️ All Settings ↘ sampler/scheduler/steps/cfg ↗
+```
+
+**Configuration:** euler, normal, 20 steps, CFG 7.0  
+**Output:** Complete sampling configuration in one node  
+**Smart Features:** Recommendations and compatibility validation
+
 ### Common Workflows
 
 <details>
@@ -164,6 +191,7 @@ Seed History → KSampler → VAE Decode → Save Image
 | **Resolution Calculator** | Calculate upscaled dimensions with model optimization | ✅ Complete | [Docs](examples/documentation/resolution_calculator.md) |
 | **Width Height Selector** | Preset-based dimension selection with 26 curated options | ✅ Complete | [Docs](examples/documentation/width_height_selector.md) |
 | **Seed History** | Advanced seed tracking with interactive history management | ✅ Complete | [Docs](examples/documentation/seed_history.md) |
+| **Sampler Combo** | Unified sampling configuration with smart recommendations | ✅ Complete | [Usage Examples](#sampler-combo-example) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
@@ -228,6 +256,27 @@ Seed History → KSampler → VAE Decode → Save Image
 - Persistent localStorage storage
 - Newest entries displayed first
 - Human-readable time formatting (5m ago, 2h ago)
+
+#### Sampler Combo
+
+**Inputs:**
+- `sampler_name` (DROPDOWN): Available ComfyUI samplers (euler, dpmpp_2m, etc.)
+- `scheduler` (DROPDOWN): Available schedulers (normal, karras, exponential, etc.)
+- `steps` (INT): 1-1000, default 20
+- `cfg` (FLOAT): 0.0-30.0, default 7.0
+
+**Outputs:**
+- `sampler_name` (STRING): Selected sampler algorithm
+- `scheduler` (STRING): Selected scheduler algorithm  
+- `steps` (INT): Validated step count
+- `cfg` (FLOAT): Validated CFG scale
+
+**Features:**
+- Smart parameter validation and sanitization
+- Sampler-specific recommendations for optimal settings
+- Compatibility checking between samplers and schedulers
+- Graceful error handling with safe defaults
+- Comprehensive tooltips for user guidance
 
 ## 🛠️ Development
 
@@ -349,10 +398,10 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 3 (Resolution Calculator, Width Height Selector, Seed History)
+- **Nodes**: 4 (Resolution Calculator, Width Height Selector, Seed History, Sampler Combo)
 - **Presets**: 26 curated resolution presets
 - **Interactive Features**: 2 (Swap Button, History UI)
-- **Test Coverage**: 100% (150+ comprehensive tests)
+- **Test Coverage**: 100% (180+ comprehensive tests)
 - **Python Version**: 3.8+
 - **ComfyUI Compatibility**: Latest
 - **Dependencies**: Minimal (PyTorch, NumPy)

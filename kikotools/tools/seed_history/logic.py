@@ -107,7 +107,6 @@ def filter_duplicate_seeds(
         return False
 
     current_time = time.time() * 1000  # Convert to milliseconds
-    dedup_window_sec = dedup_window_ms / 1000.0
 
     # Check most recent entry for duplicates within window
     latest_entry = history[0]
