@@ -4,7 +4,7 @@ Pure functions for dimension extraction and scaling calculations
 """
 
 import torch
-from typing import Tuple, Optional, Union, Dict, Any
+from typing import Tuple, Optional, Dict
 
 
 def extract_dimensions(
@@ -16,7 +16,8 @@ def extract_dimensions(
 
     Args:
         image: Optional IMAGE tensor in ComfyUI format [batch, height, width, channels]
-        latent: Optional LATENT dict with 'samples' tensor [batch, channels, height/8, width/8]
+        latent: Optional LATENT dict with 'samples' tensor
+                [batch, channels, height/8, width/8]
 
     Returns:
         Tuple of (width, height) as integers
@@ -42,7 +43,8 @@ def extract_dimensions(
         samples = latent["samples"]
         if len(samples.shape) != 4:
             raise ValueError(
-                f"Expected LATENT samples tensor with 4 dimensions, got {len(samples.shape)}"
+                f"Expected LATENT samples tensor with 4 dimensions, "
+                f"got {len(samples.shape)}"
             )
 
         _, _, latent_height, latent_width = samples.shape
