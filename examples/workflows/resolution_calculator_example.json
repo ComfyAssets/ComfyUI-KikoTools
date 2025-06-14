@@ -1,0 +1,47 @@
+{
+  "last_node_id": 3,
+  "last_link_id": 2,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "ResolutionCalculator",
+      "pos": [100, 100],
+      "size": {"0": 315, "1": 126},
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": null},
+        {"name": "latent", "type": "LATENT", "link": null}
+      ],
+      "outputs": [
+        {"name": "width", "type": "INT", "links": [1], "slot_index": 0},
+        {"name": "height", "type": "INT", "links": [2], "slot_index": 1}
+      ],
+      "properties": {},
+      "widgets_values": [2.0],
+      "category": "ComfyAssets"
+    },
+    {
+      "id": 2,
+      "type": "Note",
+      "pos": [450, 100],
+      "size": {"0": 400, "1": 200},
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {"text": "Resolution Calculator Example\n\nThis node calculates upscaled dimensions from:\n- IMAGE tensors (connect from image loaders)\n- LATENT tensors (connect from VAE encode/generation)\n\nUse cases:\n- Calculate target dimensions for upscalers\n- Plan memory usage for large generations\n- Ensure dimensions are divisible by 8\n\nScale factors optimized for SDXL and FLUX models."},
+      "widgets_values": ["Resolution Calculator Example\n\nThis node calculates upscaled dimensions from:\n- IMAGE tensors (connect from image loaders)\n- LATENT tensors (connect from VAE encode/generation)\n\nUse cases:\n- Calculate target dimensions for upscalers\n- Plan memory usage for large generations\n- Ensure dimensions are divisible by 8\n\nScale factors optimized for SDXL and FLUX models."]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 3, 0, "INT"],
+    [2, 1, 1, 3, 1, "INT"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
