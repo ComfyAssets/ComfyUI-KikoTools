@@ -119,8 +119,10 @@ release-test: quality-check test
 	@test -d examples || (echo "❌ examples directory missing" && exit 1)
 	@echo "✅ Package structure validated"
 	@echo "Checking documentation..."
-	@test -f examples/documentation/resolution_calculator.md || (echo "❌ Tool documentation missing" && exit 1)
-	@test -f examples/workflows/resolution_calculator_example.json || (echo "❌ Example workflow missing" && exit 1)
+	@test -f examples/documentation/resolution_calculator.md || (echo "❌ Resolution Calculator documentation missing" && exit 1)
+	@test -f examples/workflows/resolution_calculator_example.json || (echo "❌ Resolution Calculator workflow missing" && exit 1)
+	@test -f examples/documentation/width_height_selector.md || (echo "❌ Width Height Selector documentation missing" && exit 1)
+	@test -f examples/workflows/width_height_selector_example.json || (echo "❌ Width Height Selector workflow missing" && exit 1)
 	@echo "✅ Documentation validated"
 	@echo "🎉 Release validation completed!"
 
@@ -147,3 +149,31 @@ ci: quality-check test
 test-resolution-calculator:
 	@echo "Testing Resolution Calculator specifically..."
 	@python -c "import sys, os; sys.path.insert(0, os.getcwd()); from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode; import torch; node = ResolutionCalculatorNode(); scenarios = [('SDXL Portrait', torch.randn(1, 1216, 832, 3), 1.5), ('FLUX Square', torch.randn(1, 1024, 1024, 3), 2.0), ('User Scenario', torch.randn(1, 1216, 832, 3), 1.53)]; [print(f'✅ {name}: {image.shape[2]}×{image.shape[1]} → {node.calculate_resolution(scale, image=image)[0]}×{node.calculate_resolution(scale, image=image)[1]} ({scale}x)') for name, image, scale in scenarios]; print('🎉 Resolution Calculator tests completed!')"
+
+test-width-height-selector:
+	@echo "Testing Width Height Selector specifically..."
+	@python -c "\
+	import sys, os; \
+	sys.path.insert(0, os.getcwd()); \
+	from kikotools.tools.width_height_selector.node import WidthHeightSelectorNode; \
+	from kikotools.tools.width_height_selector.presets import PRESET_OPTIONS; \
+	print(f'Testing Width Height Selector with {len(PRESET_OPTIONS)} presets...'); \
+	node = WidthHeightSelectorNode(); \
+	scenarios = [ \
+		('SDXL Square', '1024×1024'), \
+		('FLUX HD', '1920×1080'), \
+		('SDXL Portrait', '832×1216'), \
+		('Custom Dimensions', 'custom'), \
+		('Ultra-Wide', '2560×1080') \
+	]; \
+	for name, preset in scenarios: \
+		if preset == 'custom': \
+			result = node.get_dimensions(preset, 1536, 768); \
+		else: \
+			result = node.get_dimensions(preset, 1024, 1024); \
+		print(f'✅ {name}: {preset} → {result[0]}×{result[1]}'); \
+	print('🎉 Width Height Selector tests completed!') \
+	"
+
+test-all-tools: test-resolution-calculator test-width-height-selector
+	@echo "🎉 All tool-specific tests completed!"

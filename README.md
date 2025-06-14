@@ -29,6 +29,21 @@ Calculate upscaled dimensions from image or latent inputs with precision.
 - Ensure ComfyUI tensor compatibility
 - Optimize batch processing workflows
 
+#### 📏 Width Height Selector
+Advanced preset-based dimension selection with visual swap button.
+
+- **26 Curated Presets**: SDXL, FLUX, and Ultra-Wide optimized resolutions
+- **Smart Categories**: Organized by model type and aspect ratio
+- **Visual Swap Button**: Modern blue button for quick orientation changes
+- **Intelligent Swapping**: Preset-aware orientation switching
+- **Custom Support**: Manual dimension input with validation
+
+**Use Cases:**
+- Quick dimension selection for different models
+- Consistent aspect ratios across workflows
+- Mobile and ultra-wide format support
+- Integration with upscaling pipelines
+
 ### 🔧 Architecture Highlights
 
 - **Modular Design**: Each tool is self-contained and independently testable
@@ -70,6 +85,18 @@ Image Loader → Resolution Calculator → Upscaler
 **Scale:** 1.5x  
 **Output:** 1248×1824 (ready for upscaling)
 
+### Width Height Selector Example
+
+```
+Width Height Selector → EmptyLatentImage → Model
+preset: "1920×1080"   ↘ 1920×1080      ↗
+[swap button]
+```
+
+**Preset:** FLUX HD (1920×1080)  
+**Output:** 1920×1080 (16:9 cinematic)  
+**Swap Button:** Click to get 1080×1920 (9:16 portrait)
+
 ### Common Workflows
 
 <details>
@@ -107,9 +134,9 @@ Image Loader → Resolution Calculator → Upscaler
 | Tool | Description | Status | Documentation |
 |------|-------------|--------|---------------|
 | **Resolution Calculator** | Calculate upscaled dimensions with model optimization | ✅ Complete | [Docs](examples/documentation/resolution_calculator.md) |
+| **Width Height Selector** | Preset-based dimension selection with 26 curated options | ✅ Complete | [Docs](examples/documentation/width_height_selector.md) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
-| **Model Management Tools** | Efficient model loading and memory management | 🚧 Planned | Coming Soon |
 
 ### Technical Specifications
 
@@ -129,6 +156,27 @@ Image Loader → Resolution Calculator → Upscaler
 - Preserves aspect ratio
 - Validates input tensors
 - Graceful error handling
+
+#### Width Height Selector
+
+**Inputs:**
+- `preset` (DROPDOWN): 26 preset options + custom
+- `width` (INT): 64-8192, step 8, default 1024
+- `height` (INT): 64-8192, step 8, default 1024
+
+**Outputs:**
+- `width` (INT): Selected or calculated width
+- `height` (INT): Selected or calculated height  
+
+**UI Features:**
+- Visual blue swap button in bottom-right corner
+- Intelligent preset switching when swapping
+- Modern hover effects and cursor feedback
+
+**Preset Categories:**
+- SDXL Presets (9): 1024×1024 to 1536×640 (~1MP optimized)
+- FLUX Presets (8): 1920×1080 to 1152×1728 (high resolution)
+- Ultra-Wide (8): 2560×1080 to 768×2304 (modern ratios)
 
 ## 🛠️ Development
 
@@ -250,7 +298,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 1 (Resolution Calculator)
+- **Nodes**: 2 (Resolution Calculator, Width Height Selector)
+- **Presets**: 26 curated resolution presets
 - **Test Coverage**: 100%
 - **Python Version**: 3.8+
 - **ComfyUI Compatibility**: Latest
