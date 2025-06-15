@@ -90,10 +90,12 @@ class SamplerComboNode(ComfyAssetsBaseNode):
             if not validate_sampler_settings(sampler_name, scheduler, steps, cfg):
                 # Log the validation error but don't raise
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.error(
-                    f"{self.__class__.__name__}: Invalid sampler settings: sampler={sampler_name}, "
-                    f"scheduler={scheduler}, steps={steps}, cfg={cfg}. "
+                    f"{self.__class__.__name__}: Invalid sampler settings: "
+                    f"sampler={sampler_name}, scheduler={scheduler}, "
+                    f"steps={steps}, cfg={cfg}. "
                     f"Using safe defaults: euler, normal, 20 steps, CFG 7.0"
                 )
                 return ("euler", "normal", 20, 7.0)
@@ -111,6 +113,7 @@ class SamplerComboNode(ComfyAssetsBaseNode):
         except Exception as e:
             # Handle any unexpected errors gracefully
             import logging
+
             logger = logging.getLogger(__name__)
             logger.error(
                 f"{self.__class__.__name__}: Error processing sampler combo: {str(e)}. "

@@ -4,13 +4,11 @@ from typing import Tuple
 from ...base.base_node import ComfyAssetsBaseNode
 from .logic import (
     get_preset_dimensions,
-    calculate_aspect_ratio,
     validate_dimensions,
     sanitize_dimensions,
 )
 from .presets import (
     PRESET_OPTIONS,
-    PRESET_DESCRIPTIONS,
     PRESET_METADATA,
     get_model_recommendation,
     get_preset_metadata,
@@ -31,7 +29,7 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
         """Define the input types for the ComfyUI node."""
         # Create formatted preset options with metadata
         preset_options = ["custom"]  # Custom first
-        
+
         # Add formatted presets with metadata
         for preset_name in PRESET_OPTIONS.keys():
             if preset_name != "custom":
@@ -104,9 +102,11 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
         try:
             # Extract original preset name from formatted string if needed
             original_preset = self._extract_preset_name(preset)
-            
+
             # Get base dimensions from preset or custom input
-            final_width, final_height = get_preset_dimensions(original_preset, width, height)
+            final_width, final_height = get_preset_dimensions(
+                original_preset, width, height
+            )
 
             # Sanitize dimensions to ensure they meet ComfyUI requirements
             final_width, final_height = sanitize_dimensions(final_width, final_height)
@@ -129,35 +129,35 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
             )
             self.handle_error(error_msg)
             return (1024, 1024)
-    
+
     def _extract_preset_name(self, formatted_preset: str) -> str:
         """
         Extract the original preset name from a formatted preset string.
-        
+
         Args:
             formatted_preset: Either original preset name or formatted string
-            
+
         Returns:
             Original preset name
         """
         # If it's already "custom", return as-is
         if formatted_preset == "custom":
             return formatted_preset
-            
+
         # If it contains formatting metadata, extract the resolution part
         if " - " in formatted_preset:
             # Format is: "1024×1024 - 1:1 (1.0MP) - SDXL"
             # Extract the first part (resolution)
             resolution_part = formatted_preset.split(" - ")[0]
-            
+
             # Verify this is a valid preset name
             if resolution_part in PRESET_OPTIONS:
                 return resolution_part
-        
+
         # If no formatting or not found, check if it's directly a valid preset
         if formatted_preset in PRESET_OPTIONS:
             return formatted_preset
-            
+
         # Default to "custom" if we can't parse it
         return "custom"
 
@@ -209,7 +209,7 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
         """
         # Extract original preset name
         original_preset = self._extract_preset_name(preset)
-        
+
         # Check if preset exists or is custom
         if original_preset != "custom" and original_preset not in PRESET_OPTIONS:
             return False
