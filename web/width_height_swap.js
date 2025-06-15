@@ -12,6 +12,20 @@ app.registerExtension({
         // Track button click state for visual feedback
         this.swapButtonPressed = false;
         
+        // Helper function to extract resolution from formatted preset string
+        this.extractResolutionFromPreset = function(presetValue) {
+          if (presetValue === "custom") return null;
+          
+          // If it contains formatting metadata, extract the resolution part
+          if (presetValue.includes(" - ")) {
+            // Format is: "1024×1024 - 1:1 (1.0MP) - SDXL"
+            return presetValue.split(" - ")[0];
+          }
+          
+          // Otherwise assume it's already a raw resolution
+          return presetValue;
+        };
+        
         // Override preset callback to update width/height widgets when preset changes
         const presetWidget = this.widgets.find(w => w.name === "preset");
         if (presetWidget) {
@@ -27,6 +41,9 @@ app.registerExtension({
             const heightWidget = node.widgets.find(w => w.name === "height");
             
             if (widthWidget && heightWidget && value !== "custom") {
+              // Extract raw resolution from formatted preset
+              const rawResolution = node.extractResolutionFromPreset(value);
+              
               // Define all available presets from our preset system
               const presetDimensions = {
                 // SDXL Presets
@@ -43,8 +60,8 @@ app.registerExtension({
                 "768×1792": [768, 1792], "768×2304": [768, 2304]
               };
               
-              if (presetDimensions[value]) {
-                const [w, h] = presetDimensions[value];
+              if (rawResolution && presetDimensions[rawResolution]) {
+                const [w, h] = presetDimensions[rawResolution];
                 widthWidget.value = w;
                 heightWidget.value = h;
                 
@@ -71,39 +88,42 @@ app.registerExtension({
             if (presetWidget.value !== "custom") {
               const currentPreset = presetWidget.value;
               
+              // Extract raw resolution from formatted preset
+              const rawResolution = this.extractResolutionFromPreset(currentPreset);
+              if (!rawResolution) return;
+              
               // Parse current preset dimensions (handle both × and x separators)
               let w, h;
-              if (currentPreset.includes('×')) {
-                [w, h] = currentPreset.split('×').map(v => parseInt(v));
-              } else if (currentPreset.includes('x')) {
-                [w, h] = currentPreset.split('x').map(v => parseInt(v));
+              if (rawResolution.includes('×')) {
+                [w, h] = rawResolution.split('×').map(v => parseInt(v));
+              } else if (rawResolution.includes('x')) {
+                [w, h] = rawResolution.split('x').map(v => parseInt(v));
               } else {
                 return; // Invalid preset format
               }
               
-              const swappedPreset = `${h}×${w}`;
+              const swappedRawPreset = `${h}×${w}`;
               
-              // Define all available presets from our preset system
-              const availablePresets = [
-                "custom",
-                // SDXL Presets
-                "1024×1024", "896×1152", "832×1216", "768×1344", "640×1536",
-                "1152×896", "1216×832", "1344×768", "1536×640",
-                // FLUX Presets  
-                "1920×1080", "1536×1536", "1280×768", "768×1280",
-                "1440×1080", "1080×1440", "1728×1152", "1152×1728",
-                // Ultra-Wide Presets
-                "2560×1080", "2048×768", "1792×768", "2304×768",
-                "1080×2560", "768×2048", "768×1792", "768×2304"
-              ];
+              // Find the formatted version of the swapped preset from available options
+              const availablePresets = presetWidget.options.values || presetWidget.options;
+              let swappedFormattedPreset = null;
               
-              if (availablePresets.includes(swappedPreset)) {
-                // Swapped preset exists, use it
-                presetWidget.value = swappedPreset;
+              for (const option of availablePresets) {
+                if (option === "custom") continue;
+                const extractedRes = this.extractResolutionFromPreset(option);
+                if (extractedRes === swappedRawPreset) {
+                  swappedFormattedPreset = option;
+                  break;
+                }
+              }
+              
+              if (swappedFormattedPreset) {
+                // Swapped preset exists, use the formatted version
+                presetWidget.value = swappedFormattedPreset;
                 widthWidget.value = h;
                 heightWidget.value = w;
                 if (presetWidget.callback) {
-                  presetWidget.callback(swappedPreset, this, presetWidget);
+                  presetWidget.callback(swappedFormattedPreset, this, presetWidget);
                 }
                 if (widthWidget.callback) {
                   widthWidget.callback(h, this, widthWidget);

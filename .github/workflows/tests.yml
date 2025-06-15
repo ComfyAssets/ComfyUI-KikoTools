@@ -78,67 +78,318 @@ jobs:
           print('🎉 All tests passed!')
           "
 
-      - name: Test error handling
+      - name: Test Width Height Selector
         run: |
           python -c "
           import sys
           import os
           sys.path.insert(0, os.getcwd())
 
-          from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode
+          # Test Width Height Selector imports
+          from kikotools.tools.width_height_selector.node import WidthHeightSelectorNode
+          from kikotools.tools.width_height_selector.presets import PRESET_OPTIONS, PRESET_METADATA
+          from kikotools.tools.width_height_selector.logic import get_preset_dimensions
 
-          node = ResolutionCalculatorNode()
+          print('✓ Width Height Selector imports successful')
 
-          # Test error handling
-          try:
-              node.calculate_resolution(2.0)  # No input provided
-              assert False, 'Should have raised ValueError'
-          except ValueError:
-              print('✓ Error handling test passed')
+          # Test preset structure
+          assert len(PRESET_OPTIONS) > 0
+          assert 'custom' in PRESET_OPTIONS
+          assert len(PRESET_METADATA) > 0
+          print('✓ Preset structure tests passed')
 
-          # Test invalid scale factor
-          try:
-              node.calculate_resolution(0.0)  # Invalid scale
-              assert False, 'Should have raised ValueError'
-          except ValueError:
-              print('✓ Scale factor validation test passed')
+          # Test node interface
+          node = WidthHeightSelectorNode()
+          input_types = node.INPUT_TYPES()
+          assert 'required' in input_types
+          assert 'preset' in input_types['required']
+          assert 'width' in input_types['required']
+          assert 'height' in input_types['required']
+          print('✓ Node interface tests passed')
 
-          print('✓ All error handling tests passed')
+          # Test formatted presets
+          preset_options = input_types['required']['preset'][0]
+          assert 'custom' in preset_options
+          formatted_count = len([opt for opt in preset_options if ' - ' in opt and 'MP' in opt])
+          assert formatted_count > 0
+          print(f'✓ Found {formatted_count} formatted presets')
+
+          # Test dimension calculation
+          result = node.get_dimensions('1024×1024', 512, 512)
+          assert result == (1024, 1024)
+          print('✓ Dimension calculation tests passed')
+
+          # Test formatted preset dimensions
+          formatted_preset = '1024×1024 - 1:1 (1.1MP) - SDXL'
+          result = node.get_dimensions(formatted_preset, 512, 512)
+          assert result == (1024, 1024)
+          print('✓ Formatted preset tests passed')
+
+          # Test preset extraction
+          extracted = node._extract_preset_name(formatted_preset)
+          assert extracted == '1024×1024'
+          print('✓ Preset extraction tests passed')
+
+          print('🎉 All Width Height Selector tests passed!')
           "
 
-      - name: Test ComfyUI integration readiness
+      - name: Test Sampler Combo
         run: |
           python -c "
           import sys
           import os
           sys.path.insert(0, os.getcwd())
 
+          # Test Sampler Combo imports
+          from kikotools.tools.sampler_combo.node import SamplerComboNode
+          from kikotools.tools.sampler_combo.logic import (
+              get_sampler_combo, validate_sampler_settings, SAMPLERS, SCHEDULERS
+          )
+
+          print('✓ Sampler Combo imports successful')
+
+          # Test node interface
+          node = SamplerComboNode()
+          input_types = node.INPUT_TYPES()
+          assert 'required' in input_types
+          assert 'sampler_name' in input_types['required']
+          assert 'scheduler' in input_types['required']
+          assert 'steps' in input_types['required']
+          assert 'cfg' in input_types['required']
+          print('✓ Sampler Combo interface tests passed')
+
+          # Test return types
+          assert node.RETURN_TYPES == (SAMPLERS, SCHEDULERS, 'INT', 'FLOAT')
+          assert node.RETURN_NAMES == ('sampler_name', 'scheduler', 'steps', 'cfg')
+          assert node.CATEGORY == 'ComfyAssets'
+          print('✓ Sampler Combo return types tests passed')
+
+          # Test sampler combo functionality
+          result = node.get_sampler_combo('euler', 'normal', 20, 7.0)
+          assert result == ('euler', 'normal', 20, 7.0)
+          print('✓ Sampler combo functionality tests passed')
+
+          # Test validation
+          assert validate_sampler_settings('euler', 'normal', 20, 7.0) == True
+          print('✓ Sampler validation tests passed')
+
+          # Test available samplers and schedulers
+          samplers = node.get_available_samplers()
+          schedulers = node.get_available_schedulers()
+          assert len(samplers) > 0
+          assert len(schedulers) > 0
+          assert 'euler' in samplers
+          assert 'normal' in schedulers
+          print(f'✓ Found {len(samplers)} samplers and {len(schedulers)} schedulers')
+
+          print('🎉 All Sampler Combo tests passed!')
+          "
+
+      - name: Test Seed History
+        run: |
+          python -c "
+          import sys
+          import os
+          sys.path.insert(0, os.getcwd())
+
+          # Test Seed History imports
+          from kikotools.tools.seed_history.node import SeedHistoryNode
+          from kikotools.tools.seed_history.logic import (
+              generate_random_seed, validate_seed_value, sanitize_seed_value
+          )
+
+          print('✓ Seed History imports successful')
+
+          # Test node interface
+          node = SeedHistoryNode()
+          input_types = node.INPUT_TYPES()
+          assert 'required' in input_types
+          assert 'seed' in input_types['required']
+          print('✓ Seed History interface tests passed')
+
+          # Test return types
+          assert node.RETURN_TYPES == ('INT',)
+          assert node.RETURN_NAMES == ('seed',)
+          assert node.CATEGORY == 'ComfyAssets'
+          print('✓ Seed History return types tests passed')
+
+          # Test seed output functionality
+          result = node.output_seed(12345)
+          assert result == (12345,)
+          print('✓ Seed output functionality tests passed')
+
+          # Test seed validation
+          assert validate_seed_value(12345) == True
+          assert validate_seed_value(-1) == False
+          print('✓ Seed validation tests passed')
+
+          # Test seed generation
+          new_seed = generate_random_seed()
+          assert isinstance(new_seed, int)
+          assert validate_seed_value(new_seed) == True
+          print('✓ Seed generation tests passed')
+
+          # Test seed sanitization
+          clean_seed = sanitize_seed_value(12345)
+          assert clean_seed == 12345
+          print('✓ Seed sanitization tests passed')
+
+          # Test node helper methods
+          assert node.is_seed_in_range(12345) == True
+          assert node.is_seed_in_range(-1) == False
+          assert node.get_default_seed() == 12345
+          print('✓ Seed helper methods tests passed')
+
+          print('🎉 All Seed History tests passed!')
+          "
+
+      - name: Test error handling for all tools
+        run: |
+          python -c "
+          import sys
+          import os
+          sys.path.insert(0, os.getcwd())
+
+          print('=== Testing Error Handling for All Tools ===')
+
+          # Test Resolution Calculator error handling
           from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode
+          res_node = ResolutionCalculatorNode()
 
-          # Test ComfyUI interface requirements
-          node_class = ResolutionCalculatorNode
+          try:
+              res_node.calculate_resolution(2.0)  # No input provided
+              assert False, 'Should have raised ValueError'
+          except ValueError:
+              print('✓ Resolution Calculator error handling test passed')
 
-          # Check required class attributes
-          assert hasattr(node_class, 'INPUT_TYPES')
-          assert hasattr(node_class, 'RETURN_TYPES')
-          assert hasattr(node_class, 'RETURN_NAMES')
-          assert hasattr(node_class, 'FUNCTION')
-          assert hasattr(node_class, 'CATEGORY')
+          try:
+              res_node.calculate_resolution(0.0)  # Invalid scale
+              assert False, 'Should have raised ValueError'
+          except ValueError:
+              print('✓ Resolution Calculator scale factor validation test passed')
 
-          # Check INPUT_TYPES structure
-          input_types = node_class.INPUT_TYPES()
+          # Test Width Height Selector error handling
+          from kikotools.tools.width_height_selector.node import WidthHeightSelectorNode
+          wh_node = WidthHeightSelectorNode()
+
+          # Test invalid preset fallback
+          result = wh_node.get_dimensions('invalid_preset', 800, 600)
+          assert result == (800, 600)  # Should fallback to custom dimensions
+          print('✓ Width Height Selector invalid preset handling test passed')
+
+          # Test Sampler Combo error handling
+          from kikotools.tools.sampler_combo.node import SamplerComboNode
+          sampler_node = SamplerComboNode()
+
+          # Test with invalid sampler (should use safe defaults)
+          result = sampler_node.get_sampler_combo('invalid_sampler', 'normal', 20, 7.0)
+          assert result == ('euler', 'normal', 20, 7.0)  # Safe defaults
+          print('✓ Sampler Combo invalid input handling test passed')
+
+          # Test Seed History error handling
+          from kikotools.tools.seed_history.node import SeedHistoryNode
+          seed_node = SeedHistoryNode()
+
+          # Test invalid seed value (should use fallback)
+          result = seed_node.output_seed(-1)  # Invalid negative seed
+          assert result == (12345,)  # Fallback seed
+          print('✓ Seed History invalid seed handling test passed')
+
+          print('🎉 All error handling tests passed for all tools!')
+          "
+
+      - name: Test ComfyUI integration readiness for all tools
+        run: |
+          python -c "
+          import sys
+          import os
+          sys.path.insert(0, os.getcwd())
+
+          print('=== Testing ComfyUI Integration for All Tools ===')
+
+          # Test Resolution Calculator
+          from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode
+          res_class = ResolutionCalculatorNode
+
+          assert hasattr(res_class, 'INPUT_TYPES')
+          assert hasattr(res_class, 'RETURN_TYPES')
+          assert hasattr(res_class, 'RETURN_NAMES')
+          assert hasattr(res_class, 'FUNCTION')
+          assert hasattr(res_class, 'CATEGORY')
+
+          input_types = res_class.INPUT_TYPES()
           assert 'required' in input_types
           assert 'optional' in input_types
           assert 'scale_factor' in input_types['required']
           assert 'image' in input_types['optional']
           assert 'latent' in input_types['optional']
 
-          # Check return types
-          assert node_class.RETURN_TYPES == ('INT', 'INT')
-          assert node_class.RETURN_NAMES == ('width', 'height')
-          assert node_class.CATEGORY == 'ComfyAssets'
+          assert res_class.RETURN_TYPES == ('INT', 'INT')
+          assert res_class.RETURN_NAMES == ('width', 'height')
+          assert res_class.CATEGORY == 'ComfyAssets'
+          print('✓ Resolution Calculator ComfyUI integration passed')
 
-          print('✓ ComfyUI integration readiness tests passed')
+          # Test Width Height Selector
+          from kikotools.tools.width_height_selector.node import WidthHeightSelectorNode
+          wh_class = WidthHeightSelectorNode
+
+          assert hasattr(wh_class, 'INPUT_TYPES')
+          assert hasattr(wh_class, 'RETURN_TYPES')
+          assert hasattr(wh_class, 'RETURN_NAMES')
+          assert hasattr(wh_class, 'FUNCTION')
+          assert hasattr(wh_class, 'CATEGORY')
+
+          input_types = wh_class.INPUT_TYPES()
+          assert 'required' in input_types
+          assert 'preset' in input_types['required']
+          assert 'width' in input_types['required']
+          assert 'height' in input_types['required']
+
+          assert wh_class.RETURN_TYPES == ('INT', 'INT')
+          assert wh_class.RETURN_NAMES == ('width', 'height')
+          assert wh_class.CATEGORY == 'ComfyAssets'
+          print('✓ Width Height Selector ComfyUI integration passed')
+
+          # Test Sampler Combo
+          from kikotools.tools.sampler_combo.node import SamplerComboNode
+          sampler_class = SamplerComboNode
+
+          assert hasattr(sampler_class, 'INPUT_TYPES')
+          assert hasattr(sampler_class, 'RETURN_TYPES')
+          assert hasattr(sampler_class, 'RETURN_NAMES')
+          assert hasattr(sampler_class, 'FUNCTION')
+          assert hasattr(sampler_class, 'CATEGORY')
+
+          input_types = sampler_class.INPUT_TYPES()
+          assert 'required' in input_types
+          assert 'sampler_name' in input_types['required']
+          assert 'scheduler' in input_types['required']
+          assert 'steps' in input_types['required']
+          assert 'cfg' in input_types['required']
+
+          assert sampler_class.CATEGORY == 'ComfyAssets'
+          print('✓ Sampler Combo ComfyUI integration passed')
+
+          # Test Seed History
+          from kikotools.tools.seed_history.node import SeedHistoryNode
+          seed_class = SeedHistoryNode
+
+          assert hasattr(seed_class, 'INPUT_TYPES')
+          assert hasattr(seed_class, 'RETURN_TYPES')
+          assert hasattr(seed_class, 'RETURN_NAMES')
+          assert hasattr(seed_class, 'FUNCTION')
+          assert hasattr(seed_class, 'CATEGORY')
+
+          input_types = seed_class.INPUT_TYPES()
+          assert 'required' in input_types
+          assert 'seed' in input_types['required']
+
+          assert seed_class.RETURN_TYPES == ('INT',)
+          assert seed_class.RETURN_NAMES == ('seed',)
+          assert seed_class.CATEGORY == 'ComfyAssets'
+          print('✓ Seed History ComfyUI integration passed')
+
+          print('🎉 All tools ComfyUI integration readiness tests passed!')
           "
 
   test-package-structure:
@@ -163,14 +414,37 @@ jobs:
           test -d kikotools/base || (echo "kikotools/base directory missing" && exit 1)
           test -d kikotools/tools || (echo "kikotools/tools directory missing" && exit 1)
           test -d kikotools/tools/resolution_calculator || (echo "resolution_calculator directory missing" && exit 1)
+          test -d kikotools/tools/width_height_selector || (echo "width_height_selector directory missing" && exit 1)
+          test -d kikotools/tools/sampler_combo || (echo "sampler_combo directory missing" && exit 1)
+          test -d kikotools/tools/seed_history || (echo "seed_history directory missing" && exit 1)
           test -d tests || (echo "tests directory missing" && exit 1)
           test -d examples || (echo "examples directory missing" && exit 1)
+          test -d web || (echo "web directory missing" && exit 1)
 
           # Check key files
           test -f kikotools/__init__.py || (echo "kikotools/__init__.py missing" && exit 1)
           test -f kikotools/base/base_node.py || (echo "base_node.py missing" && exit 1)
-          test -f kikotools/tools/resolution_calculator/node.py || (echo "node.py missing" && exit 1)
-          test -f kikotools/tools/resolution_calculator/logic.py || (echo "logic.py missing" && exit 1)
+          
+          # Resolution Calculator files
+          test -f kikotools/tools/resolution_calculator/node.py || (echo "resolution_calculator node.py missing" && exit 1)
+          test -f kikotools/tools/resolution_calculator/logic.py || (echo "resolution_calculator logic.py missing" && exit 1)
+          
+          # Width Height Selector files
+          test -f kikotools/tools/width_height_selector/node.py || (echo "width_height_selector node.py missing" && exit 1)
+          test -f kikotools/tools/width_height_selector/logic.py || (echo "width_height_selector logic.py missing" && exit 1)
+          test -f kikotools/tools/width_height_selector/presets.py || (echo "width_height_selector presets.py missing" && exit 1)
+          
+          # Sampler Combo files
+          test -f kikotools/tools/sampler_combo/node.py || (echo "sampler_combo node.py missing" && exit 1)
+          test -f kikotools/tools/sampler_combo/logic.py || (echo "sampler_combo logic.py missing" && exit 1)
+          
+          # Seed History files
+          test -f kikotools/tools/seed_history/node.py || (echo "seed_history node.py missing" && exit 1)
+          test -f kikotools/tools/seed_history/logic.py || (echo "seed_history logic.py missing" && exit 1)
+          
+          # Web files
+          test -f web/width_height_swap.js || (echo "width_height_swap.js missing" && exit 1)
+          test -f web/seed_history_ui.js || (echo "seed_history_ui.js missing" && exit 1)
 
           echo "✓ Package structure tests passed"
 
@@ -181,9 +455,15 @@ jobs:
 
       - name: Test documentation completeness
         run: |
-          # Check documentation files
+          # Check documentation files for all tools
           test -f examples/documentation/resolution_calculator.md || (echo "Resolution calculator docs missing" && exit 1)
-          test -f examples/workflows/resolution_calculator_example.json || (echo "Example workflow missing" && exit 1)
+          test -f examples/workflows/resolution_calculator_example.json || (echo "Resolution calculator workflow missing" && exit 1)
+          test -f examples/documentation/width_height_selector.md || (echo "Width height selector docs missing" && exit 1)
+          test -f examples/workflows/width_height_selector_example.json || (echo "Width height selector workflow missing" && exit 1)
+          test -f examples/documentation/sampler_combo.md || (echo "Sampler combo docs missing" && exit 1)
+          test -f examples/workflows/sampler_combo_example.json || (echo "Sampler combo workflow missing" && exit 1)
+          test -f examples/documentation/seed_history.md || (echo "Seed history docs missing" && exit 1)
+          test -f examples/workflows/seed_history_example.json || (echo "Seed history workflow missing" && exit 1)
 
           # Check README has key sections
           grep -q "Installation" README.md || (echo "README missing Installation section" && exit 1)

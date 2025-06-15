@@ -53,8 +53,13 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
         try:
             # Validate and sanitize the seed
             if not validate_seed_value(seed):
-                self.handle_error(
-                    f"Invalid seed value: {seed}. Using fallback seed 12345."
+                # Log the validation error but don't raise
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.error(
+                    f"{self.__class__.__name__}: Invalid seed value: {seed}. "
+                    f"Using fallback seed 12345."
                 )
                 return (12345,)
 
@@ -64,8 +69,13 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
 
         except Exception as e:
             # Handle any unexpected errors gracefully
-            error_msg = f"Error processing seed: {str(e)}. Using fallback seed 12345."
-            self.handle_error(error_msg)
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"{self.__class__.__name__}: Error processing seed: {str(e)}. "
+                f"Using fallback seed 12345."
+            )
             return (12345,)
 
     def generate_new_seed(self) -> int:

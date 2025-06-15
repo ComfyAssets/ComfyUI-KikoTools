@@ -4,14 +4,15 @@ from typing import Tuple
 from ...base.base_node import ComfyAssetsBaseNode
 from .logic import (
     get_preset_dimensions,
-    calculate_aspect_ratio,
     validate_dimensions,
     sanitize_dimensions,
 )
 from .presets import (
     PRESET_OPTIONS,
-    PRESET_DESCRIPTIONS,
+    PRESET_METADATA,
     get_model_recommendation,
+    get_preset_metadata,
+    get_presets_by_model_group,
 )
 
 
@@ -26,13 +27,26 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
     @classmethod
     def INPUT_TYPES(cls):
         """Define the input types for the ComfyUI node."""
-        # Get all preset options excluding the custom tuple
-        preset_keys = [key for key in PRESET_OPTIONS.keys()]
+        # Create formatted preset options with metadata
+        preset_options = ["custom"]  # Custom first
+
+        # Add formatted presets with metadata
+        for preset_name in PRESET_OPTIONS.keys():
+            if preset_name != "custom":
+                metadata = PRESET_METADATA.get(preset_name)
+                if metadata:
+                    formatted_option = (
+                        f"{preset_name} - {metadata.aspect_ratio} "
+                        f"({metadata.megapixels:.1f}MP) - {metadata.model_group}"
+                    )
+                    preset_options.append(formatted_option)
+                else:
+                    preset_options.append(preset_name)
 
         return {
             "required": {
                 "preset": (
-                    preset_keys,
+                    preset_options,
                     {
                         "default": "custom",
                         "tooltip": "Select from optimized resolution presets or use "
@@ -78,7 +92,7 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
         Get width and height dimensions with preset and swap support.
 
         Args:
-            preset: Selected preset name or "custom"
+            preset: Selected preset name or formatted preset string
             width: Custom width value
             height: Custom height value
 
@@ -86,8 +100,13 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
             Tuple of (width, height)
         """
         try:
+            # Extract original preset name from formatted string if needed
+            original_preset = self._extract_preset_name(preset)
+
             # Get base dimensions from preset or custom input
-            final_width, final_height = get_preset_dimensions(preset, width, height)
+            final_width, final_height = get_preset_dimensions(
+                original_preset, width, height
+            )
 
             # Sanitize dimensions to ensure they meet ComfyUI requirements
             final_width, final_height = sanitize_dimensions(final_width, final_height)
@@ -111,6 +130,37 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
             self.handle_error(error_msg)
             return (1024, 1024)
 
+    def _extract_preset_name(self, formatted_preset: str) -> str:
+        """
+        Extract the original preset name from a formatted preset string.
+
+        Args:
+            formatted_preset: Either original preset name or formatted string
+
+        Returns:
+            Original preset name
+        """
+        # If it's already "custom", return as-is
+        if formatted_preset == "custom":
+            return formatted_preset
+
+        # If it contains formatting metadata, extract the resolution part
+        if " - " in formatted_preset:
+            # Format is: "1024×1024 - 1:1 (1.0MP) - SDXL"
+            # Extract the first part (resolution)
+            resolution_part = formatted_preset.split(" - ")[0]
+
+            # Verify this is a valid preset name
+            if resolution_part in PRESET_OPTIONS:
+                return resolution_part
+
+        # If no formatting or not found, check if it's directly a valid preset
+        if formatted_preset in PRESET_OPTIONS:
+            return formatted_preset
+
+        # Default to "custom" if we can't parse it
+        return "custom"
+
     def get_preset_info(self, preset: str) -> str:
         """
         Get descriptive information about a preset.
@@ -124,14 +174,12 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
         if preset == "custom":
             return "Custom dimensions - use the width and height inputs below"
 
-        if preset in PRESET_DESCRIPTIONS:
-            return PRESET_DESCRIPTIONS[preset]
-
-        # Fallback for unknown presets
-        if preset in PRESET_OPTIONS:
-            width, height = PRESET_OPTIONS[preset]
-            aspect_ratio = calculate_aspect_ratio(width, height)
-            return f"{preset} - {aspect_ratio} aspect ratio"
+        metadata = get_preset_metadata(preset)
+        if metadata.width > 0:  # Valid metadata
+            return (
+                f"{preset} - {metadata.aspect_ratio} ({metadata.megapixels:.1f}MP) - "
+                f"{metadata.description}"
+            )
 
         return f"Unknown preset: {preset}"
 
@@ -152,19 +200,22 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
         Validate node inputs.
 
         Args:
-            preset: Preset name
+            preset: Preset name or formatted preset string
             width: Width value
             height: Height value
 
         Returns:
             True if inputs are valid
         """
+        # Extract original preset name
+        original_preset = self._extract_preset_name(preset)
+
         # Check if preset exists or is custom
-        if preset != "custom" and preset not in PRESET_OPTIONS:
+        if original_preset != "custom" and original_preset not in PRESET_OPTIONS:
             return False
 
         # For custom preset, validate dimensions
-        if preset == "custom":
+        if original_preset == "custom":
             if not validate_dimensions(width, height):
                 return False
 
@@ -194,6 +245,52 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
         if preset in PRESET_OPTIONS:
             return PRESET_OPTIONS[preset]
         return (0, 0)
+
+    @classmethod
+    def get_presets_by_model(cls, model_group: str) -> dict:
+        """
+        Get all presets for a specific model group with metadata.
+
+        Args:
+            model_group: Model group name ("SDXL", "FLUX", "Ultra-Wide")
+
+        Returns:
+            Dictionary of presets with metadata
+        """
+        return get_presets_by_model_group(model_group)
+
+    @classmethod
+    def get_preset_metadata_static(cls, preset: str) -> dict:
+        """
+        Get metadata for a preset as a dictionary.
+
+        Args:
+            preset: Preset name
+
+        Returns:
+            Dictionary with metadata information
+        """
+        metadata = get_preset_metadata(preset)
+        return {
+            "width": metadata.width,
+            "height": metadata.height,
+            "aspect_ratio": metadata.aspect_ratio,
+            "aspect_decimal": metadata.aspect_decimal,
+            "megapixels": metadata.megapixels,
+            "model_group": metadata.model_group,
+            "category": metadata.category,
+            "description": metadata.description,
+        }
+
+    @classmethod
+    def get_model_groups(cls) -> list:
+        """
+        Get list of available model groups.
+
+        Returns:
+            List of model group names
+        """
+        return list(set(metadata.model_group for metadata in PRESET_METADATA.values()))
 
     def __str__(self) -> str:
         """String representation of the node."""
