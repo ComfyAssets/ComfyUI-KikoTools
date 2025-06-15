@@ -53,7 +53,7 @@ class TestWidthHeightSelectorNode:
             height=512,  # Should be ignored
         )
         assert result == (1024, 1024)
-        
+
         # Test formatted preset
         result = self.node.get_dimensions(
             preset="1024×1024 - 1:1 (1.1MP) - SDXL",
@@ -67,10 +67,12 @@ class TestWidthHeightSelectorNode:
         # Test raw preset
         result = self.node.get_dimensions(preset="832×1216", width=512, height=512)
         assert result == (832, 1216)
-        
+
         # Test formatted preset if available
         formatted_preset = "832×1216 - 13:19 (1.0MP) - SDXL"
-        result = self.node.get_dimensions(preset=formatted_preset, width=512, height=512)
+        result = self.node.get_dimensions(
+            preset=formatted_preset, width=512, height=512
+        )
         assert result == (832, 1216)
 
     def test_sdxl_landscape_preset(self):
@@ -78,10 +80,12 @@ class TestWidthHeightSelectorNode:
         # Test raw preset
         result = self.node.get_dimensions(preset="1216×832", width=512, height=512)
         assert result == (1216, 832)
-        
+
         # Test formatted preset if available
         formatted_preset = "1216×832 - 19:13 (1.0MP) - SDXL"
-        result = self.node.get_dimensions(preset=formatted_preset, width=512, height=512)
+        result = self.node.get_dimensions(
+            preset=formatted_preset, width=512, height=512
+        )
         assert result == (1216, 832)
 
     def test_flux_preset(self):
@@ -89,10 +93,12 @@ class TestWidthHeightSelectorNode:
         # Test raw preset
         result = self.node.get_dimensions(preset="1920×1080", width=512, height=512)
         assert result == (1920, 1080)
-        
+
         # Test formatted preset
         formatted_preset = "1920×1080 - 16:9 (2.1MP) - FLUX"
-        result = self.node.get_dimensions(preset=formatted_preset, width=512, height=512)
+        result = self.node.get_dimensions(
+            preset=formatted_preset, width=512, height=512
+        )
         assert result == (1920, 1080)
 
     def test_ultra_wide_preset(self):
@@ -100,10 +106,12 @@ class TestWidthHeightSelectorNode:
         # Test raw preset
         result = self.node.get_dimensions(preset="2560×1080", width=512, height=512)
         assert result == (2560, 1080)
-        
+
         # Test formatted preset if available
         formatted_preset = "2560×1080 - 64:27 (2.8MP) - Ultra-Wide"
-        result = self.node.get_dimensions(preset=formatted_preset, width=512, height=512)
+        result = self.node.get_dimensions(
+            preset=formatted_preset, width=512, height=512
+        )
         assert result == (2560, 1080)
 
     def test_all_presets_available(self):
@@ -113,7 +121,7 @@ class TestWidthHeightSelectorNode:
 
         # Check that custom is available
         assert "custom" in available_presets
-        
+
         # Check that formatted presets are available (with metadata)
         # Extract raw preset names from formatted options
         raw_presets = []
@@ -124,7 +132,7 @@ class TestWidthHeightSelectorNode:
                 raw_presets.append(option.split(" - ")[0])
             else:
                 raw_presets.append(option)
-        
+
         # Check that all major preset categories are available
         assert "1024×1024" in raw_presets  # SDXL square
         assert "832×1216" in raw_presets  # SDXL portrait
@@ -316,21 +324,21 @@ class TestPresetMetadata:
     def test_preset_metadata_structure(self):
         """Test that metadata has correct structure."""
         for preset_name, metadata in PRESET_METADATA.items():
-            assert hasattr(metadata, 'width')
-            assert hasattr(metadata, 'height')
-            assert hasattr(metadata, 'aspect_ratio')
-            assert hasattr(metadata, 'aspect_decimal')
-            assert hasattr(metadata, 'megapixels')
-            assert hasattr(metadata, 'model_group')
-            assert hasattr(metadata, 'category')
-            assert hasattr(metadata, 'description')
+            assert hasattr(metadata, "width")
+            assert hasattr(metadata, "height")
+            assert hasattr(metadata, "aspect_ratio")
+            assert hasattr(metadata, "aspect_decimal")
+            assert hasattr(metadata, "megapixels")
+            assert hasattr(metadata, "model_group")
+            assert hasattr(metadata, "category")
+            assert hasattr(metadata, "description")
 
     def test_metadata_aspect_ratios(self):
         """Test that aspect ratios are correctly calculated."""
         for preset_name, metadata in PRESET_METADATA.items():
             expected_decimal = metadata.width / metadata.height
             assert abs(metadata.aspect_decimal - expected_decimal) < 0.001
-            
+
             # Common aspect ratios should match expected values
             if preset_name == "1024×1024":
                 assert metadata.aspect_ratio == "1:1"
@@ -350,11 +358,11 @@ class TestPresetMetadata:
         sdxl_presets = get_presets_by_model_group("SDXL")
         flux_presets = get_presets_by_model_group("FLUX")
         ultra_wide_presets = get_presets_by_model_group("Ultra-Wide")
-        
+
         assert len(sdxl_presets) > 0
         assert len(flux_presets) > 0
         assert len(ultra_wide_presets) > 0
-        
+
         # Check specific presets are in correct groups
         assert "1024×1024" in [k for k, v in sdxl_presets.items()]
         assert "1920×1080" in [k for k, v in flux_presets.items()]
@@ -367,7 +375,7 @@ class TestPresetMetadata:
         assert metadata.width == 1024
         assert metadata.height == 1024
         assert metadata.model_group == "SDXL"
-        
+
         # Invalid preset returns default
         metadata = get_preset_metadata("invalid_preset")
         assert metadata.width == 0
@@ -388,13 +396,13 @@ class TestNodeMetadataIntegration:
         assert "1:1" in info  # Aspect ratio
         assert "1.0MP" in info or "1.1MP" in info  # Megapixels
         assert "SDXL" in info  # Description
-        
+
     def test_get_presets_by_model_static(self):
         """Test static method for getting presets by model."""
         sdxl_presets = self.node.get_presets_by_model("SDXL")
         assert isinstance(sdxl_presets, dict)
         assert len(sdxl_presets) > 0
-        
+
         # Check that returned values are metadata objects
         for preset_name, metadata in sdxl_presets.items():
             assert metadata.model_group == "SDXL"
@@ -402,12 +410,12 @@ class TestNodeMetadataIntegration:
     def test_get_preset_metadata_static(self):
         """Test static method for getting preset metadata."""
         metadata_dict = self.node.get_preset_metadata_static("1920×1080")
-        
+
         assert metadata_dict["width"] == 1920
         assert metadata_dict["height"] == 1080
         assert metadata_dict["aspect_ratio"] == "16:9"
         assert metadata_dict["model_group"] == "FLUX"
-        
+
     def test_get_model_groups(self):
         """Test static method for getting model groups."""
         groups = self.node.get_model_groups()
@@ -421,12 +429,18 @@ class TestMetadataValidation:
 
     def test_dimensions_validation(self):
         """Test dimensions validation from metadata."""
-        from kikotools.tools.width_height_selector.presets import validate_preset_dimensions
+        from kikotools.tools.width_height_selector.presets import (
+            validate_preset_dimensions,
+        )
+
         assert validate_preset_dimensions() is True
 
     def test_metadata_consistency_validation(self):
         """Test metadata consistency validation."""
-        from kikotools.tools.width_height_selector.presets import validate_metadata_consistency
+        from kikotools.tools.width_height_selector.presets import (
+            validate_metadata_consistency,
+        )
+
         assert validate_metadata_consistency() is True
 
 
@@ -441,16 +455,16 @@ class TestFormattedPresets:
         """Test that INPUT_TYPES generates formatted presets."""
         input_types = self.node.INPUT_TYPES()
         available_presets = input_types["required"]["preset"][0]
-        
+
         # Should have custom first
         assert available_presets[0] == "custom"
-        
+
         # Should have formatted presets with metadata
         formatted_count = 0
         for option in available_presets[1:]:  # Skip custom
             if " - " in option and "MP" in option:
                 formatted_count += 1
-        
+
         assert formatted_count > 0, "No formatted presets found"
         assert formatted_count == len(PRESET_METADATA), "Not all presets are formatted"
 
@@ -464,10 +478,12 @@ class TestFormattedPresets:
             ("1024×1024", "1024×1024"),  # Raw preset name
             ("invalid_preset", "custom"),  # Invalid fallback
         ]
-        
+
         for formatted_preset, expected in test_cases:
             result = self.node._extract_preset_name(formatted_preset)
-            assert result == expected, f"Expected {expected}, got {result} for input {formatted_preset}"
+            assert (
+                result == expected
+            ), f"Expected {expected}, got {result} for input {formatted_preset}"
 
     def test_formatted_preset_dimensions(self):
         """Test that formatted presets return correct dimensions."""
@@ -485,13 +501,13 @@ class TestFormattedPresets:
         """Test validation of formatted presets."""
         # Valid formatted preset
         assert self.node.validate_inputs("1024×1024 - 1:1 (1.1MP) - SDXL", 1024, 1024)
-        
+
         # Valid raw preset
         assert self.node.validate_inputs("1024×1024", 1024, 1024)
-        
+
         # Custom preset
         assert self.node.validate_inputs("custom", 1024, 1024)
-        
+
         # Invalid formatted preset should still work (fallback to custom)
         assert self.node.validate_inputs("invalid - formatted", 1024, 1024)
 
@@ -499,7 +515,7 @@ class TestFormattedPresets:
         """Test that raw preset names still work."""
         # Raw preset names should still work for backwards compatibility
         raw_presets = ["1024×1024", "1920×1080", "832×1216"]
-        
+
         for raw_preset in raw_presets:
             if raw_preset in PRESET_OPTIONS:
                 result = self.node.get_dimensions(raw_preset, 512, 512)
@@ -509,22 +525,34 @@ class TestFormattedPresets:
     def test_formatted_preset_metadata_accuracy(self):
         """Test that formatted presets contain accurate metadata."""
         input_types = self.node.INPUT_TYPES()
-        formatted_presets = [opt for opt in input_types["required"]["preset"][0] if " - " in opt]
-        
+        formatted_presets = [
+            opt for opt in input_types["required"]["preset"][0] if " - " in opt
+        ]
+
         for formatted_preset in formatted_presets:
             # Extract components
             parts = formatted_preset.split(" - ")
-            assert len(parts) == 3, f"Formatted preset should have 3 parts: {formatted_preset}"
-            
+            assert (
+                len(parts) == 3
+            ), f"Formatted preset should have 3 parts: {formatted_preset}"
+
             resolution = parts[0]
             aspect_and_mp = parts[1]
             model_group = parts[2]
-            
+
             # Verify resolution exists in metadata
-            assert resolution in PRESET_METADATA, f"Resolution {resolution} not in metadata"
-            
+            assert (
+                resolution in PRESET_METADATA
+            ), f"Resolution {resolution} not in metadata"
+
             # Verify metadata matches format
             metadata = PRESET_METADATA[resolution]
-            assert metadata.model_group == model_group, f"Model group mismatch for {resolution}"
-            assert metadata.aspect_ratio in aspect_and_mp, f"Aspect ratio not in {aspect_and_mp}"
-            assert f"{metadata.megapixels:.1f}MP" in aspect_and_mp, f"Megapixels not in {aspect_and_mp}"
+            assert (
+                metadata.model_group == model_group
+            ), f"Model group mismatch for {resolution}"
+            assert (
+                metadata.aspect_ratio in aspect_and_mp
+            ), f"Aspect ratio not in {aspect_and_mp}"
+            assert (
+                f"{metadata.megapixels:.1f}MP" in aspect_and_mp
+            ), f"Megapixels not in {aspect_and_mp}"
