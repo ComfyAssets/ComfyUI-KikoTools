@@ -74,6 +74,19 @@ jobs:
         from kikotools.tools.resolution_calculator.logic import extract_dimensions
         from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode as NodeClass
         
+        # Test Width Height Selector imports
+        from kikotools.tools.width_height_selector import WidthHeightSelectorNode
+        from kikotools.tools.width_height_selector.logic import get_preset_dimensions
+        from kikotools.tools.width_height_selector.presets import PRESET_OPTIONS, PRESET_METADATA
+        
+        # Test Sampler Combo imports
+        from kikotools.tools.sampler_combo import SamplerComboNode
+        from kikotools.tools.sampler_combo.logic import get_sampler_combo, SAMPLERS, SCHEDULERS
+        
+        # Test Seed History imports
+        from kikotools.tools.seed_history import SeedHistoryNode
+        from kikotools.tools.seed_history.logic import generate_random_seed, validate_seed_value
+        
         print('✓ All module imports successful')
         "
 
@@ -190,12 +203,56 @@ jobs:
         
         # Check that nodes have proper ComfyUI interface
         required_attrs = ['INPUT_TYPES', 'RETURN_TYPES', 'RETURN_NAMES', 'FUNCTION', 'CATEGORY']
+        
+        # Test Resolution Calculator Node
         for attr in required_attrs:
             if not hasattr(ResolutionCalculatorNode, attr):
-                print(f'❌ Node missing required attribute: {attr}')
+                print(f'❌ ResolutionCalculatorNode missing required attribute: {attr}')
                 sys.exit(1)
         
-        print('✓ All architecture checks passed')
+        # Test Width Height Selector Node
+        from kikotools.tools.width_height_selector.node import WidthHeightSelectorNode
+        
+        if issubclass(WidthHeightSelectorNode, ComfyAssetsBaseNode):
+            print('✓ WidthHeightSelectorNode properly inherits from base class')
+        else:
+            print('❌ WidthHeightSelectorNode does not inherit from base class')
+            sys.exit(1)
+        
+        for attr in required_attrs:
+            if not hasattr(WidthHeightSelectorNode, attr):
+                print(f'❌ WidthHeightSelectorNode missing required attribute: {attr}')
+                sys.exit(1)
+        
+        # Test Sampler Combo Node
+        from kikotools.tools.sampler_combo.node import SamplerComboNode
+        
+        if issubclass(SamplerComboNode, ComfyAssetsBaseNode):
+            print('✓ SamplerComboNode properly inherits from base class')
+        else:
+            print('❌ SamplerComboNode does not inherit from base class')
+            sys.exit(1)
+        
+        for attr in required_attrs:
+            if not hasattr(SamplerComboNode, attr):
+                print(f'❌ SamplerComboNode missing required attribute: {attr}')
+                sys.exit(1)
+        
+        # Test Seed History Node
+        from kikotools.tools.seed_history.node import SeedHistoryNode
+        
+        if issubclass(SeedHistoryNode, ComfyAssetsBaseNode):
+            print('✓ SeedHistoryNode properly inherits from base class')
+        else:
+            print('❌ SeedHistoryNode does not inherit from base class')
+            sys.exit(1)
+        
+        for attr in required_attrs:
+            if not hasattr(SeedHistoryNode, attr):
+                print(f'❌ SeedHistoryNode missing required attribute: {attr}')
+                sys.exit(1)
+        
+        print('✓ All architecture checks passed for all tools')
         "
 
     - name: Check test coverage expectations
