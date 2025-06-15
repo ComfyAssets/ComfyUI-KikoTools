@@ -87,12 +87,16 @@ class SamplerComboNode(ComfyAssetsBaseNode):
         """
         try:
             # Validate inputs
-            self.validate_inputs(
-                sampler_name=sampler_name,
-                scheduler=scheduler,
-                steps=steps,
-                cfg=cfg,
-            )
+            if not validate_sampler_settings(sampler_name, scheduler, steps, cfg):
+                # Log the validation error but don't raise
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(
+                    f"{self.__class__.__name__}: Invalid sampler settings: sampler={sampler_name}, "
+                    f"scheduler={scheduler}, steps={steps}, cfg={cfg}. "
+                    f"Using safe defaults: euler, normal, 20 steps, CFG 7.0"
+                )
+                return ("euler", "normal", 20, 7.0)
 
             # Process and return the combo
             result = get_sampler_combo(sampler_name, scheduler, steps, cfg)
@@ -106,11 +110,12 @@ class SamplerComboNode(ComfyAssetsBaseNode):
 
         except Exception as e:
             # Handle any unexpected errors gracefully
-            error_msg = (
-                f"Error processing sampler combo: {str(e)}. "
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"{self.__class__.__name__}: Error processing sampler combo: {str(e)}. "
                 f"Using safe defaults: euler, normal, 20 steps, CFG 7.0"
             )
-            self.handle_error(error_msg)
             return ("euler", "normal", 20, 7.0)
 
     def validate_inputs(
