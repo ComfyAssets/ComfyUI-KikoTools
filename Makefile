@@ -2,6 +2,22 @@
 
 .PHONY: help install test test-fast lint format type-check quality-check clean setup dev-test release-test
 
+# Python and virtual environment setup
+PYTHON := python3
+VENV_DIR := venv
+VENV_BIN := $(VENV_DIR)/bin
+VENV_PYTHON := $(VENV_BIN)/python
+VENV_PIP := $(VENV_BIN)/pip
+
+# Check if we're in a virtual environment, if not use venv
+ifeq ($(VIRTUAL_ENV),)
+	PYTHON_CMD := $(VENV_PYTHON)
+	PIP_CMD := $(VENV_PIP)
+else
+	PYTHON_CMD := python
+	PIP_CMD := pip
+endif
+
 # Default target
 help:
 	@echo "ComfyUI-KikoTools Development Commands"
@@ -28,44 +44,48 @@ help:
 	@echo "  help           - Show this help message"
 
 # Setup and installation
-setup:
-	@echo "Setting up ComfyUI-KikoTools development environment..."
-	python -m venv venv
-	@echo "Virtual environment created. Activate with:"
-	@echo "  source venv/bin/activate  (Linux/Mac)"
-	@echo "  venv\\Scripts\\activate     (Windows)"
-	@echo "Then run: make install"
+setup: $(VENV_DIR)
+	@echo "✅ ComfyUI-KikoTools development environment ready"
+	@echo "Virtual environment created. Dependencies installed."
 
-install:
+$(VENV_DIR):
+	@echo "Creating virtual environment..."
+	$(PYTHON) -m venv $(VENV_DIR)
 	@echo "Installing development dependencies..."
-	pip install --upgrade pip
-	pip install -r requirements-dev.txt
+	$(VENV_PIP) install --upgrade pip
+	$(VENV_PIP) install -r requirements-dev.txt
+	@echo "✅ Virtual environment created and dependencies installed"
+
+install: $(VENV_DIR)
+	@echo "Installing/updating development dependencies..."
+	$(PIP_CMD) install --upgrade pip
+	$(PIP_CMD) install -r requirements-dev.txt
 	@echo "✅ Dependencies installed"
 
 # Code quality
-format:
+format: $(VENV_DIR)
 	@echo "Formatting code with black..."
-	black .
+	$(PYTHON_CMD) -m black .
 	@echo "✅ Code formatted"
 
-lint:
+lint: $(VENV_DIR)
 	@echo "Linting with flake8..."
-	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-	flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+	$(PYTHON_CMD) -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv
+	$(PYTHON_CMD) -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=venv
 	@echo "✅ Linting completed"
 
-type-check:
+type-check: $(VENV_DIR)
 	@echo "Type checking with mypy..."
-	mypy kikotools/ --ignore-missing-imports --no-strict-optional || true
+	$(PYTHON_CMD) -m mypy kikotools/ --ignore-missing-imports --no-strict-optional || true
 	@echo "✅ Type checking completed"
 
 quality-check: format lint type-check
 	@echo "✅ All quality checks completed"
 
 # Testing
-dev-test:
+dev-test: $(VENV_DIR)
 	@echo "Running quick development test..."
-	@python -c "\
+	@$(PYTHON_CMD) -c "\
 	import sys, os; \
 	sys.path.insert(0, os.getcwd()); \
 	from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode; \
@@ -75,9 +95,9 @@ dev-test:
 	print(f'✅ Development test passed! Result: {result[0]}x{result[1]}'); \
 	"
 
-test-fast:
+test-fast: $(VENV_DIR)
 	@echo "Running core functionality tests..."
-	@python -c "\
+	@$(PYTHON_CMD) -c "\
 	import sys, os; \
 	sys.path.insert(0, os.getcwd()); \
 	from kikotools.base import ComfyAssetsBaseNode; \
@@ -146,13 +166,13 @@ ci: quality-check test
 	@echo "✅ CI checks passed!"
 
 # Tool-specific commands (can be extended for new tools)
-test-resolution-calculator:
+test-resolution-calculator: $(VENV_DIR)
 	@echo "Testing Resolution Calculator specifically..."
-	@python -c "import sys, os; sys.path.insert(0, os.getcwd()); from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode; import torch; node = ResolutionCalculatorNode(); scenarios = [('SDXL Portrait', torch.randn(1, 1216, 832, 3), 1.5), ('FLUX Square', torch.randn(1, 1024, 1024, 3), 2.0), ('User Scenario', torch.randn(1, 1216, 832, 3), 1.53)]; [print(f'✅ {name}: {image.shape[2]}×{image.shape[1]} → {node.calculate_resolution(scale, image=image)[0]}×{node.calculate_resolution(scale, image=image)[1]} ({scale}x)') for name, image, scale in scenarios]; print('🎉 Resolution Calculator tests completed!')"
+	@$(PYTHON_CMD) -c "import sys, os; sys.path.insert(0, os.getcwd()); from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode; import torch; node = ResolutionCalculatorNode(); scenarios = [('SDXL Portrait', torch.randn(1, 1216, 832, 3), 1.5), ('FLUX Square', torch.randn(1, 1024, 1024, 3), 2.0), ('User Scenario', torch.randn(1, 1216, 832, 3), 1.53)]; [print(f'✅ {name}: {image.shape[2]}×{image.shape[1]} → {node.calculate_resolution(scale, image=image)[0]}×{node.calculate_resolution(scale, image=image)[1]} ({scale}x)') for name, image, scale in scenarios]; print('🎉 Resolution Calculator tests completed!')"
 
-test-width-height-selector:
+test-width-height-selector: $(VENV_DIR)
 	@echo "Testing Width Height Selector specifically..."
-	@python -c "\
+	@$(PYTHON_CMD) -c "\
 	import sys, os; \
 	sys.path.insert(0, os.getcwd()); \
 	from kikotools.tools.width_height_selector.node import WidthHeightSelectorNode; \
