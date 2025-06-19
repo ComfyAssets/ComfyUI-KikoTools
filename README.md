@@ -76,6 +76,22 @@ Unified sampling configuration interface combining sampler, scheduler, steps, an
 - Reduce node clutter in workflows
 - Quick sampling parameter experimentation
 
+#### 📦 Empty Latent Batch
+Advanced empty latent creation with preset support and batch processing capabilities.
+
+- **Preset Integration**: 26 curated resolution presets with model optimization
+- **Batch Processing**: Create multiple empty latents (1-64) in a single operation
+- **Visual Swap Button**: Interactive blue button for quick dimension swapping
+- **Smart Validation**: Automatic dimension sanitization for VAE compatibility
+- **Memory Estimation**: Built-in memory usage calculation and warnings
+- **Model-Aware Presets**: SDXL (~1MP), FLUX (high-res), and Ultra-wide options
+
+**Use Cases:**
+- Initialize batch processing workflows efficiently
+- Create consistent latent dimensions across model types
+- Optimize memory usage with batch size planning
+- Quick preset-based latent generation for different aspect ratios
+
 ### 🔧 Architecture Highlights
 
 - **Modular Design**: Each tool is self-contained and independently testable
@@ -152,6 +168,20 @@ Sampler Combo → KSampler → VAE Decode → Save Image
 **Output:** Complete sampling configuration in one node  
 **Smart Features:** Recommendations and compatibility validation
 
+### Empty Latent Batch Example
+
+```
+Empty Latent Batch → KSampler → VAE Decode → Save Image
+📦 preset: "1024×1024" ↘ batch latents ↗
+   batch_size: 4
+   [swap button]
+```
+
+**Preset:** SDXL Square (1024×1024)  
+**Batch Size:** 4 empty latents  
+**Output:** 4×4×128×128 latent tensor ready for sampling  
+**Swap Button:** Click to switch to any available swapped preset
+
 ### Common Workflows
 
 <details>
@@ -192,6 +222,7 @@ Sampler Combo → KSampler → VAE Decode → Save Image
 | **Width Height Selector** | Preset-based dimension selection with 26 curated options | ✅ Complete | [Docs](examples/documentation/width_height_selector.md) |
 | **Seed History** | Advanced seed tracking with interactive history management | ✅ Complete | [Docs](examples/documentation/seed_history.md) |
 | **Sampler Combo** | Unified sampling configuration with smart recommendations | ✅ Complete | [Docs](examples/documentation/sampler_combo.md) |
+| **Empty Latent Batch** | Create empty latent batches with preset support | ✅ Complete | [Docs](examples/documentation/empty_latent_batch.md) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
@@ -277,6 +308,37 @@ Sampler Combo → KSampler → VAE Decode → Save Image
 - Compatibility checking between samplers and schedulers
 - Graceful error handling with safe defaults
 - Comprehensive tooltips for user guidance
+
+#### Empty Latent Batch
+
+**Inputs:**
+- `preset` (DROPDOWN): 26 preset options + custom with formatted metadata display
+- `width` (INT): 64-8192, step 8, default 1024
+- `height` (INT): 64-8192, step 8, default 1024
+- `batch_size` (INT): 1-64, default 1
+
+**Outputs:**
+- `latent` (LATENT): Batch of empty latent tensors in ComfyUI format
+- `width` (INT): Final sanitized width (divisible by 8)
+- `height` (INT): Final sanitized height (divisible by 8)
+
+**UI Features:**
+- Visual blue swap button with hover and click feedback
+- Intelligent preset switching when swapping dimensions
+- Memory usage estimation and warnings for large batches
+- Auto-update width/height widgets when presets change
+
+**Batch Processing:**
+- Creates tensors with shape: [batch_size, 4, height//8, width//8]
+- Efficient memory allocation with torch.zeros
+- Validates batch size limits (1-64) with performance warnings
+- Compatible with all ComfyUI latent processing nodes
+
+**Preset Integration:**
+- Full access to 26 curated resolution presets from Width Height Selector
+- Model-aware categorization (SDXL, FLUX, Ultra-wide)
+- Formatted display with aspect ratio and megapixel information
+- Intelligent fallback to custom dimensions for invalid presets
 
 ## 🛠️ Development
 
@@ -398,9 +460,9 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 4 (Resolution Calculator, Width Height Selector, Seed History, Sampler Combo)
+- **Nodes**: 5 (Resolution Calculator, Width Height Selector, Seed History, Sampler Combo, Empty Latent Batch)
 - **Presets**: 26 curated resolution presets
-- **Interactive Features**: 2 (Swap Button, History UI)
+- **Interactive Features**: 3 (Width/Height Swap Button, Seed History UI, Empty Latent Batch Swap Button)
 - **Test Coverage**: 100% (180+ comprehensive tests)
 - **Python Version**: 3.8+
 - **ComfyUI Compatibility**: Latest

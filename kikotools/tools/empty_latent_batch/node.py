@@ -9,6 +9,14 @@ from .logic import (
     validate_dimensions,
     sanitize_dimensions,
 )
+from ..width_height_selector.logic import get_preset_dimensions
+from ..width_height_selector.presets import (
+    PRESET_OPTIONS,
+    PRESET_METADATA,
+    get_model_recommendation,
+    get_preset_metadata,
+    get_presets_by_model_group,
+)
 
 
 class EmptyLatentBatchNode(ComfyAssetsBaseNode):
@@ -22,8 +30,34 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
     @classmethod
     def INPUT_TYPES(cls):
         """Define the input types for the ComfyUI node."""
+        # Create formatted preset options with metadata
+        preset_options = ["custom"]  # Custom first
+
+        # Add formatted presets with metadata
+        for preset_name in PRESET_OPTIONS.keys():
+            if preset_name != "custom":
+                metadata = PRESET_METADATA.get(preset_name)
+                if metadata:
+                    formatted_option = (
+                        f"{preset_name} - {metadata.aspect_ratio} "
+                        f"({metadata.megapixels:.1f}MP) - {metadata.model_group}"
+                    )
+                    preset_options.append(formatted_option)
+                else:
+                    preset_options.append(preset_name)
+
         return {
             "required": {
+                "preset": (
+                    preset_options,
+                    {
+                        "default": "custom",
+                        "tooltip": "Select from optimized resolution presets or use "
+                        "custom dimensions. SDXL presets are ~1MP, FLUX presets are "
+                        "higher resolution, Ultra-wide presets support modern "
+                        "aspect ratios.",
+                    },
+                ),
                 "width": (
                     "INT",
                     {
@@ -31,8 +65,9 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
                         "min": 64,
                         "max": 8192,
                         "step": 8,
-                        "tooltip": "Width in pixels (must be multiple of 8). "
-                        "This will be converted to latent space dimensions.",
+                        "tooltip": "Custom width in pixels (must be multiple of 8). "
+                        "Used when preset is 'custom' or as fallback for invalid "
+                        "presets. This will be converted to latent space dimensions.",
                     },
                 ),
                 "height": (
@@ -42,8 +77,9 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
                         "min": 64,
                         "max": 8192,
                         "step": 8,
-                        "tooltip": "Height in pixels (must be multiple of 8). "
-                        "This will be converted to latent space dimensions.",
+                        "tooltip": "Custom height in pixels (must be multiple of 8). "
+                        "Used when preset is 'custom' or as fallback for invalid "
+                        "presets. This will be converted to latent space dimensions.",
                     },
                 ),
                 "batch_size": (
@@ -60,33 +96,42 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
             }
         }
 
-    RETURN_TYPES = ("LATENT",)
-    RETURN_NAMES = ("latent",)
+    RETURN_TYPES = ("LATENT", "INT", "INT")
+    RETURN_NAMES = ("latent", "width", "height")
     FUNCTION = "create_empty_latent"
     CATEGORY = "ComfyAssets"
 
     def create_empty_latent(
-        self, width: int, height: int, batch_size: int
-    ) -> Tuple[Dict[str, torch.Tensor]]:
+        self, preset: str, width: int, height: int, batch_size: int
+    ) -> Tuple[Dict[str, torch.Tensor], int, int]:
         """
         Create empty latent tensor with specified dimensions and batch size.
 
         Args:
-            width: Width in pixels
-            height: Height in pixels
+            preset: Selected preset name or formatted preset string
+            width: Custom width value
+            height: Custom height value
             batch_size: Number of latents in the batch
 
         Returns:
-            Tuple containing latent dictionary with 'samples' tensor
+            Tuple containing (latent dictionary with 'samples' tensor, width, height)
         """
         try:
-            # Sanitize dimensions to ensure they meet requirements
-            final_width, final_height = sanitize_dimensions(width, height)
+            # Extract original preset name from formatted string if needed
+            original_preset = self._extract_preset_name(preset)
 
-            # Log if dimensions were changed
-            if final_width != width or final_height != height:
+            # Get base dimensions from preset or custom input
+            base_width, base_height = get_preset_dimensions(
+                original_preset, width, height
+            )
+
+            # Sanitize dimensions to ensure they meet requirements
+            final_width, final_height = sanitize_dimensions(base_width, base_height)
+
+            # Log if dimensions were changed from the base dimensions
+            if final_width != base_width or final_height != base_height:
                 self.log_info(
-                    f"Dimensions adjusted from {width}×{height} to "
+                    f"Dimensions adjusted from {base_width}×{base_height} to "
                     f"{final_width}×{final_height} to meet VAE requirements"
                 )
 
@@ -118,18 +163,52 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
                 f"(pixel dims: {final_width}×{final_height})"
             )
 
-            return (latent_dict,)
+            return (latent_dict, final_width, final_height)
 
         except Exception as e:
             # Handle any unexpected errors gracefully
             error_msg = f"Error creating empty latent batch: {str(e)}"
             self.handle_error(error_msg, e)
 
-    def validate_inputs(self, width: int, height: int, batch_size: int) -> bool:
+    def _extract_preset_name(self, formatted_preset: str) -> str:
+        """
+        Extract the original preset name from a formatted preset string.
+
+        Args:
+            formatted_preset: Either original preset name or formatted string
+
+        Returns:
+            Original preset name
+        """
+        # If it's already "custom", return as-is
+        if formatted_preset == "custom":
+            return formatted_preset
+
+        # If it contains formatting metadata, extract the resolution part
+        if " - " in formatted_preset:
+            # Format is: "1024×1024 - 1:1 (1.0MP) - SDXL"
+            # Extract the first part (resolution)
+            resolution_part = formatted_preset.split(" - ")[0]
+
+            # Verify this is a valid preset name
+            if resolution_part in PRESET_OPTIONS:
+                return resolution_part
+
+        # If no formatting or not found, check if it's directly a valid preset
+        if formatted_preset in PRESET_OPTIONS:
+            return formatted_preset
+
+        # Default to "custom" if we can't parse it
+        return "custom"
+
+    def validate_inputs(
+        self, preset: str, width: int, height: int, batch_size: int
+    ) -> bool:
         """
         Validate node inputs.
 
         Args:
+            preset: Preset name or formatted preset string
             width: Width value
             height: Height value
             batch_size: Batch size value
@@ -137,8 +216,18 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
         Returns:
             True if inputs are valid
         """
+        # Extract original preset name
+        original_preset = self._extract_preset_name(preset)
+
+        # Check if preset exists or is custom
+        if original_preset != "custom" and original_preset not in PRESET_OPTIONS:
+            return False
+
+        # Get dimensions from preset or use custom
+        base_width, base_height = get_preset_dimensions(original_preset, width, height)
+
         # Check dimension validity (after sanitization)
-        sanitized_width, sanitized_height = sanitize_dimensions(width, height)
+        sanitized_width, sanitized_height = sanitize_dimensions(base_width, base_height)
         if not validate_dimensions(sanitized_width, sanitized_height):
             return False
 
