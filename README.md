@@ -92,6 +92,34 @@ Advanced empty latent creation with preset support and batch processing capabili
 - Optimize memory usage with batch size planning
 - Quick preset-based latent generation for different aspect ratios
 
+#### 💾 Kiko Save Image
+Enhanced image saving with format selection, quality control, and floating popup viewer.
+
+- **Multiple Format Support**: Save as PNG, JPEG, or WebP with format-specific optimizations
+- **Advanced Quality Controls**: JPEG/WebP quality (1-100), PNG compression (0-9), WebP lossless mode
+- **Floating Popup Viewer**: Draggable, resizable window that shows saved images immediately
+- **Interactive Previews**: Click any image to open in new tab, download individual images
+- **Batch Selection**: Multi-select images for bulk actions (open all, download all)
+- **Format-Specific Settings**: Quality indicators, file size display, compression info
+- **Smart UI**: Auto-hide/show, minimize/maximize, roll-up functionality
+- **Popup Toggle**: Enable/disable popup viewer per save operation
+
+**Use Cases:**
+- Quick preview and management of saved images without file browser navigation
+- Compare multiple format outputs side-by-side (PNG vs JPEG vs WebP)
+- Batch download or open selected images efficiently
+- Monitor file sizes and compression effectiveness in real-time
+- Streamlined workflow for iterative image generation and saving
+
+**Why Better Than Standard Save Image:**
+- **Immediate Visual Feedback**: See your saved images instantly without opening file explorer
+- **Multi-Format Flexibility**: Choose optimal format for your use case (PNG for quality, JPEG for size, WebP for modern efficiency)
+- **Advanced Compression Control**: Fine-tune file sizes with format-specific quality settings
+- **Batch Operations**: Handle multiple images efficiently with selection and bulk actions
+- **Modern UI**: Floating, draggable interface that doesn't interrupt your workflow
+- **Smart Memory Usage**: File size indicators help optimize storage and sharing
+- **One-Click Access**: Direct image opening in browser tabs for quick sharing or review
+
 ### 🔧 Architecture Highlights
 
 - **Modular Design**: Each tool is self-contained and independently testable
@@ -171,8 +199,8 @@ Sampler Combo → KSampler → VAE Decode → Save Image
 ### Empty Latent Batch Example
 
 ```
-Empty Latent Batch → KSampler → VAE Decode → Save Image
-📦 preset: "1024×1024" ↘ batch latents ↗
+Empty Latent Batch → KSampler → VAE Decode → Kiko Save Image
+📦 preset: "1024×1024" ↘ batch latents ↗                ↘ popup viewer ↗
    batch_size: 4
    [swap button]
 ```
@@ -181,6 +209,21 @@ Empty Latent Batch → KSampler → VAE Decode → Save Image
 **Batch Size:** 4 empty latents  
 **Output:** 4×4×128×128 latent tensor ready for sampling  
 **Swap Button:** Click to switch to any available swapped preset
+
+### Kiko Save Image Example
+
+```
+Generate Image → Kiko Save Image → Floating Popup Viewer
+📷 output       ↘ format: WEBP   ↘ draggable window ↗
+                  quality: 85
+                  [popup: enabled]
+```
+
+**Format:** WebP (efficient compression, modern format)  
+**Quality:** 85% (balanced size/quality)  
+**Popup Viewer:** Floating, draggable window with saved images  
+**Features:** Click images to open in new tabs, download individual files, batch selection  
+**Advantages:** Immediate preview without file explorer, multi-format comparison, advanced quality controls
 
 ### Common Workflows
 
@@ -223,6 +266,7 @@ Empty Latent Batch → KSampler → VAE Decode → Save Image
 | **Seed History** | Advanced seed tracking with interactive history management | ✅ Complete | [Docs](examples/documentation/seed_history.md) |
 | **Sampler Combo** | Unified sampling configuration with smart recommendations | ✅ Complete | [Docs](examples/documentation/sampler_combo.md) |
 | **Empty Latent Batch** | Create empty latent batches with preset support | ✅ Complete | [Docs](examples/documentation/empty_latent_batch.md) |
+| **Kiko Save Image** | Enhanced image saving with popup viewer and multi-format support | ✅ Complete | [Docs](examples/documentation/kiko_save_image.md) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
@@ -339,6 +383,40 @@ Empty Latent Batch → KSampler → VAE Decode → Save Image
 - Model-aware categorization (SDXL, FLUX, Ultra-wide)
 - Formatted display with aspect ratio and megapixel information
 - Intelligent fallback to custom dimensions for invalid presets
+
+#### Kiko Save Image
+
+**Inputs:**
+- `images` (IMAGE): Batch of images to save
+- `filename_prefix` (STRING): Prefix for saved filenames, default "KikoSave"
+- `format` (DROPDOWN): Output format (PNG, JPEG, WEBP), default PNG
+- `quality` (INT): JPEG/WebP quality (1-100), default 90
+- `png_compress_level` (INT): PNG compression level (0-9), default 4
+- `webp_lossless` (BOOLEAN): Use lossless WebP compression, default False
+- `popup` (BOOLEAN): Enable popup viewer window, default True
+
+**Outputs:**
+- `UI`: Enhanced image preview data with popup viewer functionality
+
+**UI Features:**
+- Floating, draggable popup window showing saved images immediately
+- Interactive image grid with click-to-open functionality 
+- Individual image download buttons with format-specific quality indicators
+- Batch selection with multi-select checkboxes for bulk operations
+- Window controls: minimize, maximize, roll-up, close, and dragging
+- Auto-hide/show behavior with smart positioning
+
+**Format Support:**
+- **PNG**: Lossless compression with metadata preservation, configurable compression levels
+- **JPEG**: Quality-controlled lossy compression with automatic transparency handling
+- **WebP**: Modern format with both lossy and lossless modes, superior compression ratios
+
+**Advanced Features:**
+- File size monitoring and display for optimization feedback
+- Format-specific quality indicators (PNG compression level, JPEG/WebP quality percentage)
+- Smart filename sanitization with timestamp-based uniqueness
+- Persistent popup viewer across multiple save operations
+- Toggle button integration in node UI for manual viewer control
 
 ## 🛠️ Development
 
@@ -460,13 +538,14 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 5 (Resolution Calculator, Width Height Selector, Seed History, Sampler Combo, Empty Latent Batch)
+- **Nodes**: 6 (Resolution Calculator, Width Height Selector, Seed History, Sampler Combo, Empty Latent Batch, Kiko Save Image)
+- **Format Support**: 3 (PNG, JPEG, WebP with advanced controls)
 - **Presets**: 26 curated resolution presets
-- **Interactive Features**: 3 (Width/Height Swap Button, Seed History UI, Empty Latent Batch Swap Button)
-- **Test Coverage**: 100% (180+ comprehensive tests)
+- **Interactive Features**: 4 (Width/Height Swap Button, Seed History UI, Empty Latent Batch Swap Button, Kiko Save Image Popup Viewer)
+- **Test Coverage**: 100% (200+ comprehensive tests)
 - **Python Version**: 3.8+
 - **ComfyUI Compatibility**: Latest
-- **Dependencies**: Minimal (PyTorch, NumPy)
+- **Dependencies**: Minimal (PyTorch, NumPy, Pillow)
 
 ---
 
