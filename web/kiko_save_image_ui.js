@@ -25,6 +25,16 @@ kiko-image-viewer {
     resize: both;
     min-width: 300px;
     min-height: 200px;
+    transition: background 0.3s ease, box-shadow 0.3s ease, border 0.3s ease;
+}
+
+kiko-image-viewer.rolled-up {
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    overflow: visible;
+    resize: none;
+    min-height: auto;
 }
 
 kiko-image-viewer.dragging {
@@ -41,6 +51,16 @@ kiko-image-viewer.dragging .kiko-viewer-header {
     max-height: calc(80vh - 80px);
     overflow-y: auto;
     overflow-x: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease;
+}
+
+kiko-image-viewer.rolled-up .kiko-viewer-container {
+    max-height: 0;
+    padding: 0 12px;
+    opacity: 0;
+    overflow: hidden;
 }
 
 .kiko-viewer-header {
@@ -55,6 +75,31 @@ kiko-image-viewer.dragging .kiko-viewer-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
+}
+
+.kiko-viewer-header::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+kiko-image-viewer.rolled-up .kiko-viewer-header::after {
+    opacity: 1;
+}
+
+kiko-image-viewer.rolled-up .kiko-viewer-header {
+    border-bottom: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
 }
 
 .kiko-viewer-title {
@@ -342,20 +387,17 @@ function formatFileSize(bytes) {
 }
 
 // Open image in new tab
-function openImageInTab(imagePath, subfolder = '') {
-    console.log(`KikoSaveImage: Attempting to open image: ${imagePath}, subfolder: ${subfolder}`);
+function openImageInTab(imagePath, enablePopup = true) {
+    console.log(`KikoSaveImage: Attempting to open image: ${imagePath}`);
+    
+    // Note: enablePopup parameter is kept for compatibility but not used
+    // since popup now controls viewer visibility, not individual image clicks
+    
     const basePath = window.location.origin;
-    let fullPath;
     
     // Properly encode the filename for URL
     const encodedFilename = encodeURIComponent(imagePath);
-    const encodedSubfolder = subfolder ? encodeURIComponent(subfolder) : '';
-    
-    if (subfolder) {
-        fullPath = `${basePath}/api/view?filename=${encodedFilename}&subfolder=${encodedSubfolder}&type=output`;
-    } else {
-        fullPath = `${basePath}/api/view?filename=${encodedFilename}&type=output`;
-    }
+    const fullPath = `${basePath}/api/view?filename=${encodedFilename}&type=output`;
     
     console.log(`KikoSaveImage: Opening URL: ${fullPath}`);
     
@@ -385,7 +427,9 @@ class KikoImageViewer extends HTMLElement {
         this.selectedImages = new Set();
         this.isDragging = false;
         this.isMinimized = false;
+        this.isRolledUp = false;
         this.dragOffset = { x: 0, y: 0 };
+        this.lastHeaderClick = 0;
         
         // Always start at default position
     }
@@ -398,6 +442,7 @@ class KikoImageViewer extends HTMLElement {
         if (name === 'data' && newValue) {
             try {
                 this.imageData = JSON.parse(newValue);
+                this.autoUnrollOnNewImages();
                 this.render();
             } catch (e) {
                 console.error('KikoImageViewer: Failed to parse image data:', e);
@@ -406,16 +451,20 @@ class KikoImageViewer extends HTMLElement {
     }
     
     setImageData(data) {
+        console.log('KikoImageViewer: setImageData called with:', data);
+        console.log('KikoImageViewer: First image data:', data[0]);
         this.imageData = data;
+        this.autoUnrollOnNewImages();
         this.render();
         this.setupEventListeners();
     }
     
     setupEventListeners() {
-        // Window dragging functionality
+        // Window dragging and double-click functionality
         const header = this.querySelector('.kiko-viewer-header');
         if (header) {
             header.addEventListener('mousedown', this.startDrag.bind(this));
+            header.addEventListener('dblclick', this.handleHeaderDoubleClick.bind(this));
         }
         
         // Control buttons
@@ -466,6 +515,11 @@ class KikoImageViewer extends HTMLElement {
     }
     
     startDrag(e) {
+        // Don't start dragging if clicking on control buttons
+        if (e.target.closest('.kiko-viewer-controls')) {
+            return;
+        }
+        
         this.isDragging = true;
         const rect = this.getBoundingClientRect();
         this.dragOffset = {
@@ -505,6 +559,33 @@ class KikoImageViewer extends HTMLElement {
         
         this.isDragging = false;
         this.classList.remove('dragging');
+    }
+    
+    handleHeaderDoubleClick(e) {
+        // Don't toggle if clicking on control buttons
+        if (e.target.closest('.kiko-viewer-controls')) {
+            return;
+        }
+        
+        this.toggleRollUp();
+    }
+    
+    autoUnrollOnNewImages() {
+        // Auto-unroll if currently rolled up and we have new image data
+        if (this.isRolledUp && this.imageData && this.imageData.length > 0) {
+            this.isRolledUp = false;
+            this.classList.remove('rolled-up');
+        }
+    }
+    
+    toggleRollUp() {
+        this.isRolledUp = !this.isRolledUp;
+        
+        if (this.isRolledUp) {
+            this.classList.add('rolled-up');
+        } else {
+            this.classList.remove('rolled-up');
+        }
     }
     
     toggleMinimize() {
@@ -623,16 +704,14 @@ class KikoImageViewer extends HTMLElement {
             setTimeout(() => {
                 const imageData = this.imageData[index];
                 if (imageData) {
-                    openImageInTab(imageData.filename, imageData.subfolder);
+                    openImageInTab(imageData.filename);
                 }
             }, i * 150);
         });
     }
     
     downloadImage(imageData) {
-        const imageUrl = imageData.subfolder 
-            ? `${window.location.origin}/api/view?filename=${encodeURIComponent(imageData.filename)}&subfolder=${encodeURIComponent(imageData.subfolder)}&type=${imageData.type}`
-            : `${window.location.origin}/api/view?filename=${encodeURIComponent(imageData.filename)}&type=${imageData.type}`;
+        const imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(imageData.filename)}&type=${imageData.type}`;
             
         // Create temporary link and trigger download
         const link = document.createElement('a');
@@ -701,9 +780,7 @@ class KikoImageViewer extends HTMLElement {
     }
     
     createImageItem(data, index) {
-        const imageUrl = data.subfolder 
-            ? `${window.location.origin}/api/view?filename=${encodeURIComponent(data.filename)}&subfolder=${encodeURIComponent(data.subfolder)}&type=${data.type}`
-            : `${window.location.origin}/api/view?filename=${encodeURIComponent(data.filename)}&type=${data.type}`;
+        const imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(data.filename)}&type=${data.type}`;
             
         const formatClass = `kiko-format-${data.format.toLowerCase()}`;
         
@@ -758,8 +835,8 @@ class KikoImageViewer extends HTMLElement {
                 item.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log(`KikoImageViewer: Opening image ${index}: ${data.filename}`);
-                    openImageInTab(data.filename, data.subfolder);
+                    console.log(`KikoImageViewer: Clicking image ${index}: ${data.filename}`);
+                    openImageInTab(data.filename);
                 });
             }
         });
@@ -778,9 +855,7 @@ function createImagePreview(imageData) {
     
     // Create image element
     const img = document.createElement('img');
-    const imagePath = imageData.subfolder 
-        ? `/api/view?filename=${imageData.filename}&subfolder=${imageData.subfolder}&type=${imageData.type}`
-        : `/api/view?filename=${imageData.filename}&type=${imageData.type}`;
+    const imagePath = `/api/view?filename=${imageData.filename}&type=${imageData.type}`;
     img.src = imagePath;
     img.alt = imageData.filename;
     
@@ -826,7 +901,7 @@ function createImagePreview(imageData) {
     
     // Add click handler to open in new tab
     container.addEventListener('click', () => {
-        openImageInTab(imageData.filename, imageData.subfolder);
+        openImageInTab(imageData.filename);
     });
     
     return container;
@@ -941,6 +1016,15 @@ app.registerExtension({
             // Add method to create custom image viewer
             nodeType.prototype.createCustomImageViewer = function(imageData) {
                 console.log('KikoSaveImage: Creating custom viewer for', imageData.length, 'images');
+                
+                // Check if popup is enabled for any image (use first image's popup setting)
+                const popupEnabled = imageData.length > 0 ? imageData[0].popup : true;
+                console.log('KikoSaveImage: Popup enabled:', popupEnabled);
+                
+                if (!popupEnabled) {
+                    console.log('KikoSaveImage: Popup disabled, not showing custom viewer');
+                    return;
+                }
                 
                 // Check if viewer already exists
                 let existingViewer = document.querySelector('kiko-image-viewer');

@@ -61,14 +61,12 @@ class TestKikoSaveImageLogic:
             assert filename.startswith("test_prefix_")
             assert filename.endswith("_00000.png")
 
-            # Test with subfolder
-            full_path, filename = get_save_image_path(
-                "test", 1, ".jpg", temp_dir, "subfolder"
-            )
+            # Test with empty subfolder (standard behavior)
+            full_path, filename = get_save_image_path("test", 1, ".jpg", temp_dir, "")
 
-            expected_subfolder = os.path.join(temp_dir, "subfolder")
-            assert full_path.startswith(expected_subfolder)
-            assert os.path.exists(expected_subfolder)  # Should be created
+            assert full_path.startswith(temp_dir)
+            assert filename.startswith("test_")
+            assert filename.endswith("_00001.jpg")
 
     def test_create_png_metadata(self):
         """Test PNG metadata creation"""
@@ -115,6 +113,7 @@ class TestKikoSaveImageLogic:
                 assert enhanced["format"] == "PNG"
                 assert enhanced["compress_level"] == 6
                 assert enhanced["dimensions"] == "32x32"
+                assert enhanced["popup"] is True  # Default popup value
                 assert "file_size" in enhanced
 
                 # Verify file was saved
@@ -151,7 +150,7 @@ class TestKikoSaveImageLogic:
             assert enhanced["filename"].endswith(".jpg")
 
             # Verify file exists and can be loaded
-            filepath = os.path.join(temp_dir, result["filename"])
+            filepath = os.path.join(temp_dir, results[0]["filename"])
             assert os.path.exists(filepath)
 
             saved_img = Image.open(filepath)
@@ -315,7 +314,7 @@ class TestKikoSaveImageNode:
         assert "quality" in optional
         assert "png_compress_level" in optional
         assert "webp_lossless" in optional
-        assert "subfolder" in optional
+        assert "popup" in optional
 
         # Check hidden inputs
         hidden = input_types["hidden"]
@@ -343,7 +342,7 @@ class TestKikoSaveImageNode:
         mock_enhanced = [
             {
                 "filename": "test_00001_00000.png",
-                "subfolder": "",
+                "popup": True,
                 "type": "output",
                 "format": "PNG",
                 "file_size": 1024,
@@ -385,7 +384,7 @@ class TestKikoSaveImageNode:
             quality=90,
             png_compress_level=4,
             webp_lossless=False,
-            subfolder="",
+            popup=True,
         )
 
     def test_validate_inputs_invalid_webp_lossless(self):
@@ -399,33 +398,22 @@ class TestKikoSaveImageNode:
                 quality=90,
                 png_compress_level=4,
                 webp_lossless="not_boolean",
-                subfolder="",
+                popup=True,
             )
 
-    def test_validate_inputs_invalid_subfolder(self):
-        """Test validation with invalid subfolder"""
+    def test_validate_inputs_invalid_popup(self):
+        """Test validation with invalid popup"""
         images = torch.rand(1, 32, 32, 3)
 
-        # Non-string subfolder
-        with pytest.raises(ValueError, match="subfolder must be a string"):
+        # Non-boolean popup
+        with pytest.raises(ValueError, match="popup must be a boolean"):
             self.node.validate_inputs(
                 images=images,
                 format="PNG",
                 quality=90,
                 png_compress_level=4,
                 webp_lossless=False,
-                subfolder=123,
-            )
-
-        # Dangerous subfolder paths
-        with pytest.raises(ValueError, match="subfolder cannot contain"):
-            self.node.validate_inputs(
-                images=images,
-                format="PNG",
-                quality=90,
-                png_compress_level=4,
-                webp_lossless=False,
-                subfolder="../dangerous",
+                popup="not_boolean",
             )
 
     @patch("kikotools.tools.kiko_save_image.node.process_image_batch")
