@@ -201,7 +201,7 @@ def process_image_batch(
     quality: int = 90,
     png_compress_level: int = 4,
     webp_lossless: bool = False,
-    subfolder: str = "",
+    popup: bool = True,
     prompt: Optional[Dict] = None,
     extra_pnginfo: Optional[Dict] = None,
 ) -> List[Dict[str, Any]]:
@@ -215,7 +215,7 @@ def process_image_batch(
         quality: JPEG/WebP quality (1-100)
         png_compress_level: PNG compression level (0-9)
         webp_lossless: Use lossless WebP compression
-        subfolder: Subfolder within output directory
+        popup: Enable popup windows in UI
         prompt: ComfyUI prompt data for metadata
         extra_pnginfo: Additional PNG metadata
 
@@ -251,7 +251,7 @@ def process_image_batch(
 
         # Generate save path
         filepath, preview_filename, relative_subfolder = get_save_image_path(
-            filename_prefix, batch_number, format_ext, output_dir, subfolder
+            filename_prefix, batch_number, format_ext, output_dir, ""
         )
 
         # Save with format-specific settings
@@ -276,7 +276,7 @@ def process_image_batch(
         # Store enhanced data separately
         enhanced_info = {
             "filename": preview_filename,
-            "subfolder": relative_subfolder,
+            "popup": popup,
             "type": "output",
             "format": format_type,
             "file_size": save_info["file_size"],
