@@ -7,7 +7,11 @@ import os
 import re
 from pathlib import Path
 
-from .kikotools import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+try:
+    from .kikotools import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+except ImportError:
+    # Fallback for testing environment
+    from kikotools import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 
 # Tell ComfyUI where to find our JavaScript extensions
 WEB_DIRECTORY = "./web"
