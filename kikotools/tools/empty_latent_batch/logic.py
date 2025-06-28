@@ -1,7 +1,7 @@
 """Logic for creating empty latent tensors with batch support."""
 
 import torch
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple
 
 
 def create_empty_latent_batch(
