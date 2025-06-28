@@ -83,11 +83,11 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
                         "(ignores quality setting)",
                     },
                 ),
-                "subfolder": (
-                    "STRING",
+                "popup": (
+                    "BOOLEAN",
                     {
-                        "default": "",
-                        "tooltip": "Optional subfolder within output directory",
+                        "default": True,
+                        "tooltip": "Enable popup windows when clicking on images in the viewer",
                     },
                 ),
             },
@@ -106,7 +106,7 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
         quality: int = 90,
         png_compress_level: int = 4,
         webp_lossless: bool = False,
-        subfolder: str = "",
+        popup: bool = True,
         prompt: Optional[Dict] = None,
         extra_pnginfo: Optional[Dict] = None,
     ) -> Dict[str, Any]:
@@ -120,7 +120,7 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
             quality: JPEG/WebP quality setting
             png_compress_level: PNG compression level
             webp_lossless: Use lossless WebP compression
-            subfolder: Optional subfolder for organization
+            popup: Enable popup windows when clicking on images
             prompt: ComfyUI prompt data for metadata
             extra_pnginfo: Additional PNG metadata
 
@@ -138,7 +138,7 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
                 quality=quality,
                 png_compress_level=png_compress_level,
                 webp_lossless=webp_lossless,
-                subfolder=subfolder,
+                popup=popup,
             )
 
             # Log the save operation
@@ -156,7 +156,7 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
                 quality=quality,
                 png_compress_level=png_compress_level,
                 webp_lossless=webp_lossless,
-                subfolder=subfolder,
+                popup=popup,
                 prompt=prompt,
                 extra_pnginfo=extra_pnginfo,
             )
@@ -187,7 +187,7 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
         quality: int,
         png_compress_level: int,
         webp_lossless: bool,
-        subfolder: str,
+        popup: bool,
     ) -> None:
         """
         Validate inputs specific to KikoSaveImage
@@ -198,7 +198,7 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
             quality: Quality setting
             png_compress_level: PNG compression level
             webp_lossless: WebP lossless setting
-            subfolder: Subfolder path
+            popup: Enable popup windows
 
         Raises:
             ValueError: If validation fails
@@ -212,14 +212,8 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
                 f"webp_lossless must be a boolean, got {type(webp_lossless).__name__}"
             )
 
-        if not isinstance(subfolder, str):
-            raise ValueError(
-                f"subfolder must be a string, got {type(subfolder).__name__}"
-            )
-
-        # Validate subfolder doesn't contain dangerous paths
-        if subfolder and (".." in subfolder or subfolder.startswith("/")):
-            raise ValueError("subfolder cannot contain '..' or start with '/'")
+        if not isinstance(popup, bool):
+            raise ValueError(f"popup must be a boolean, got {type(popup).__name__}")
 
 
 # Node class mappings for ComfyUI registration
