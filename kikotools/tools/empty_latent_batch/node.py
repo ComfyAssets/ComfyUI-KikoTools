@@ -1,7 +1,7 @@
 """Empty Latent Batch node for ComfyUI."""
 
 import torch
-from typing import Dict, Any, Tuple
+from typing import Dict, Tuple
 
 from ...base.base_node import ComfyAssetsBaseNode
 from .logic import (
@@ -13,9 +13,6 @@ from ..width_height_selector.logic import get_preset_dimensions
 from ..width_height_selector.presets import (
     PRESET_OPTIONS,
     PRESET_METADATA,
-    get_model_recommendation,
-    get_preset_metadata,
-    get_presets_by_model_group,
 )
 
 
