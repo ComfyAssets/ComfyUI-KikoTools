@@ -140,38 +140,46 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
                 f"scale_factor must be a number, got {type(scale_factor).__name__}"
             )
 
-        # Additional tensor validation
+        # Validate tensors using helper methods
         if image is not None:
-            if not isinstance(image, torch.Tensor):
-                raise ValueError(
-                    f"image must be a torch.Tensor, got {type(image).__name__}"
-                )
-
-            if len(image.shape) != 4:
-                raise ValueError(
-                    f"image tensor must have 4 dimensions "
-                    f"[batch, height, width, channels], got {len(image.shape)}"
-                )
+            self._validate_image_tensor(image)
 
         if latent is not None:
-            if not isinstance(latent, dict):
-                raise ValueError(f"latent must be a dict, got {type(latent).__name__}")
+            self._validate_latent_dict(latent)
 
-            if "samples" not in latent:
-                raise ValueError("latent dict must contain 'samples' key")
+    def _validate_image_tensor(self, image: torch.Tensor) -> None:
+        """Validate image tensor format"""
+        if not isinstance(image, torch.Tensor):
+            raise ValueError(
+                f"image must be a torch.Tensor, got {type(image).__name__}"
+            )
 
-            samples = latent["samples"]
-            if not isinstance(samples, torch.Tensor):
-                raise ValueError(
-                    f"latent['samples'] must be a torch.Tensor, "
-                    f"got {type(samples).__name__}"
-                )
+        if len(image.shape) != 4:
+            raise ValueError(
+                f"image tensor must have 4 dimensions "
+                f"[batch, height, width, channels], got {len(image.shape)}"
+            )
 
-            if len(samples.shape) != 4:
-                raise ValueError(
-                    f"latent samples tensor must have 4 dimensions "
-                    f"[batch, channels, height, width], got {len(samples.shape)}"
-                )
+    def _validate_latent_dict(self, latent: Dict[str, torch.Tensor]) -> None:
+        """Validate latent dictionary format"""
+        if not isinstance(latent, dict):
+            raise ValueError(f"latent must be a dict, got {type(latent).__name__}")
+
+        if "samples" not in latent:
+            raise ValueError("latent dict must contain 'samples' key")
+
+        samples = latent["samples"]
+        if not isinstance(samples, torch.Tensor):
+            raise ValueError(
+                f"latent['samples'] must be a torch.Tensor, "
+                f"got {type(samples).__name__}"
+            )
+
+        if len(samples.shape) != 4:
+            raise ValueError(
+                f"latent samples tensor must have 4 dimensions "
+                f"[batch, channels, height, width], got {len(samples.shape)}"
+            )
 
 
 # Node class mappings for ComfyUI registration
