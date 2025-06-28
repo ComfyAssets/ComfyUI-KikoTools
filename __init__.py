@@ -3,7 +3,6 @@ ComfyUI-KikoTools: Modular collection of custom ComfyUI nodes
 All nodes are grouped under the "ComfyAssets" category
 """
 
-import os
 import re
 from pathlib import Path
 
