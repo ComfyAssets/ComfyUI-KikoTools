@@ -5,11 +5,10 @@ Tests image saving functionality with multiple formats and quality settings
 
 import pytest
 import torch
-import numpy as np
 import tempfile
 import os
 from PIL import Image
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from kikotools.tools.kiko_save_image.node import KikoSaveImageNode
 from kikotools.tools.kiko_save_image.logic import (
