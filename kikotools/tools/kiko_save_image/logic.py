@@ -291,6 +291,7 @@ def process_image_batch(
         # Store enhanced data separately
         enhanced_info = {
             "filename": preview_filename,
+            "subfolder": relative_subfolder,
             "popup": popup,
             "type": "output",
             "format": format_type,
