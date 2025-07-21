@@ -46,9 +46,11 @@ def get_save_image_path(
     # This allows for directory structures like "kittybear/anime/images/kittybear"
     prefix_dir = os.path.dirname(filename_prefix)
     prefix_name = os.path.basename(filename_prefix)
-    
+
     # Sanitize only the filename part (not the directory path)
-    safe_prefix = prefix_name.replace(":", "_")  # Only sanitize problematic chars for filenames
+    safe_prefix = prefix_name.replace(
+        ":", "_"
+    )  # Only sanitize problematic chars for filenames
     safe_prefix = "".join(c for c in safe_prefix if c.isalnum() or c in "._-")
 
     # Create unique filename with timestamp to avoid conflicts
@@ -58,14 +60,14 @@ def get_save_image_path(
     # Handle subfolder and prefix directory (but not the filename part)
     path_components = []
     path_components.append(output_dir)
-    
+
     if subfolder:
         path_components.append(subfolder)
-    
+
     # Only add prefix_dir if it exists (the directory part, not the filename part)
     if prefix_dir:
         path_components.append(prefix_dir)
-    
+
     full_output_folder = os.path.join(*path_components)
 
     # Ensure directory exists
@@ -77,18 +79,18 @@ def get_save_image_path(
     # The subfolder needs to be relative to the output directory root
     # Build the relative subfolder path including prefix directory (but not filename part)
     relative_path_components = []
-    
+
     if subfolder:
         relative_path_components.append(subfolder.strip("/\\"))
-    
+
     if prefix_dir:
         relative_path_components.append(prefix_dir.strip("/\\"))
-    
+
     if relative_path_components:
         relative_subfolder = os.path.join(*relative_path_components)
     else:
         relative_subfolder = ""
-    
+
     preview_filename = filename
 
     return full_path, preview_filename, relative_subfolder
