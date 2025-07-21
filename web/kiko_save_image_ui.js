@@ -387,17 +387,21 @@ function formatFileSize(bytes) {
 }
 
 // Open image in new tab
-function openImageInTab(imagePath, enablePopup = true) {
-    console.log(`KikoSaveImage: Attempting to open image: ${imagePath}`);
+function openImageInTab(imagePath, subfolder = '', enablePopup = true) {
+    console.log(`KikoSaveImage: Attempting to open image: ${imagePath}, subfolder: ${subfolder}`);
     
     // Note: enablePopup parameter is kept for compatibility but not used
     // since popup now controls viewer visibility, not individual image clicks
     
     const basePath = window.location.origin;
     
-    // Properly encode the filename for URL
-    const encodedFilename = encodeURIComponent(imagePath);
-    const fullPath = `${basePath}/api/view?filename=${encodedFilename}&type=output`;
+    // Construct proper image URL handling subfolder
+    let fullPath;
+    if (subfolder && subfolder.trim()) {
+        fullPath = `${basePath}/api/view?filename=${encodeURIComponent(imagePath)}&subfolder=${encodeURIComponent(subfolder)}&type=output`;
+    } else {
+        fullPath = `${basePath}/api/view?filename=${encodeURIComponent(imagePath)}&type=output`;
+    }
     
     console.log(`KikoSaveImage: Opening URL: ${fullPath}`);
     
@@ -704,14 +708,20 @@ class KikoImageViewer extends HTMLElement {
             setTimeout(() => {
                 const imageData = this.imageData[index];
                 if (imageData) {
-                    openImageInTab(imageData.filename);
+                    openImageInTab(imageData.filename, imageData.subfolder || '');
                 }
             }, i * 150);
         });
     }
     
     downloadImage(imageData) {
-        const imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(imageData.filename)}&type=${imageData.type}`;
+        // Construct proper image URL handling subfolder
+        let imageUrl;
+        if (imageData.subfolder && imageData.subfolder.trim()) {
+            imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(imageData.filename)}&subfolder=${encodeURIComponent(imageData.subfolder)}&type=${imageData.type}`;
+        } else {
+            imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(imageData.filename)}&type=${imageData.type}`;
+        }
             
         // Create temporary link and trigger download
         const link = document.createElement('a');
@@ -780,7 +790,14 @@ class KikoImageViewer extends HTMLElement {
     }
     
     createImageItem(data, index) {
-        const imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(data.filename)}&type=${data.type}`;
+        // Construct proper image URL handling subfolder
+        let imageUrl;
+        if (data.subfolder && data.subfolder.trim()) {
+            // ComfyUI expects subfolder to be passed separately
+            imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(data.filename)}&subfolder=${encodeURIComponent(data.subfolder)}&type=${data.type}`;
+        } else {
+            imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(data.filename)}&type=${data.type}`;
+        }
             
         const formatClass = `kiko-format-${data.format.toLowerCase()}`;
         
@@ -836,7 +853,7 @@ class KikoImageViewer extends HTMLElement {
                     e.preventDefault();
                     e.stopPropagation();
                     console.log(`KikoImageViewer: Clicking image ${index}: ${data.filename}`);
-                    openImageInTab(data.filename);
+                    openImageInTab(data.filename, data.subfolder || '');
                 });
             }
         });
@@ -901,7 +918,7 @@ function createImagePreview(imageData) {
     
     // Add click handler to open in new tab
     container.addEventListener('click', () => {
-        openImageInTab(imageData.filename);
+        openImageInTab(imageData.filename, imageData.subfolder || '');
     });
     
     return container;
