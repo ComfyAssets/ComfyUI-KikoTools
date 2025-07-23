@@ -159,7 +159,7 @@ jobs:
           print('✓ Sampler Combo interface tests passed')
 
           # Test return types
-          assert node.RETURN_TYPES == (SAMPLERS, SCHEDULERS, 'INT', 'FLOAT')
+          assert node.RETURN_TYPES == ('SAMPLER', SCHEDULERS, 'INT', 'FLOAT')
           assert node.RETURN_NAMES == ('sampler_name', 'scheduler', 'steps', 'cfg')
           assert node.CATEGORY == 'ComfyAssets'
           print('✓ Sampler Combo return types tests passed')
