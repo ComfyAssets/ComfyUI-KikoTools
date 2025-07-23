@@ -1,13 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "kikotools"
 description = "Simple tools for ComfyUI"
-version = "1.0.5"
-license = {file = "LICENSE"}
-dependencies = ["# Development dependencies for ComfyUI-KikoTools", "# Testing framework", "pytest>=7.0.0", "pytest-cov>=4.0.0", "pytest-mock>=3.10.0", "# Code quality", "black>=23.0.0", "flake8>=6.0.0", "mypy>=1.0.0", "# Development utilities", "pre-commit>=3.0.0", "# ComfyUI testing (mock dependencies for unit tests)", "torch>=2.0.0", "numpy>=1.24.0", "pillow>=9.0.0"]
+version = "1.0.6"
+license = {text = "MIT"}
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    # Testing framework
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    # Code quality
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    # Development utilities
+    "pre-commit>=3.0.0",
+    # ComfyUI testing (mock dependencies for unit tests)
+    "torch>=2.0.0",
+    "numpy>=1.24.0",
+    "pillow>=9.0.0"
+]
 
 [project.urls]
 Repository = "https://github.com/ComfyAssets/ComfyUI-KikoTools"
 #  Used by Comfy Registry https://registry.comfy.org
+
+[tool.setuptools.packages.find]
+include = ["kikotools*"]
+exclude = ["tests*", "web*"]
 
 [tool.comfy]
 PublisherId = "kiko9"
