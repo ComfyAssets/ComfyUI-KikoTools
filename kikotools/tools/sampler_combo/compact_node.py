@@ -60,14 +60,14 @@ class SamplerComboCompactNode(ComfyAssetsBaseNode):
             }
         }
 
-    RETURN_TYPES = (SAMPLERS, SCHEDULERS, "INT", "FLOAT")
+    RETURN_TYPES = ("SAMPLER", SCHEDULERS, "INT", "FLOAT")
     RETURN_NAMES = ("sampler", "scheduler", "steps", "cfg")
     FUNCTION = "get_combo"
     CATEGORY = "ComfyAssets"
 
     def get_combo(
         self, sampler: str, sched: str, steps: int, cfg: float
-    ) -> Tuple[str, str, int, float]:
+    ) -> Tuple[object, str, int, float]:
         """
         Get compact sampler combo configuration.
 
@@ -78,17 +78,32 @@ class SamplerComboCompactNode(ComfyAssetsBaseNode):
             cfg: CFG scale value
 
         Returns:
-            Tuple of (sampler, scheduler, steps, cfg)
+            Tuple of (sampler_object, scheduler, steps, cfg)
         """
         try:
             # Use the same validation logic but with compact interface
             result = get_sampler_combo(sampler, sched, steps, cfg)
-            return result
+            # Create the sampler object
+            try:
+                import comfy.samplers
+
+                sampler_obj = comfy.samplers.sampler_object(result[0])
+            except ImportError:
+                # Return sampler name for testing
+                sampler_obj = result[0]
+            return (sampler_obj, result[1], result[2], result[3])
 
         except Exception as e:
             # Graceful fallback
             self.handle_error(f"Error in compact combo: {str(e)}")
-            return ("euler", "normal", 20, 7.0)
+            try:
+                import comfy.samplers
+
+                sampler_obj = comfy.samplers.sampler_object("euler")
+            except ImportError:
+                # Return sampler name for testing
+                sampler_obj = "euler"
+            return (sampler_obj, "normal", 20, 7.0)
 
     def __str__(self) -> str:
         """String representation of the compact node."""
