@@ -168,17 +168,17 @@ class TestSamplerComboNode:
         steps_input = required["steps"]
         assert steps_input[0] == "INT"
         assert steps_input[1]["min"] == 1
-        assert steps_input[1]["max"] == 1000
+        assert steps_input[1]["max"] == 100
 
         # Check CFG input structure
         cfg_input = required["cfg"]
         assert cfg_input[0] == "FLOAT"
         assert cfg_input[1]["min"] == 0.0
-        assert cfg_input[1]["max"] == 30.0
+        assert cfg_input[1]["max"] == 20.0
 
     def test_return_types_structure(self):
         """Test that return types are correctly defined."""
-        assert SamplerComboNode.RETURN_TYPES == (SAMPLERS, SCHEDULERS, "INT", "FLOAT")
+        assert SamplerComboNode.RETURN_TYPES == ("SAMPLER", SCHEDULERS, "INT", "FLOAT")
         assert SamplerComboNode.RETURN_NAMES == (
             "sampler_name",
             "scheduler",

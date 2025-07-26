@@ -65,14 +65,14 @@ class SamplerComboNode(ComfyAssetsBaseNode):
             }
         }
 
-    RETURN_TYPES = (SAMPLERS, SCHEDULERS, "INT", "FLOAT")
+    RETURN_TYPES = ("SAMPLER", SCHEDULERS, "INT", "FLOAT")
     RETURN_NAMES = ("sampler_name", "scheduler", "steps", "cfg")
     FUNCTION = "get_sampler_combo"
     CATEGORY = "ComfyAssets"
 
     def get_sampler_combo(
         self, sampler_name: str, scheduler: str, steps: int, cfg: float
-    ) -> Tuple[str, str, int, float]:
+    ) -> Tuple[object, str, int, float]:
         """
         Get sampler combo configuration.
 
@@ -83,7 +83,7 @@ class SamplerComboNode(ComfyAssetsBaseNode):
             cfg: CFG scale value
 
         Returns:
-            Tuple of (sampler_name, scheduler, steps, cfg)
+            Tuple of (sampler_object, scheduler, steps, cfg)
         """
         try:
             # Validate inputs
@@ -98,17 +98,33 @@ class SamplerComboNode(ComfyAssetsBaseNode):
                     f"steps={steps}, cfg={cfg}. "
                     f"Using safe defaults: euler, normal, 20 steps, CFG 7.0"
                 )
-                return ("euler", "normal", 20, 7.0)
+                try:
+                    import comfy.samplers
+
+                    sampler = comfy.samplers.sampler_object("euler")
+                except ImportError:
+                    # Return mock object for testing
+                    sampler = "euler"
+                return (sampler, "normal", 20, 7.0)
 
             # Process and return the combo
             result = get_sampler_combo(sampler_name, scheduler, steps, cfg)
+
+            # Create the sampler object
+            try:
+                import comfy.samplers
+
+                sampler = comfy.samplers.sampler_object(result[0])
+            except ImportError:
+                # Return sampler name for testing
+                sampler = result[0]
 
             self.log_info(
                 f"Configured sampler combo: {result[0]}, {result[1]}, "
                 f"{result[2]} steps, CFG {result[3]}"
             )
 
-            return result
+            return (sampler, result[1], result[2], result[3])
 
         except Exception as e:
             # Handle any unexpected errors gracefully
@@ -119,7 +135,14 @@ class SamplerComboNode(ComfyAssetsBaseNode):
                 f"{self.__class__.__name__}: Error processing sampler combo: {str(e)}. "
                 f"Using safe defaults: euler, normal, 20 steps, CFG 7.0"
             )
-            return ("euler", "normal", 20, 7.0)
+            try:
+                import comfy.samplers
+
+                sampler = comfy.samplers.sampler_object("euler")
+            except ImportError:
+                # Return mock object for testing
+                sampler = "euler"
+            return (sampler, "normal", 20, 7.0)
 
     def validate_inputs(
         self, sampler_name: str, scheduler: str, steps: int, cfg: float
