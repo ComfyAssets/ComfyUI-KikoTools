@@ -38,12 +38,12 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
                     "FLOAT",
                     {
                         "default": 2.0,
-                        "min": 1.0,
+                        "min": 0.1,
                         "max": 8.0,
                         "step": 0.1,
                         "display": "slider",
                         "tooltip": "Factor to scale the resolution by "
-                        "(e.g., 2.0 for 2x upscale)",
+                        "(e.g., 2.0 for 2x, 0.5 for half scale)",
                     },
                 ),
             },
