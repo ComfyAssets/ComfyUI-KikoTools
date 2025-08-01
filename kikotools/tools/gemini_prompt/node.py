@@ -5,7 +5,8 @@ import torch
 from ...base import ComfyAssetsBaseNode
 
 from .logic import analyze_image_with_gemini, validate_prompt_type
-from .prompts import PROMPT_OPTIONS, GEMINI_MODELS
+from .prompts import PROMPT_OPTIONS, DEFAULT_GEMINI_MODELS
+from .models import get_available_models
 
 
 class GeminiPromptNode(ComfyAssetsBaseNode):
@@ -14,11 +15,21 @@ class GeminiPromptNode(ComfyAssetsBaseNode):
     @classmethod
     def INPUT_TYPES(cls):
         """Define input types for the node."""
+        # Get available models dynamically (silent mode for initial load)
+        models, _ = get_available_models(silent=True)
+
+        # Use default if no models available
+        if not models:
+            models = DEFAULT_GEMINI_MODELS
+
+        # Find best default model
+        default_model = models[0] if models else "gemini-2.5-flash"
+
         return {
             "required": {
                 "image": ("IMAGE",),
                 "prompt_type": (PROMPT_OPTIONS, {"default": "flux"}),
-                "model": (GEMINI_MODELS, {"default": "gemini-1.5-flash"}),
+                "model": (models, {"default": default_model}),
             },
             "optional": {
                 "api_key": ("STRING", {"default": "", "multiline": False}),
@@ -73,6 +84,19 @@ Install: pip install google-generativeai
             image_np = image.cpu().numpy()
         else:
             image_np = image
+
+        # If API key is provided, try to refresh model list in background
+        if api_key:
+            try:
+                from .models import get_available_models
+
+                # Try to get fresh models with the provided API key
+                fresh_models, _ = get_available_models(api_key=api_key, silent=True)
+                if fresh_models and fresh_models != DEFAULT_GEMINI_MODELS:
+                    # Models were successfully fetched with this API key
+                    pass
+            except Exception:
+                pass
 
         # Analyze image with Gemini
         prompt, error = analyze_image_with_gemini(
