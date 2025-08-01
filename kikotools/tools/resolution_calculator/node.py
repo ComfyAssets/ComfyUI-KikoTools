@@ -42,8 +42,7 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
                         "max": 8.0,
                         "step": 0.1,
                         "display": "slider",
-                        "tooltip": "Factor to scale the resolution by "
-                        "(e.g., 2.0 for 2x, 0.5 for half scale)",
+                        "tooltip": "Factor to scale the resolution by " "(e.g., 2.0 for 2x, 0.5 for half scale)",
                     },
                 ),
             },
@@ -88,20 +87,11 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
             self.validate_inputs(scale_factor=scale_factor, image=image, latent=latent)
 
             # Log the operation
-            input_type = (
-                "IMAGE"
-                if image is not None
-                else "LATENT" if latent is not None else "NONE"
-            )
-            self.log_info(
-                f"Calculating resolution with scale_factor={scale_factor}, "
-                f"input_type={input_type}"
-            )
+            input_type = "IMAGE" if image is not None else "LATENT" if latent is not None else "NONE"
+            self.log_info(f"Calculating resolution with scale_factor={scale_factor}, " f"input_type={input_type}")
 
             # Calculate the resolution
-            width, height = calculate_resolution_from_input(
-                scale_factor=scale_factor, image=image, latent=latent
-            )
+            width, height = calculate_resolution_from_input(scale_factor=scale_factor, image=image, latent=latent)
 
             # Log the result
             self.log_info(f"Calculated resolution: {width}x{height}")
@@ -136,9 +126,7 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
 
         # Validate scale factor type
         if not isinstance(scale_factor, (int, float)):
-            raise ValueError(
-                f"scale_factor must be a number, got {type(scale_factor).__name__}"
-            )
+            raise ValueError(f"scale_factor must be a number, got {type(scale_factor).__name__}")
 
         # Validate tensors using helper methods
         if image is not None:
@@ -150,14 +138,11 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
     def _validate_image_tensor(self, image: torch.Tensor) -> None:
         """Validate image tensor format"""
         if not isinstance(image, torch.Tensor):
-            raise ValueError(
-                f"image must be a torch.Tensor, got {type(image).__name__}"
-            )
+            raise ValueError(f"image must be a torch.Tensor, got {type(image).__name__}")
 
         if len(image.shape) != 4:
             raise ValueError(
-                f"image tensor must have 4 dimensions "
-                f"[batch, height, width, channels], got {len(image.shape)}"
+                f"image tensor must have 4 dimensions " f"[batch, height, width, channels], got {len(image.shape)}"
             )
 
     def _validate_latent_dict(self, latent: Dict[str, torch.Tensor]) -> None:
@@ -170,15 +155,11 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
 
         samples = latent["samples"]
         if not isinstance(samples, torch.Tensor):
-            raise ValueError(
-                f"latent['samples'] must be a torch.Tensor, "
-                f"got {type(samples).__name__}"
-            )
+            raise ValueError(f"latent['samples'] must be a torch.Tensor, " f"got {type(samples).__name__}")
 
         if len(samples.shape) != 4:
             raise ValueError(
-                f"latent samples tensor must have 4 dimensions "
-                f"[batch, channels, height, width], got {len(samples.shape)}"
+                f"latent samples tensor must have 4 dimensions " f"[batch, channels, height, width], got {len(samples.shape)}"
             )
 
 

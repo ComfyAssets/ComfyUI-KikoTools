@@ -52,9 +52,7 @@ class TestKikoSaveImageLogic:
         """Test save path generation"""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Test basic path generation
-            full_path, filename = get_save_image_path(
-                "test_prefix", 0, ".png", temp_dir
-            )
+            full_path, filename = get_save_image_path("test_prefix", 0, ".png", temp_dir)
 
             assert full_path.startswith(temp_dir)
             assert filename.startswith("test_prefix_")
@@ -213,28 +211,20 @@ class TestKikoSaveImageLogic:
         images = torch.rand(1, 32, 32, 3)
 
         # Quality out of range
-        with pytest.raises(
-            ValueError, match="quality must be an integer between 1 and 100"
-        ):
+        with pytest.raises(ValueError, match="quality must be an integer between 1 and 100"):
             validate_save_inputs(images, "JPEG", 0, 4)
 
-        with pytest.raises(
-            ValueError, match="quality must be an integer between 1 and 100"
-        ):
+        with pytest.raises(ValueError, match="quality must be an integer between 1 and 100"):
             validate_save_inputs(images, "JPEG", 101, 4)
 
     def test_validate_save_inputs_invalid_compress_level(self):
         """Test validation with invalid PNG compression level"""
         images = torch.rand(1, 32, 32, 3)
 
-        with pytest.raises(
-            ValueError, match="png_compress_level must be an integer between 0 and 9"
-        ):
+        with pytest.raises(ValueError, match="png_compress_level must be an integer between 0 and 9"):
             validate_save_inputs(images, "PNG", 90, -1)
 
-        with pytest.raises(
-            ValueError, match="png_compress_level must be an integer between 0 and 9"
-        ):
+        with pytest.raises(ValueError, match="png_compress_level must be an integer between 0 and 9"):
             validate_save_inputs(images, "PNG", 90, 10)
 
     def test_save_image_with_format_png(self):

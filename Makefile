@@ -123,7 +123,7 @@ test-fast: $(VENV_DIR)
 test: test-fast
 	@echo "Running comprehensive test suite..."
 	@echo "✅ Test case 1: 512×512 → 1024×1024 (scale: 2.0)"
-	@echo "✅ Test case 2: 1024×1024 → 1536×1536 (scale: 1.5)"  
+	@echo "✅ Test case 2: 1024×1024 → 1536×1536 (scale: 1.5)"
 	@echo "✅ Test case 3: 832×1216 → 1272×1864 (scale: 1.53)"
 	@echo "✅ Error handling test passed"
 	@echo "🎉 All comprehensive tests passed!"

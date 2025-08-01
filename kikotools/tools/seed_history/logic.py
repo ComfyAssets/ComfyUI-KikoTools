@@ -66,9 +66,7 @@ def sanitize_seed_value(seed: Any) -> int:
         raise ValueError(f"Invalid seed value: {seed}") from e
 
 
-def create_history_entry(
-    seed: int, timestamp: Optional[float] = None
-) -> Dict[str, Any]:
+def create_history_entry(seed: int, timestamp: Optional[float] = None) -> Dict[str, Any]:
     """
     Create a standardized history entry for a seed.
 
@@ -89,9 +87,7 @@ def create_history_entry(
     }
 
 
-def filter_duplicate_seeds(
-    history: List[Dict[str, Any]], new_seed: int, dedup_window_ms: int = 500
-) -> bool:
+def filter_duplicate_seeds(history: List[Dict[str, Any]], new_seed: int, dedup_window_ms: int = 500) -> bool:
     """
     Check if a seed should be filtered as a duplicate.
 
@@ -193,9 +189,7 @@ def format_time_ago(timestamp: float) -> str:
         return f"{seconds}s ago"
 
 
-def search_history_by_seed(
-    history: List[Dict[str, Any]], seed: int
-) -> Optional[Dict[str, Any]]:
+def search_history_by_seed(history: List[Dict[str, Any]], seed: int) -> Optional[Dict[str, Any]]:
     """
     Search history for a specific seed value.
 

@@ -35,9 +35,7 @@ class ComfyAssetsBaseNode:
         """
         pass
 
-    def handle_error(
-        self, error_msg: str, exception: Optional[Exception] = None
-    ) -> None:
+    def handle_error(self, error_msg: str, exception: Optional[Exception] = None) -> None:
         """
         Standardized error handling with logging
 

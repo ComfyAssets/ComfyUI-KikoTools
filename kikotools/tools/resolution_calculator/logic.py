@@ -28,9 +28,7 @@ def extract_dimensions(
     if image is not None:
         # IMAGE tensor format: [batch, height, width, channels]
         if len(image.shape) != 4:
-            raise ValueError(
-                f"Expected IMAGE tensor with 4 dimensions, got {len(image.shape)}"
-            )
+            raise ValueError(f"Expected IMAGE tensor with 4 dimensions, got {len(image.shape)}")
 
         _, height, width, _ = image.shape
         return int(width), int(height)
@@ -42,10 +40,7 @@ def extract_dimensions(
 
         samples = latent["samples"]
         if len(samples.shape) != 4:
-            raise ValueError(
-                f"Expected LATENT samples tensor with 4 dimensions, "
-                f"got {len(samples.shape)}"
-            )
+            raise ValueError(f"Expected LATENT samples tensor with 4 dimensions, " f"got {len(samples.shape)}")
 
         _, _, latent_height, latent_width = samples.shape
 
@@ -79,9 +74,7 @@ def ensure_divisible_by_8(width: int, height: int) -> Tuple[int, int]:
     return int(new_width), int(new_height)
 
 
-def calculate_scaled_dimensions(
-    width: int, height: int, scale_factor: float
-) -> Tuple[int, int]:
+def calculate_scaled_dimensions(width: int, height: int, scale_factor: float) -> Tuple[int, int]:
     """
     Calculate new dimensions with scale factor and ensure divisible by 8
 
@@ -104,9 +97,7 @@ def calculate_scaled_dimensions(
     return ensure_divisible_by_8(new_width, new_height)
 
 
-def validate_scale_factor(
-    scale_factor: float, min_scale: float = 0.1, max_scale: float = 8.0
-) -> None:
+def validate_scale_factor(scale_factor: float, min_scale: float = 0.1, max_scale: float = 8.0) -> None:
     """
     Validate scale factor is within reasonable bounds
 
@@ -119,19 +110,13 @@ def validate_scale_factor(
         ValueError: If scale factor is out of bounds
     """
     if not isinstance(scale_factor, (int, float)):
-        raise ValueError(
-            f"Scale factor must be a number, got {type(scale_factor).__name__}"
-        )
+        raise ValueError(f"Scale factor must be a number, got {type(scale_factor).__name__}")
 
     if scale_factor < min_scale:
-        raise ValueError(
-            f"Scale factor {scale_factor} is too small (minimum: {min_scale})"
-        )
+        raise ValueError(f"Scale factor {scale_factor} is too small (minimum: {min_scale})")
 
     if scale_factor > max_scale:
-        raise ValueError(
-            f"Scale factor {scale_factor} is too large (maximum: {max_scale})"
-        )
+        raise ValueError(f"Scale factor {scale_factor} is too large (maximum: {max_scale})")
 
 
 def calculate_resolution_from_input(
@@ -161,8 +146,6 @@ def calculate_resolution_from_input(
     original_width, original_height = extract_dimensions(image=image, latent=latent)
 
     # Calculate scaled dimensions
-    new_width, new_height = calculate_scaled_dimensions(
-        original_width, original_height, scale_factor
-    )
+    new_width, new_height = calculate_scaled_dimensions(original_width, original_height, scale_factor)
 
     return new_width, new_height

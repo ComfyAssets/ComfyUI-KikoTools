@@ -147,7 +147,7 @@ Width Height Selector → EmptyLatentImage → Resolution Calculator → Upscale
 
 ### Aspect Ratio Considerations
 - **Portrait**: 3:4, 2:3, 13:19 work well for people
-- **Landscape**: 16:9, 19:13, 7:4 for scenes and objects  
+- **Landscape**: 16:9, 19:13, 7:4 for scenes and objects
 - **Square**: 1:1 for centered compositions
 - **Ultra-wide**: 21:9+ for panoramic and cinematic shots
 

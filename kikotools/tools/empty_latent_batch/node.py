@@ -36,8 +36,7 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
                 metadata = PRESET_METADATA.get(preset_name)
                 if metadata:
                     formatted_option = (
-                        f"{preset_name} - {metadata.aspect_ratio} "
-                        f"({metadata.megapixels:.1f}MP) - {metadata.model_group}"
+                        f"{preset_name} - {metadata.aspect_ratio} " f"({metadata.megapixels:.1f}MP) - {metadata.model_group}"
                     )
                     preset_options.append(formatted_option)
                 else:
@@ -86,8 +85,7 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
                         "min": 1,
                         "max": 64,
                         "step": 1,
-                        "tooltip": "Number of empty latents to create in the batch. "
-                        "Useful for batch processing workflows.",
+                        "tooltip": "Number of empty latents to create in the batch. " "Useful for batch processing workflows.",
                     },
                 ),
             }
@@ -118,9 +116,7 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
             original_preset = self._extract_preset_name(preset)
 
             # Get base dimensions from preset or custom input
-            base_width, base_height = get_preset_dimensions(
-                original_preset, width, height
-            )
+            base_width, base_height = get_preset_dimensions(original_preset, width, height)
 
             # Sanitize dimensions to ensure they meet requirements
             final_width, final_height = sanitize_dimensions(base_width, base_height)
@@ -134,23 +130,17 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
 
             # Validate final dimensions
             if not validate_dimensions(final_width, final_height):
-                self.handle_error(
-                    f"Invalid dimensions after sanitization: {final_width}×{final_height}"
-                )
+                self.handle_error(f"Invalid dimensions after sanitization: {final_width}×{final_height}")
 
             # Validate batch size
             if batch_size <= 0:
                 self.handle_error(f"Batch size must be positive, got {batch_size}")
 
             if batch_size > 64:
-                self.log_info(
-                    f"Large batch size ({batch_size}) may use significant memory"
-                )
+                self.log_info(f"Large batch size ({batch_size}) may use significant memory")
 
             # Create the empty latent batch
-            latent_dict = create_empty_latent_batch(
-                final_width, final_height, batch_size
-            )
+            latent_dict = create_empty_latent_batch(final_width, final_height, batch_size)
 
             # Log the operation
             latent_height = final_height // 8
@@ -198,9 +188,7 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
         # Default to "custom" if we can't parse it
         return "custom"
 
-    def validate_inputs(
-        self, preset: str, width: int, height: int, batch_size: int
-    ) -> bool:
+    def validate_inputs(self, preset: str, width: int, height: int, batch_size: int) -> bool:
         """
         Validate node inputs.
 
@@ -291,12 +279,7 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
 
     def __repr__(self) -> str:
         """Detailed string representation of the node."""
-        return (
-            f"EmptyLatentBatchNode("
-            f"category='{self.CATEGORY}', "
-            f"function='{self.FUNCTION}'"
-            f")"
-        )
+        return f"EmptyLatentBatchNode(" f"category='{self.CATEGORY}', " f"function='{self.FUNCTION}'" f")"
 
 
 # Node class mappings for ComfyUI registration

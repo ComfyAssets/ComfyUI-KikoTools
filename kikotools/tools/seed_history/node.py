@@ -28,8 +28,7 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
                         "default": 12345,
                         "min": 0,
                         "max": 0xFFFFFFFFFFFFFFFF,
-                        "tooltip": "Seed value for generation processes. "
-                        "History UI tracks all changes automatically.",
+                        "tooltip": "Seed value for generation processes. " "History UI tracks all changes automatically.",
                     },
                 ),
             }
@@ -57,10 +56,7 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
                 import logging
 
                 logger = logging.getLogger(__name__)
-                logger.error(
-                    f"{self.__class__.__name__}: Invalid seed value: {seed}. "
-                    f"Using fallback seed 12345."
-                )
+                logger.error(f"{self.__class__.__name__}: Invalid seed value: {seed}. " f"Using fallback seed 12345.")
                 return (12345,)
 
             clean_seed = sanitize_seed_value(seed)
@@ -72,10 +68,7 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.error(
-                f"{self.__class__.__name__}: Error processing seed: {str(e)}. "
-                f"Using fallback seed 12345."
-            )
+            logger.error(f"{self.__class__.__name__}: Error processing seed: {str(e)}. " f"Using fallback seed 12345.")
             return (12345,)
 
     def generate_new_seed(self) -> int:

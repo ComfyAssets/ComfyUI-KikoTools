@@ -36,8 +36,7 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
                 metadata = PRESET_METADATA.get(preset_name)
                 if metadata:
                     formatted_option = (
-                        f"{preset_name} - {metadata.aspect_ratio} "
-                        f"({metadata.megapixels:.1f}MP) - {metadata.model_group}"
+                        f"{preset_name} - {metadata.aspect_ratio} " f"({metadata.megapixels:.1f}MP) - {metadata.model_group}"
                     )
                     preset_options.append(formatted_option)
                 else:
@@ -104,9 +103,7 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
             original_preset = self._extract_preset_name(preset)
 
             # Get base dimensions from preset or custom input
-            final_width, final_height = get_preset_dimensions(
-                original_preset, width, height
-            )
+            final_width, final_height = get_preset_dimensions(original_preset, width, height)
 
             # Sanitize dimensions to ensure they meet ComfyUI requirements
             final_width, final_height = sanitize_dimensions(final_width, final_height)
@@ -115,8 +112,7 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
             if not validate_dimensions(final_width, final_height):
                 # This should not happen after sanitization, but handle gracefully
                 self.handle_error(
-                    f"Generated invalid dimensions: {final_width}×{final_height}. "
-                    f"Using fallback dimensions 1024×1024."
+                    f"Generated invalid dimensions: {final_width}×{final_height}. " f"Using fallback dimensions 1024×1024."
                 )
                 final_width, final_height = 1024, 1024
 
@@ -124,9 +120,7 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
 
         except Exception as e:
             # Handle any unexpected errors gracefully
-            error_msg = (
-                f"Error processing dimensions: {str(e)}. Using fallback 1024×1024."
-            )
+            error_msg = f"Error processing dimensions: {str(e)}. Using fallback 1024×1024."
             self.handle_error(error_msg)
             return (1024, 1024)
 
@@ -176,10 +170,7 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
 
         metadata = get_preset_metadata(preset)
         if metadata.width > 0:  # Valid metadata
-            return (
-                f"{preset} - {metadata.aspect_ratio} ({metadata.megapixels:.1f}MP) - "
-                f"{metadata.description}"
-            )
+            return f"{preset} - {metadata.aspect_ratio} ({metadata.megapixels:.1f}MP) - " f"{metadata.description}"
 
         return f"Unknown preset: {preset}"
 

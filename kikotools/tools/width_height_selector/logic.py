@@ -5,9 +5,7 @@ from math import gcd
 from .presets import PRESET_OPTIONS
 
 
-def get_preset_dimensions(
-    preset: str, custom_width: int, custom_height: int
-) -> Tuple[int, int]:
+def get_preset_dimensions(preset: str, custom_width: int, custom_height: int) -> Tuple[int, int]:
     """
     Get dimensions from preset name or use custom dimensions.
 
@@ -114,9 +112,7 @@ def sanitize_dimensions(width: int, height: int) -> Tuple[int, int]:
     return width, height
 
 
-def get_dimension_info(
-    preset: str, width: int, height: int, swap_enabled: bool
-) -> dict:
+def get_dimension_info(preset: str, width: int, height: int, swap_enabled: bool) -> dict:
     """
     Get comprehensive dimension information including metadata.
 
@@ -205,9 +201,7 @@ def parse_dimension_string(dimension_str: str) -> Tuple[int, int]:
         raise ValueError(f"Could not parse dimensions from {dimension_str}: {e}")
 
 
-def get_optimal_scale_factor(
-    current_width: int, current_height: int, target_width: int, target_height: int
-) -> float:
+def get_optimal_scale_factor(current_width: int, current_height: int, target_width: int, target_height: int) -> float:
     """
     Calculate optimal scale factor to get from current to target dimensions.
 
