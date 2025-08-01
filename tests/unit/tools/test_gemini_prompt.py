@@ -150,7 +150,9 @@ class TestGeminiLogic:
         # Test JPEG format
         result_jpeg = image_to_base64(image, format="JPEG")
         assert isinstance(result_jpeg, str)
-        assert result != result_jpeg  # Different formats should produce different results
+        assert (
+            result != result_jpeg
+        )  # Different formats should produce different results
 
     @patch.dict("os.environ", {"GEMINI_API_KEY": "test_key_123"})
     def test_get_api_key_from_env(self):
@@ -165,7 +167,9 @@ class TestGeminiLogic:
         """Test getting API key from config file."""
         # Setup
         mock_exists.return_value = True
-        mock_open.return_value.__enter__.return_value.read.return_value = '{"api_key": "config_key_456"}'
+        mock_open.return_value.__enter__.return_value.read.return_value = (
+            '{"api_key": "config_key_456"}'
+        )
 
         # Execute
         result = get_api_key()
@@ -198,7 +202,9 @@ class TestGeminiLogic:
         test_image = np.random.rand(64, 64, 3)
 
         # Execute
-        result, error = analyze_image_with_gemini(test_image, "flux", api_key="test_key")
+        result, error = analyze_image_with_gemini(
+            test_image, "flux", api_key="test_key"
+        )
 
         # Assert
         assert result == "A beautiful sunset over mountains"
@@ -210,7 +216,9 @@ class TestGeminiLogic:
         """Test analysis without API key."""
         test_image = np.random.rand(64, 64, 3)
 
-        with patch("kikotools.tools.gemini_prompt.logic.get_api_key", return_value=None):
+        with patch(
+            "kikotools.tools.gemini_prompt.logic.get_api_key", return_value=None
+        ):
             result, error = analyze_image_with_gemini(test_image, "flux")
 
         assert result == ""
@@ -231,7 +239,9 @@ class TestGeminiLogic:
         custom_prompt = "Analyze this image and describe the colors"
 
         # Execute
-        result, error = analyze_image_with_gemini(test_image, "flux", api_key="test_key", custom_prompt=custom_prompt)
+        result, error = analyze_image_with_gemini(
+            test_image, "flux", api_key="test_key", custom_prompt=custom_prompt
+        )
 
         # Assert
         assert result == "Custom analysis result"
