@@ -61,9 +61,7 @@ def get_api_key() -> Optional[str]:
     if not api_key:
         # Check for config file in ComfyUI directory
         try:
-            config_path = os.path.join(
-                os.path.dirname(__file__), "..", "..", "..", "gemini_config.json"
-            )
+            config_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "gemini_config.json")
             if os.path.exists(config_path):
                 with open(config_path, "r") as f:
                     config = json.load(f)
