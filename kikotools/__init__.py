@@ -9,6 +9,7 @@ from .tools.seed_history import SeedHistoryNode
 from .tools.sampler_combo import SamplerComboNode, SamplerComboCompactNode
 from .tools.empty_latent_batch import EmptyLatentBatchNode
 from .tools.kiko_save_image import KikoSaveImageNode
+from .tools.image_to_multiple_of import ImageToMultipleOfNode
 
 # ComfyUI node registration mappings
 NODE_CLASS_MAPPINGS = {
@@ -19,6 +20,7 @@ NODE_CLASS_MAPPINGS = {
     "SamplerComboCompact": SamplerComboCompactNode,
     "EmptyLatentBatch": EmptyLatentBatchNode,
     "KikoSaveImage": KikoSaveImageNode,
+    "ImageToMultipleOf": ImageToMultipleOfNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -29,6 +31,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "SamplerComboCompact": "Sampler Combo (Compact)",
     "EmptyLatentBatch": "Empty Latent Batch",
     "KikoSaveImage": "Kiko Save Image",
+    "ImageToMultipleOf": "Image to Multiple of",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
