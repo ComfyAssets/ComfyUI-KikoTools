@@ -10,6 +10,7 @@ from .tools.sampler_combo import SamplerComboNode, SamplerComboCompactNode
 from .tools.empty_latent_batch import EmptyLatentBatchNode
 from .tools.kiko_save_image import KikoSaveImageNode
 from .tools.image_to_multiple_of import ImageToMultipleOfNode
+from .tools.gemini_prompt import GeminiPromptNode
 
 # ComfyUI node registration mappings
 NODE_CLASS_MAPPINGS = {
@@ -21,6 +22,7 @@ NODE_CLASS_MAPPINGS = {
     "EmptyLatentBatch": EmptyLatentBatchNode,
     "KikoSaveImage": KikoSaveImageNode,
     "ImageToMultipleOf": ImageToMultipleOfNode,
+    "GeminiPrompt": GeminiPromptNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -32,6 +34,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "EmptyLatentBatch": "Empty Latent Batch",
     "KikoSaveImage": "Kiko Save Image",
     "ImageToMultipleOf": "Image to Multiple of",
+    "GeminiPrompt": "Gemini Prompt Engineer",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
