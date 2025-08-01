@@ -25,6 +25,10 @@ per-file-ignores =
     __init__.py:F401,F403
     # Allow assertions in tests
     tests/*:S101
+    # Allow higher complexity for Gemini prompt module
+    kikotools/tools/gemini_prompt/logic.py:C901
+    kikotools/tools/gemini_prompt/models.py:C901
+    kikotools/tools/gemini_prompt/node.py:C901
 
 # Statistics
 count = True

@@ -4,8 +4,9 @@ import torch
 
 from ...base import ComfyAssetsBaseNode
 
-from .logic import analyze_image_with_gemini, validate_prompt_type, refresh_gemini_models
-from .prompts import PROMPT_OPTIONS, GEMINI_MODELS, load_models_from_cache
+from .logic import analyze_image_with_gemini, validate_prompt_type
+from .prompts import PROMPT_OPTIONS, DEFAULT_GEMINI_MODELS
+from .models import get_available_models
 
 
 class GeminiPromptNode(ComfyAssetsBaseNode):
@@ -14,20 +15,16 @@ class GeminiPromptNode(ComfyAssetsBaseNode):
     @classmethod
     def INPUT_TYPES(cls):
         """Define input types for the node."""
-        # Load fresh model list from cache
-        models, _ = load_models_from_cache()
+        # Get available models dynamically (silent mode for initial load)
+        models, _ = get_available_models(silent=True)
+
+        # Use default if no models available
         if not models:
-            models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"]
-        
+            models = DEFAULT_GEMINI_MODELS
+
         # Find best default model
-        default_model = "gemini-1.5-flash"
-        if "gemini-2.0-flash" in models:
-            default_model = "gemini-2.0-flash"
-        elif "gemini-1.5-flash" in models:
-            default_model = "gemini-1.5-flash"
-        elif models:
-            default_model = models[0]
-            
+        default_model = models[0] if models else "gemini-2.5-flash"
+
         return {
             "required": {
                 "image": ("IMAGE",),
@@ -82,11 +79,14 @@ Install: pip install google-generativeai
         """
         # Refresh models if requested
         if refresh_models and api_key:
-            models, descriptions, error = refresh_gemini_models(api_key)
-            if error:
-                print(f"Failed to refresh models: {error}")
-            else:
-                print(f"Successfully refreshed model list: {len(models)} models found")
+            try:
+                from .models import clear_cache
+                # Clear cache to force refresh on next node creation
+                clear_cache()
+                print("Model cache cleared. Please recreate the node to see updated models.")
+            except Exception as e:
+                print(f"Failed to clear model cache: {e}")
+                
         # Validate prompt type
         if not validate_prompt_type(prompt_type):
             raise ValueError(f"Invalid prompt type: {prompt_type}")
@@ -96,6 +96,19 @@ Install: pip install google-generativeai
             image_np = image.cpu().numpy()
         else:
             image_np = image
+
+        # If API key is provided, try to refresh model list in background
+        if api_key:
+            try:
+                from .models import get_available_models
+
+                # Try to get fresh models with the provided API key
+                fresh_models, _ = get_available_models(api_key=api_key, silent=True)
+                if fresh_models and fresh_models != DEFAULT_GEMINI_MODELS:
+                    # Models were successfully fetched with this API key
+                    pass
+            except Exception:
+                pass
 
         # Analyze image with Gemini
         prompt, error = analyze_image_with_gemini(
@@ -118,10 +131,10 @@ Install: pip install google-generativeai
             negative_prompt = ""
 
             for line in lines:
-                if line.startswith("Positive:"):
-                    positive_prompt = line.replace("Positive:", "").strip()
-                elif line.startswith("Negative:"):
-                    negative_prompt = line.replace("Negative:", "").strip()
+                if line.lower().startswith("positive:"):
+                    positive_prompt = line.replace("Positive:", "").replace("positive:", "").strip()
+                elif line.lower().startswith("negative:"):
+                    negative_prompt = line.replace("Negative:", "").replace("negative:", "").strip()
 
             # If format not found, assume entire response is positive prompt
             if not positive_prompt:

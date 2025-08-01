@@ -4,8 +4,7 @@ import base64
 import io
 import json
 import os
-import time
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Tuple
 
 import numpy as np
 from PIL import Image
@@ -162,60 +161,3 @@ def validate_prompt_type(prompt_type: str) -> bool:
         True if valid, False otherwise
     """
     return prompt_type in PROMPT_TEMPLATES
-
-
-def refresh_gemini_models(api_key: Optional[str] = None) -> Tuple[List[str], Dict[str, str], Optional[str]]:
-    """Refresh the list of available Gemini models from the API.
-    
-    Args:
-        api_key: Gemini API key (optional, will try to get from env/config)
-        
-    Returns:
-        Tuple of (model_list, model_descriptions, error_message)
-    """
-    # Get API key
-    if not api_key:
-        api_key = get_api_key()
-    
-    if not api_key:
-        return [], {}, "API key not found"
-    
-    try:
-        import google.generativeai as genai
-    except ImportError:
-        return [], {}, "google-generativeai library not installed"
-    
-    try:
-        # Configure Gemini
-        genai.configure(api_key=api_key)
-        
-        # List available models
-        models = []
-        descriptions = {}
-        
-        for model in genai.list_models():
-            # Only include models that support generateContent
-            if 'generateContent' in model.supported_generation_methods:
-                model_name = model.name.replace('models/', '')
-                models.append(model_name)
-                descriptions[model_name] = model.display_name or model_name
-        
-        # Save to cache
-        cache_path = os.path.join(os.path.dirname(__file__), ".gemini_models_cache.json")
-        cache_data = {
-            "models": sorted(models),
-            "descriptions": descriptions,
-            "timestamp": time.time()
-        }
-        
-        try:
-            with open(cache_path, "w") as f:
-                json.dump(cache_data, f, indent=2)
-        except Exception as e:
-            # Continue even if cache save fails
-            pass
-        
-        return sorted(models), descriptions, None
-        
-    except Exception as e:
-        return [], {}, f"Failed to fetch models: {str(e)}"

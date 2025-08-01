@@ -159,3 +159,6 @@ test_images/
 test_outputs/
 experiments/
 .claude/
+
+# Gemini model cache
+.gemini_models_cache.json
