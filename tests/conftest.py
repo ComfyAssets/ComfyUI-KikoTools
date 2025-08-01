@@ -102,18 +102,12 @@ def assert_divisible_by_8(width: int, height: int) -> None:
     assert height % 8 == 0, f"Height {height} must be divisible by 8"
 
 
-def assert_reasonable_dimensions(
-    width: int, height: int, min_size: int = 64, max_size: int = 8192
-) -> None:
+def assert_reasonable_dimensions(width: int, height: int, min_size: int = 64, max_size: int = 8192) -> None:
     """
     Helper function to assert dimensions are within reasonable bounds
     """
-    assert (
-        min_size <= width <= max_size
-    ), f"Width {width} out of reasonable range [{min_size}, {max_size}]"
-    assert (
-        min_size <= height <= max_size
-    ), f"Height {height} out of reasonable range [{min_size}, {max_size}]"
+    assert min_size <= width <= max_size, f"Width {width} out of reasonable range [{min_size}, {max_size}]"
+    assert min_size <= height <= max_size, f"Height {height} out of reasonable range [{min_size}, {max_size}]"
 
 
 # Make helper functions available as pytest fixtures

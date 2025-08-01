@@ -37,7 +37,7 @@ Describe how the tool should process inputs and generate outputs.
 
 **Model Compatibility:**
 - [ ] SDXL optimized
-- [ ] FLUX optimized  
+- [ ] FLUX optimized
 - [ ] General purpose
 - [ ] Specific model requirements: [describe]
 

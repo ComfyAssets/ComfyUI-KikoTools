@@ -79,8 +79,7 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
                     "BOOLEAN",
                     {
                         "default": False,
-                        "tooltip": "Use lossless WebP compression "
-                        "(ignores quality setting)",
+                        "tooltip": "Use lossless WebP compression " "(ignores quality setting)",
                     },
                 ),
                 "popup": (
@@ -163,10 +162,7 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
 
             # Log results
             total_size = sum(data["file_size"] for data in enhanced_data)
-            self.log_info(
-                f"Successfully saved {len(results)} images "
-                f"(total size: {total_size / 1024:.1f} KB)"
-            )
+            self.log_info(f"Successfully saved {len(results)} images " f"(total size: {total_size / 1024:.1f} KB)")
 
             # Return UI data for ComfyUI preview (clean) + enhanced data for our JS
             return {
@@ -208,9 +204,7 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
 
         # Additional node-specific validation
         if not isinstance(webp_lossless, bool):
-            raise ValueError(
-                f"webp_lossless must be a boolean, got {type(webp_lossless).__name__}"
-            )
+            raise ValueError(f"webp_lossless must be a boolean, got {type(webp_lossless).__name__}")
 
         if not isinstance(popup, bool):
             raise ValueError(f"popup must be a boolean, got {type(popup).__name__}")

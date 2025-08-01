@@ -331,9 +331,7 @@ class TestSamplerComboIntegration:
 
             # Test that recommendations work with the node
             for scheduler in suggestions[:2]:  # Test first 2 suggestions
-                result = node.get_sampler_combo(
-                    sampler, scheduler, steps_rec["default"], cfg_rec["default"]
-                )
+                result = node.get_sampler_combo(sampler, scheduler, steps_rec["default"], cfg_rec["default"])
                 assert result[0] == sampler
                 assert result[1] == scheduler
                 assert result[2] == steps_rec["default"]

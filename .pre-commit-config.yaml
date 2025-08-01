@@ -1,0 +1,84 @@
+# Pre-commit hooks configuration for ComfyUI-KikoTools
+# This ensures code quality checks are run before each commit
+
+repos:
+  # Python code formatting with Black
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3.10
+        args: ['--line-length=127']  # Match CI configuration
+
+  # Python linting with flake8
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        args: ['--max-line-length=127', '--max-complexity=10']
+        exclude: '^tests/'
+
+  # Python type checking with mypy
+  # Note: Mypy is disabled in pre-commit due to package name issue
+  # Run manually with: mypy kikotools/
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.8.0
+  #   hooks:
+  #     - id: mypy
+  #       args: ['--config-file=mypy.ini']
+  #       files: '^kikotools/'
+  #       exclude: '^tests/'
+  #       additional_dependencies: ['types-requests']
+
+  # Security checks with bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.6
+    hooks:
+      - id: bandit
+        args: ['-ll', '-r']
+        files: '^kikotools/'
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-docstring-first
+      - id: debug-statements
+      - id: mixed-line-ending
+
+  # Check for hardcoded secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: '^(tests/|\.git/)'
+
+# Configuration for specific hooks
+default_language_version:
+  python: python3.10
+
+# Run hooks on all files by default
+fail_fast: false
+
+# Exclude patterns
+exclude: |
+  (?x)^(
+    \.git/|
+    \.mypy_cache/|
+    \.pytest_cache/|
+    __pycache__/|
+    build/|
+    dist/|
+    \.eggs/|
+    .*\.egg-info/|
+    venv/|
+    env/
+  )

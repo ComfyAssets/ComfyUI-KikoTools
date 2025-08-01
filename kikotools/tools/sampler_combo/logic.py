@@ -40,9 +40,7 @@ except ImportError:
     ]
 
 
-def validate_sampler_settings(
-    sampler_name: str, scheduler: str, steps: int, cfg: float
-) -> bool:
+def validate_sampler_settings(sampler_name: str, scheduler: str, steps: int, cfg: float) -> bool:
     """
     Validate sampler configuration settings.
 
@@ -83,9 +81,7 @@ def validate_sampler_settings(
         return False
 
 
-def get_sampler_combo(
-    sampler_name: str, scheduler: str, steps: int, cfg: float
-) -> Tuple[str, str, int, float]:
+def get_sampler_combo(sampler_name: str, scheduler: str, steps: int, cfg: float) -> Tuple[str, str, int, float]:
     """
     Process and return sampler combo settings.
 

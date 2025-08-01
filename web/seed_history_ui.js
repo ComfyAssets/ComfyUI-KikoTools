@@ -22,11 +22,11 @@ app.registerExtension({
         this.seedHistory = this.loadSeedHistory();
         this.hideTimer = null;
         this.mouseOverHistory = false;
-        
+
         // Register this node in global registry
         window.seedHistoryNodes = window.seedHistoryNodes || [];
         window.seedHistoryNodes.push(this);
-        
+
         // Create UI container
         const uiContainer = document.createElement("div");
         uiContainer.style.padding = "8px";
@@ -62,14 +62,14 @@ app.registerExtension({
         setTimeout(() => {
           this.setupSeedWidgetCallbacks();
         }, 100);
-        
+
         // Hook directly into widget value changes
         const originalOnWidgetChange = this.onWidgetChange;
         this.onWidgetChange = function(name, value, oldValue, widget) {
           if (name === "seed" && value !== oldValue) {
             this.addSeedToHistory(value);
           }
-          
+
           if (originalOnWidgetChange) {
             return originalOnWidgetChange.call(this, name, value, oldValue, widget);
           }
@@ -105,12 +105,12 @@ app.registerExtension({
             clearInterval(this.seedValueWatcher);
             this.seedValueWatcher = null;
           }
-          
+
           // Clean up deduplication tracking
           if (this.lastAddedSeed) {
             this.lastAddedSeed = null;
           }
-          
+
           // Remove from global registry
           if (window.seedHistoryNodes) {
             const index = window.seedHistoryNodes.indexOf(this);
@@ -118,7 +118,7 @@ app.registerExtension({
               window.seedHistoryNodes.splice(index, 1);
             }
           }
-          
+
           if (originalOnRemoved) {
             originalOnRemoved.call(this);
           }
@@ -220,7 +220,7 @@ app.registerExtension({
           this.mouseOverHistory = true;
           this.cancelAutoHide();
         });
-        
+
         historyDiv.addEventListener("mouseleave", () => {
           this.mouseOverHistory = false;
           this.startAutoHide();
@@ -257,38 +257,38 @@ app.registerExtension({
 
         const numSeed = typeof seed === 'string' ? parseInt(seed) : seed;
         const now = Date.now();
-        
+
         // Deduplication: prevent adding the same seed within 500ms window
         if (!this.lastAddedSeed) {
           this.lastAddedSeed = { seed: null, timestamp: 0 };
         }
-        
+
         const timeSinceLastAdd = now - this.lastAddedSeed.timestamp;
         const isSameSeed = this.lastAddedSeed.seed === numSeed;
         const isWithinDupeWindow = timeSinceLastAdd < 500; // 500ms window
-        
+
         if (isSameSeed && isWithinDupeWindow) {
           return;
         }
-        
+
         // Update deduplication tracking
         this.lastAddedSeed = { seed: numSeed, timestamp: now };
-        
+
         // Remove if already exists in history
         this.seedHistory = this.seedHistory.filter(item => item.seed !== numSeed);
-        
+
         // Add to front
         this.seedHistory.unshift({
           seed: numSeed,
           timestamp: now,
           dateString: new Date().toLocaleString()
         });
-        
+
         // Keep only last 10
         if (this.seedHistory.length > 10) {
           this.seedHistory = this.seedHistory.slice(0, 10);
         }
-        
+
         this.saveSeedHistory();
         this.refreshHistoryDisplay();
         this.startAutoHide();
@@ -297,7 +297,7 @@ app.registerExtension({
       // Generate new random seed
       nodeType.prototype.generateRandomSeed = function () {
         const newSeed = Math.floor(Math.random() * 0xFFFFFFFFFFFFFFFF);
-        
+
         const seedWidget = this.widgets?.find(w => w.name === "seed");
         if (seedWidget) {
           seedWidget.value = newSeed;
@@ -305,7 +305,7 @@ app.registerExtension({
             seedWidget.callback(newSeed, this, seedWidget);
           }
         }
-        
+
         this.addSeedToHistory(newSeed);
         this.setDirtyCanvas(true, true);
         this.showMessage(`Generated: ${newSeed}`, "success");
@@ -320,7 +320,7 @@ app.registerExtension({
             seedWidget.callback(historyItem.seed, this, seedWidget);
           }
         }
-        
+
         this.highlightHistoryEntry(index);
         this.setDirtyCanvas(true, true);
         this.startAutoHide();
@@ -340,7 +340,7 @@ app.registerExtension({
         if (!this.historyDisplay) return;
 
         if (!this.seedHistory || this.seedHistory.length === 0) {
-          this.historyDisplay.innerHTML = 
+          this.historyDisplay.innerHTML =
             '<div style="color: #888; text-align: center; padding: 15px;">No seeds tracked<br><small>Generate seeds to build history</small></div>';
           return;
         }
@@ -382,7 +382,7 @@ app.registerExtension({
 
           this.historyDisplay.appendChild(entryDiv);
         });
-        
+
         this.startAutoHide();
       };
 
@@ -420,7 +420,7 @@ app.registerExtension({
       nodeType.prototype.hideHistorySection = function () {
         if (this.historyDisplay && !this.mouseOverHistory) {
           this.historyDisplay.style.display = "none";
-          
+
           if (!this.restoreButton) {
             const restoreDiv = document.createElement("div");
             restoreDiv.style.padding = "10px";
@@ -458,12 +458,12 @@ app.registerExtension({
       nodeType.prototype.showHistorySection = function () {
         if (this.historyDisplay) {
           this.historyDisplay.style.display = "block";
-          
+
           if (this.restoreButton && this.restoreButton.parentNode) {
             this.restoreButton.parentNode.removeChild(this.restoreButton);
             this.restoreButton = null;
           }
-          
+
           this.startAutoHide();
         }
       };

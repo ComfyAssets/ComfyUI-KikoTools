@@ -40,7 +40,7 @@ The Sampler Combo is a unified ComfyUI node that combines sampler, scheduler, st
 
 ### Outputs
 - **sampler_name**: Selected sampler algorithm
-- **scheduler**: Selected scheduler algorithm  
+- **scheduler**: Selected scheduler algorithm
 - **steps**: Number of sampling steps
 - **cfg**: CFG scale value
 
@@ -75,7 +75,7 @@ The Sampler Combo is a unified ComfyUI node that combines sampler, scheduler, st
 - **linear**: Basic linear distribution
 - **sgm_uniform**: Uniform distribution
 
-### Advanced Schedulers  
+### Advanced Schedulers
 - **karras**: Karras noise schedule (recommended)
 - **exponential**: Exponential decay
 - **polyexponential**: Polynomial exponential
@@ -99,7 +99,7 @@ Steps: 15-25
 CFG: 6.0-8.0
 ```
 
-#### Quality Optimized  
+#### Quality Optimized
 ```
 Sampler: dpmpp_2m_sde or dpmpp_3m_sde
 Scheduler: karras
@@ -138,7 +138,7 @@ CFG: 7.0-8.5
 ### Basic Configuration
 ```
 sampler_name: euler
-scheduler: normal  
+scheduler: normal
 steps: 20
 cfg: 7.0
 ```
@@ -164,7 +164,7 @@ cfg: 6.5
 ### Compatibility Analysis
 The node provides real-time analysis of parameter compatibility:
 - Scheduler compatibility with selected sampler
-- Steps optimization for sampler type  
+- Steps optimization for sampler type
 - CFG scale recommendations
 - Performance impact assessment
 
@@ -200,7 +200,7 @@ The node provides real-time analysis of parameter compatibility:
 
 The Sampler Combo node outputs are compatible with all standard ComfyUI sampling nodes:
 - KSampler
-- KSamplerAdvanced  
+- KSamplerAdvanced
 - Custom sampling workflows
 - Upscaling pipelines
 - Img2img workflows

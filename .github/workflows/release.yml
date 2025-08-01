@@ -8,7 +8,7 @@ on:
 jobs:
   create-release:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
 
@@ -28,30 +28,30 @@ jobs:
         import sys
         import os
         sys.path.insert(0, os.getcwd())
-        
+
         # Run comprehensive tests before release
         from kikotools.base import ComfyAssetsBaseNode
         from kikotools.tools.resolution_calculator.logic import extract_dimensions, calculate_scaled_dimensions
         from kikotools.tools.resolution_calculator.node import ResolutionCalculatorNode
         import torch
-        
+
         print('Running pre-release validation...')
-        
+
         # Test all major functionality
         node = ResolutionCalculatorNode()
-        
+
         # Test various scenarios
         test_cases = [
             (torch.randn(1, 512, 512, 3), 2.0),
             (torch.randn(1, 1024, 1024, 3), 1.5),
             (torch.randn(1, 1216, 832, 3), 1.53),  # User scenario
         ]
-        
+
         for i, (image, scale) in enumerate(test_cases):
             width, height = node.calculate_resolution(scale, image=image)
             print(f'✓ Test case {i+1}: {image.shape[2]}×{image.shape[1]} → {width}×{height} (scale: {scale})')
             assert width % 8 == 0 and height % 8 == 0
-        
+
         print('🎉 All pre-release tests passed!')
         "
 
@@ -64,22 +64,22 @@ jobs:
       run: |
         cat > release_notes.md << 'EOF'
         ## ComfyUI-KikoTools ${{ steps.get_version.outputs.version }}
-        
+
         ### 🎉 What's New
-        
+
         #### Resolution Calculator Tool
         - **Smart Input Handling**: Works with both IMAGE and LATENT tensors
-        - **Model Optimized**: Specific optimizations for SDXL and FLUX models  
+        - **Model Optimized**: Specific optimizations for SDXL and FLUX models
         - **Constraint Enforcement**: Automatically ensures dimensions divisible by 8
         - **Flexible Scaling**: Supports scale factors from 1.0x to 8.0x
-        
+
         ### 📦 Installation
-        
+
         #### ComfyUI Manager
         1. Search for "ComfyUI-KikoTools"
         2. Click Install
         3. Restart ComfyUI
-        
+
         #### Manual Installation
         ```bash
         cd ComfyUI/custom_nodes/
@@ -87,24 +87,24 @@ jobs:
         cd ComfyUI-KikoTools
         pip install -r requirements-dev.txt
         ```
-        
+
         ### 🚀 Quick Start
-        
+
         Look for **ComfyAssets** nodes in your ComfyUI node browser!
-        
+
         ### 📊 Technical Details
-        
+
         - **Nodes**: 1 (Resolution Calculator)
         - **Test Coverage**: 100%
         - **Python Support**: 3.8+
         - **ComfyUI Compatibility**: Latest
-        
+
         ### 🐛 Bug Reports
-        
+
         Found an issue? Please report it [here](https://github.com/ComfyAssets/ComfyUI-KikoTools/issues).
-        
+
         ---
-        
+
         **Full Changelog**: https://github.com/ComfyAssets/ComfyUI-KikoTools/compare/v0.0.0...${{ steps.get_version.outputs.version }}
         EOF
 
@@ -128,14 +128,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: create-release
     if: success()
-    
+
     steps:
     - name: Community notification placeholder
       run: |
         echo "🎉 Release ${{ needs.create-release.outputs.version }} created!"
         echo "Consider posting to:"
         echo "- ComfyUI Discord"
-        echo "- Reddit r/ComfyUI"  
+        echo "- Reddit r/ComfyUI"
         echo "- ComfyUI-Manager database"
         echo ""
         echo "Release includes:"

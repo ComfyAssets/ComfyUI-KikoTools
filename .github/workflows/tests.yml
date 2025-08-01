@@ -424,24 +424,24 @@ jobs:
           # Check key files
           test -f kikotools/__init__.py || (echo "kikotools/__init__.py missing" && exit 1)
           test -f kikotools/base/base_node.py || (echo "base_node.py missing" && exit 1)
-          
+
           # Resolution Calculator files
           test -f kikotools/tools/resolution_calculator/node.py || (echo "resolution_calculator node.py missing" && exit 1)
           test -f kikotools/tools/resolution_calculator/logic.py || (echo "resolution_calculator logic.py missing" && exit 1)
-          
+
           # Width Height Selector files
           test -f kikotools/tools/width_height_selector/node.py || (echo "width_height_selector node.py missing" && exit 1)
           test -f kikotools/tools/width_height_selector/logic.py || (echo "width_height_selector logic.py missing" && exit 1)
           test -f kikotools/tools/width_height_selector/presets.py || (echo "width_height_selector presets.py missing" && exit 1)
-          
+
           # Sampler Combo files
           test -f kikotools/tools/sampler_combo/node.py || (echo "sampler_combo node.py missing" && exit 1)
           test -f kikotools/tools/sampler_combo/logic.py || (echo "sampler_combo logic.py missing" && exit 1)
-          
+
           # Seed History files
           test -f kikotools/tools/seed_history/node.py || (echo "seed_history node.py missing" && exit 1)
           test -f kikotools/tools/seed_history/logic.py || (echo "seed_history logic.py missing" && exit 1)
-          
+
           # Web files
           test -f web/width_height_swap.js || (echo "width_height_swap.js missing" && exit 1)
           test -f web/seed_history_ui.js || (echo "seed_history_ui.js missing" && exit 1)

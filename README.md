@@ -25,7 +25,7 @@ Calculate upscaled dimensions from image or latent inputs with precision.
 
 **Use Cases:**
 - Calculate target dimensions for upscaler nodes
-- Plan memory usage for large generations  
+- Plan memory usage for large generations
 - Ensure ComfyUI tensor compatibility
 - Optimize batch processing workflows
 
@@ -104,6 +104,26 @@ Enhanced image saving with format selection, quality control, and floating popup
 - **Smart UI**: Auto-hide/show, minimize/maximize, roll-up functionality
 - **Popup Toggle**: Enable/disable popup viewer per save operation
 
+#### 🤖 Gemini Prompt Engineer
+AI-powered image analysis using Google's Gemini to generate optimized prompts for various models.
+
+- **Multi-Model Support**: Generate prompts for FLUX, SDXL, Danbooru, and Video generation
+- **Smart Analysis**: Gemini analyzes composition, style, lighting, colors, and details
+- **Format-Specific Output**: FLUX artistic prompts, SDXL positive/negative pairs, Danbooru tags, Video motion descriptions
+- **Custom System Prompts**: Override templates with your own analysis instructions
+- **Flexible API Key Management**: Environment variable, config file, or direct input
+- **Visual Status Feedback**: Real-time processing indicators and error states
+- **Help Integration**: Built-in setup guide and documentation
+
+**Use Cases:**
+- Reverse-engineer prompts from reference images
+- Convert artistic descriptions between different AI model formats
+- Generate consistent style descriptions across workflows
+- Create detailed scene breakdowns for complex compositions
+- Analyze and replicate lighting/mood from existing artwork
+
+### 💾 Kiko Save Image Features
+
 **Use Cases:**
 - Quick preview and management of saved images without file browser navigation
 - Compare multiple format outputs side-by-side (PNG vs JPEG vs WebP)
@@ -157,8 +177,8 @@ Image Loader → Resolution Calculator → Upscaler
              ↘ scale_factor: 1.5    ↗
 ```
 
-**Input:** 832×1216 (SDXL portrait format)  
-**Scale:** 1.5x  
+**Input:** 832×1216 (SDXL portrait format)
+**Scale:** 1.5x
 **Output:** 1248×1824 (ready for upscaling)
 
 ### Width Height Selector Example
@@ -169,8 +189,8 @@ preset: "1920×1080"   ↘ 1920×1080      ↗
 [swap button]
 ```
 
-**Preset:** FLUX HD (1920×1080)  
-**Output:** 1920×1080 (16:9 cinematic)  
+**Preset:** FLUX HD (1920×1080)
+**Output:** 1920×1080 (16:9 cinematic)
 **Swap Button:** Click to get 1080×1920 (9:16 portrait)
 
 ### Seed History Example
@@ -181,8 +201,8 @@ Seed History → KSampler → VAE Decode → Save Image
 [History UI: 54321, 99999, 11111...]
 ```
 
-**Current Seed:** 12345  
-**History:** Auto-tracked previous seeds with timestamps  
+**Current Seed:** 12345
+**History:** Auto-tracked previous seeds with timestamps
 **Interaction:** Click any historical seed to reload instantly
 
 ### Sampler Combo Example
@@ -192,8 +212,8 @@ Sampler Combo → KSampler → VAE Decode → Save Image
 ⚙️ All Settings ↘ sampler/scheduler/steps/cfg ↗
 ```
 
-**Configuration:** euler, normal, 20 steps, CFG 7.0  
-**Output:** Complete sampling configuration in one node  
+**Configuration:** euler, normal, 20 steps, CFG 7.0
+**Output:** Complete sampling configuration in one node
 **Smart Features:** Recommendations and compatibility validation
 
 ### Empty Latent Batch Example
@@ -205,9 +225,9 @@ Empty Latent Batch → KSampler → VAE Decode → Kiko Save Image
    [swap button]
 ```
 
-**Preset:** SDXL Square (1024×1024)  
-**Batch Size:** 4 empty latents  
-**Output:** 4×4×128×128 latent tensor ready for sampling  
+**Preset:** SDXL Square (1024×1024)
+**Batch Size:** 4 empty latents
+**Output:** 4×4×128×128 latent tensor ready for sampling
 **Swap Button:** Click to switch to any available swapped preset
 
 ### Kiko Save Image Example
@@ -219,11 +239,24 @@ Generate Image → Kiko Save Image → Floating Popup Viewer
                   [popup: enabled]
 ```
 
-**Format:** WebP (efficient compression, modern format)  
-**Quality:** 85% (balanced size/quality)  
-**Popup Viewer:** Floating, draggable window with saved images  
-**Features:** Click images to open in new tabs, download individual files, batch selection  
+**Format:** WebP (efficient compression, modern format)
+**Quality:** 85% (balanced size/quality)
+**Popup Viewer:** Floating, draggable window with saved images
+**Features:** Click images to open in new tabs, download individual files, batch selection
 **Advantages:** Immediate preview without file explorer, multi-format comparison, advanced quality controls
+
+### Gemini Prompt Engineer Example
+```
+Load Image → Gemini Prompt → Text Generation Model
+🖼️ reference ↘ type: FLUX   ↘ "majestic landscape..."
+               [API key]      → FLUX model
+```
+
+**Input:** Reference image for style analysis
+**Prompt Type:** FLUX (detailed artistic prompts)
+**Output:** Optimized prompt with style, lighting, composition details
+**API:** Requires Gemini API key (free tier available)
+**Use Case:** Recreate similar style/mood from reference images
 
 ### Common Workflows
 
@@ -233,7 +266,7 @@ Generate Image → Kiko Save Image → Floating Popup Viewer
 ```json
 {
   "workflow": "Load SDXL portrait → Calculate 1.5x dimensions → Feed to upscaler",
-  "input_resolution": "832×1216", 
+  "input_resolution": "832×1216",
   "scale_factor": 1.5,
   "output_resolution": "1248×1824",
   "memory_efficient": true
@@ -248,7 +281,7 @@ Generate Image → Kiko Save Image → Floating Popup Viewer
 {
   "workflow": "Generate latents → Calculate target size → Batch upscale",
   "input_resolution": "1024×1024",
-  "scale_factor": 2.0, 
+  "scale_factor": 2.0,
   "output_resolution": "2048×2048",
   "batch_optimized": true
 }
@@ -276,7 +309,7 @@ Generate Image → Kiko Save Image → Floating Popup Viewer
 
 **Inputs:**
 - `scale_factor` (FLOAT): 1.0-8.0, default 2.0
-- `image` (IMAGE, optional): Input image tensor  
+- `image` (IMAGE, optional): Input image tensor
 - `latent` (LATENT, optional): Input latent tensor
 
 **Outputs:**
@@ -298,7 +331,7 @@ Generate Image → Kiko Save Image → Floating Popup Viewer
 
 **Outputs:**
 - `width` (INT): Selected or calculated width
-- `height` (INT): Selected or calculated height  
+- `height` (INT): Selected or calculated height
 
 **UI Features:**
 - Visual blue swap button in bottom-right corner
@@ -342,7 +375,7 @@ Generate Image → Kiko Save Image → Floating Popup Viewer
 
 **Outputs:**
 - `sampler_name` (STRING): Selected sampler algorithm
-- `scheduler` (STRING): Selected scheduler algorithm  
+- `scheduler` (STRING): Selected scheduler algorithm
 - `steps` (INT): Validated step count
 - `cfg` (FLOAT): Validated CFG scale
 
@@ -400,7 +433,7 @@ Generate Image → Kiko Save Image → Floating Popup Viewer
 
 **UI Features:**
 - Floating, draggable popup window showing saved images immediately
-- Interactive image grid with click-to-open functionality 
+- Interactive image grid with click-to-open functionality
 - Individual image download buttons with format-specific quality indicators
 - Batch selection with multi-select checkboxes for bulk operations
 - Window controls: minimize, maximize, roll-up, close, and dragging
@@ -440,6 +473,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install development dependencies
 pip install -r requirements-dev.txt
 
+# Install pre-commit hooks
+pre-commit install
+
 # Run tests
 python -c "
 import sys, os
@@ -456,13 +492,32 @@ print(f'✅ Development setup successful! Test result: {result[0]}x{result[1]}')
 
 ### Code Quality
 
-We maintain high code quality standards:
+We maintain high code quality standards with automated pre-commit hooks:
+
+#### Pre-commit Hooks
+
+Our pre-commit configuration automatically runs:
+- **Black**: Code formatting (127 char line length)
+- **Flake8**: Linting and style checks
+- **Bandit**: Security vulnerability scanning
+- **detect-secrets**: Prevents accidental secret commits
+- File checks: trailing whitespace, YAML validation, merge conflicts
+
+```bash
+# Run all pre-commit hooks manually
+pre-commit run --all-files
+
+# Update hooks to latest versions
+pre-commit autoupdate
+```
+
+#### Manual Code Quality Checks
 
 ```bash
 # Format code
 black .
 
-# Lint code  
+# Lint code
 flake8 .
 
 # Type checking
@@ -485,7 +540,7 @@ Following **Test-Driven Development (TDD)**:
 # Test structure
 tests/
 ├── unit/                    # Individual component tests
-├── integration/            # ComfyUI workflow tests  
+├── integration/            # ComfyUI workflow tests
 └── fixtures/              # Test data and workflows
 ```
 

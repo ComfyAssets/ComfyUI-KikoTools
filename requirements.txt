@@ -1,19 +1,4 @@
-# Development dependencies for ComfyUI-KikoTools
+# Runtime dependencies for ComfyUI-KikoTools
 
-# Testing framework
-pytest>=7.0.0
-pytest-cov>=4.0.0
-pytest-mock>=3.10.0
-
-# Code quality
-black>=23.0.0
-flake8>=6.0.0
-mypy>=1.0.0
-
-# Development utilities
-pre-commit>=3.0.0
-
-# ComfyUI testing (mock dependencies for unit tests)
-torch>=2.0.0
-numpy>=1.24.0
-pillow>=9.0.0
+# Gemini API integration (optional - only needed for Gemini Prompt node)
+google-generativeai>=0.3.0

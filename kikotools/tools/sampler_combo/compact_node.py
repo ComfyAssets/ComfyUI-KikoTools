@@ -65,9 +65,7 @@ class SamplerComboCompactNode(ComfyAssetsBaseNode):
     FUNCTION = "get_combo"
     CATEGORY = "ComfyAssets"
 
-    def get_combo(
-        self, sampler: str, sched: str, steps: int, cfg: float
-    ) -> Tuple[object, str, int, float]:
+    def get_combo(self, sampler: str, sched: str, steps: int, cfg: float) -> Tuple[object, str, int, float]:
         """
         Get compact sampler combo configuration.
 
