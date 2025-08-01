@@ -76,7 +76,11 @@ Install: pip install google-generativeai
 
         # Analyze image with Gemini
         prompt, error = analyze_image_with_gemini(
-            image_np, prompt_type, api_key=api_key or None, custom_prompt=custom_prompt or None, model_name=model
+            image_np,
+            prompt_type,
+            api_key=api_key or None,
+            custom_prompt=custom_prompt or None,
+            model_name=model,
         )
 
         if error:

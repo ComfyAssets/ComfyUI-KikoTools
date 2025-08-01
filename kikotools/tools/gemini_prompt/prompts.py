@@ -194,7 +194,7 @@ GEMINI_MODELS = [
 MODEL_DESCRIPTIONS = {
     "gemini-1.5-pro": "Most capable Gemini model for complex tasks",
     "gemini-1.5-flash": "Faster and cost-effective (recommended for most uses)",
-    "gemini-1.5-flash-8b": "Smaller and faster, good for simple prompts", 
+    "gemini-1.5-flash-8b": "Smaller and faster, good for simple prompts",
     "gemini-pro-vision": "Optimized for vision tasks and image analysis",
     "gemini-1.0-pro": "Previous generation, stable option",
 }
