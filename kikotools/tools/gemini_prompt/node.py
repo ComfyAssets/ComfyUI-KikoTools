@@ -4,8 +4,8 @@ import torch
 
 from ...base import ComfyAssetsBaseNode
 
-from .logic import analyze_image_with_gemini, validate_prompt_type
-from .prompts import PROMPT_OPTIONS, GEMINI_MODELS
+from .logic import analyze_image_with_gemini, validate_prompt_type, refresh_gemini_models
+from .prompts import PROMPT_OPTIONS, GEMINI_MODELS, load_models_from_cache
 
 
 class GeminiPromptNode(ComfyAssetsBaseNode):
@@ -14,11 +14,25 @@ class GeminiPromptNode(ComfyAssetsBaseNode):
     @classmethod
     def INPUT_TYPES(cls):
         """Define input types for the node."""
+        # Load fresh model list from cache
+        models, _ = load_models_from_cache()
+        if not models:
+            models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"]
+        
+        # Find best default model
+        default_model = "gemini-1.5-flash"
+        if "gemini-2.0-flash" in models:
+            default_model = "gemini-2.0-flash"
+        elif "gemini-1.5-flash" in models:
+            default_model = "gemini-1.5-flash"
+        elif models:
+            default_model = models[0]
+            
         return {
             "required": {
                 "image": ("IMAGE",),
                 "prompt_type": (PROMPT_OPTIONS, {"default": "flux"}),
-                "model": (GEMINI_MODELS, {"default": "gemini-1.5-flash"}),
+                "model": (models, {"default": default_model}),
             },
             "optional": {
                 "api_key": ("STRING", {"default": "", "multiline": False}),
@@ -30,6 +44,7 @@ class GeminiPromptNode(ComfyAssetsBaseNode):
                         "placeholder": "Optional: Enter custom system prompt instead of using templates",
                     },
                 ),
+                "refresh_models": ("BOOLEAN", {"default": False, "label_on": "Refresh", "label_off": "Skip"}),
             },
         }
 
@@ -51,7 +66,7 @@ Requires Gemini API key (set GEMINI_API_KEY env var or provide in node).
 Install: pip install google-generativeai
 """
 
-    def generate_prompt(self, image, prompt_type, model, api_key="", custom_prompt=""):
+    def generate_prompt(self, image, prompt_type, model, api_key="", custom_prompt="", refresh_models=False):
         """Generate prompt from image using Gemini.
 
         Args:
@@ -60,10 +75,18 @@ Install: pip install google-generativeai
             model: Gemini model to use
             api_key: Optional API key
             custom_prompt: Optional custom system prompt
+            refresh_models: Whether to refresh the model list
 
         Returns:
             Tuple of (prompt, negative_prompt)
         """
+        # Refresh models if requested
+        if refresh_models and api_key:
+            models, descriptions, error = refresh_gemini_models(api_key)
+            if error:
+                print(f"Failed to refresh models: {error}")
+            else:
+                print(f"Successfully refreshed model list: {len(models)} models found")
         # Validate prompt type
         if not validate_prompt_type(prompt_type):
             raise ValueError(f"Invalid prompt type: {prompt_type}")

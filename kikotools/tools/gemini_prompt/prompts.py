@@ -48,43 +48,46 @@ Example output format:
 Remember: FLUX responds well to specific artistic references, quality indicators like "highly detailed," "4K," "award-winning," and style descriptors like "trending on ArtStation" or "photorealistic."
 """
 
-SDXL_PROMPT = """You are an expert SDXL prompt engineer specializing in analyzing images and creating optimized prompts for Stable Diffusion XL models.
+SDXL_PROMPT = """You are an expert prompt engineer specializing in SDXL (Stable Diffusion XL). Your task is to generate high-quality positive and negative prompts that conform to SDXL prompt formatting standards.
 
-When analyzing an image, systematically evaluate:
+Your expertise includes:
+- Leveraging community-tested techniques (ComfyUI, A1111, InvokeAI)
+- Applying photographic theory for realism, composition, lighting
+- Following Civitai trend standards and style best practices
+- Mastering Pony Diffusion XL formatting for stylized and anime content
 
-1. **Core Subject Analysis**
-   - Primary subject with specific descriptors
-   - Pose, expression, and action
-   - Clothing and accessories details
-   - Physical characteristics
+Structure prompts in this layered, modular format:
+[Main Subject], [Pose & Camera], [Lighting & Environment], [Style & Details], [Boost Terms], [Style References]
 
-2. **Style & Medium**
-   - Artistic style and influences
-   - Medium (photography, digital art, oil painting, etc.)
-   - Specific artist references (if applicable)
-   - Visual aesthetic keywords
+For SDXL specifically:
+- Use quality boosters: 8k, RAW photo, masterpiece, ultra detailed, cinematic lighting
+- Prioritize realism and artistry
+- Excellent for portraits, landscapes, or cinematic scenes
 
-3. **Technical Specifications**
-   - Camera settings (aperture, focal length, ISO)
-   - Shot type (close-up, wide angle, portrait, etc.)
-   - Resolution and quality markers
-   - Post-processing effects
+Instructions:
 
-4. **Environment & Context**
-   - Setting and location details
-   - Props and surrounding objects
-   - Weather and environmental conditions
-   - Time period or era
+Only reply with two fields:
+Positive prompt: (Your positive prompt here)
+Negative prompt: (Your negative prompt here)
 
-Format your SDXL prompt with:
-- **Positive prompt**: Detailed description emphasizing what you want
-- **Negative prompt**: Elements to avoid (low quality, blurry, distorted, etc.)
-- Weight emphasis using (parentheses) or [brackets] for importance
-- Break into logical chunks with commas
+Do not include any commentary or explanation.
 
-Example format:
-Positive: "beautiful woman, (detailed eyes:1.2), flowing red dress, golden hour lighting, professional photography, 85mm lens, shallow depth of field, bokeh, high resolution, masterpiece"
-Negative: "low quality, blurry, distorted features, bad anatomy, poorly drawn, amateur"
+Use concise, highly descriptive language that maximizes visual richness.
+
+Follow SDXL prompt conventions: prioritize subject clarity, camera perspective, lighting, mood, style tags, and composition.
+
+Keep total token length efficient (ideally under 250 tokens).
+
+Avoid redundancy and generic filler words.
+
+Focus on crafting super high-quality prompts for stunning visual output.
+
+Example Input:
+A futuristic cyberpunk samurai standing on a neon-lit rooftop in the rain.
+
+Example Output:
+Positive prompt: cyberpunk samurai, neon-lit rooftop, dramatic rain, glowing katana, futuristic cityscape, night scene, cinematic lighting, intense expression, sleek cyber armor, atmospheric depth, ultra-detailed, masterpiece, 8k, sharp focus, trending on artstation
+Negative prompt: blurry, low quality, poorly drawn, extra limbs, bad anatomy, deformed hands, text, watermark, jpeg artifacts, duplicate, cropped, out of frame
 """
 
 DANBOORU_PROMPT = """You are a Danbooru tagging expert, specialized in analyzing images and creating precise tag sets following booru-style conventions for anime/manga artwork.
@@ -181,20 +184,43 @@ PROMPT_TEMPLATES = {
 
 PROMPT_OPTIONS = ["flux", "sdxl", "danbooru", "video"]
 
-# Available Gemini models
-GEMINI_MODELS = [
-    "gemini-1.5-pro",  # Most capable model
-    "gemini-1.5-flash",  # Fast, efficient model
-    "gemini-1.5-flash-8b",  # Smaller, faster variant
-    "gemini-pro-vision",  # Vision-optimized model
-    "gemini-1.0-pro",  # Previous generation pro model
-]
+# Available Gemini models - will be dynamically loaded from cache or API
+GEMINI_MODELS = []
+MODEL_DESCRIPTIONS = {}
 
-# Model descriptions for UI
-MODEL_DESCRIPTIONS = {
-    "gemini-1.5-pro": "Most capable Gemini model for complex tasks",
-    "gemini-1.5-flash": "Faster and cost-effective (recommended for most uses)",
-    "gemini-1.5-flash-8b": "Smaller and faster, good for simple prompts",
-    "gemini-pro-vision": "Optimized for vision tasks and image analysis",
-    "gemini-1.0-pro": "Previous generation, stable option",
-}
+def load_models_from_cache():
+    """Load models from cache file if available."""
+    import os
+    import json
+    
+    cache_path = os.path.join(os.path.dirname(__file__), ".gemini_models_cache.json")
+    
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r") as f:
+                cache_data = json.load(f)
+                return cache_data.get("models", []), cache_data.get("descriptions", {})
+        except Exception:
+            pass
+    
+    # Fallback to default models if cache not available
+    default_models = [
+        "gemini-1.5-pro",
+        "gemini-1.5-flash", 
+        "gemini-1.5-flash-8b",
+        "gemini-2.0-flash",
+        "gemini-2.5-flash",
+    ]
+    
+    default_descriptions = {
+        "gemini-1.5-pro": "Most capable Gemini 1.5 model",
+        "gemini-1.5-flash": "Fast and efficient (recommended)",
+        "gemini-1.5-flash-8b": "Smaller, faster variant",
+        "gemini-2.0-flash": "Latest Gemini 2.0 Flash model",
+        "gemini-2.5-flash": "Cutting-edge Gemini 2.5 Flash",
+    }
+    
+    return default_models, default_descriptions
+
+# Load models on module import
+GEMINI_MODELS, MODEL_DESCRIPTIONS = load_models_from_cache()
