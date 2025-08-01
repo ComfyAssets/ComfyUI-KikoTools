@@ -3,4 +3,3 @@
 from .node import ImageToMultipleOfNode
 
 __all__ = ["ImageToMultipleOfNode"]
-

@@ -2,12 +2,13 @@
 
 from typing import Tuple
 
-import torch
 import torch.nn.functional as F
 from torch import Tensor
 
 
-def calculate_dimensions_to_multiple(height: int, width: int, multiple_of: int) -> Tuple[int, int]:
+def calculate_dimensions_to_multiple(
+    height: int, width: int, multiple_of: int
+) -> Tuple[int, int]:
     """Calculate new dimensions that are multiples of the specified value.
 
     Args:
@@ -23,7 +24,9 @@ def calculate_dimensions_to_multiple(height: int, width: int, multiple_of: int) 
     return new_height, new_width
 
 
-def process_image_to_multiple_of(image: Tensor, multiple_of: int, method: str) -> Tensor:
+def process_image_to_multiple_of(
+    image: Tensor, multiple_of: int, method: str
+) -> Tensor:
     """Process image to ensure dimensions are multiples of specified value.
 
     Args:
@@ -56,4 +59,3 @@ def process_image_to_multiple_of(image: Tensor, multiple_of: int, method: str) -
         bottom = top + new_height
         right = left + new_width
         return image[:, top:bottom, left:right, :]
-

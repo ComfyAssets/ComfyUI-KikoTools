@@ -153,7 +153,9 @@ class TestImageToMultipleOfNode:
         # Test with invalid image shape
         invalid_image = torch.rand(300, 400, 3)  # Missing batch dimension
         with pytest.raises(ValueError, match="Expected image tensor with shape"):
-            node.validate_inputs(image=invalid_image, multiple_of=64, method="center crop")
+            node.validate_inputs(
+                image=invalid_image, multiple_of=64, method="center crop"
+            )
 
         # Test with negative multiple_of
         image = torch.rand(1, 300, 400, 3)
@@ -167,7 +169,9 @@ class TestImageToMultipleOfNode:
         # Test with image too small
         small_image = torch.rand(1, 30, 40, 3)
         with pytest.raises(ValueError, match="too small to be adjusted"):
-            node.validate_inputs(image=small_image, multiple_of=64, method="center crop")
+            node.validate_inputs(
+                image=small_image, multiple_of=64, method="center crop"
+            )
 
     def test_node_edge_cases(self):
         """Test edge cases."""
@@ -187,4 +191,3 @@ class TestImageToMultipleOfNode:
         image = torch.rand(1, 1024, 1024, 3)
         result = node.process(image, 256, "rescale")
         assert result[0].shape == (1, 1024, 1024, 3)
-
