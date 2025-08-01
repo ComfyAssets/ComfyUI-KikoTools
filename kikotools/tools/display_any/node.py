@@ -6,6 +6,14 @@ from ...base import ComfyAssetsBaseNode
 from .logic import format_display_value, validate_display_mode
 
 
+# Define AnyType for wildcard input matching
+class AnyType(str):
+    """A special type that matches any input type in ComfyUI."""
+
+    def __ne__(self, other):
+        return False
+
+
 class DisplayAnyNode(ComfyAssetsBaseNode):
     """Display any input value or tensor shape information.
 
@@ -19,7 +27,7 @@ class DisplayAnyNode(ComfyAssetsBaseNode):
         """Define input types for the node."""
         return {
             "required": {
-                "input": ("*"),  # Accept any type of input
+                "input": (AnyType("*"), {}),  # Accept any type of input
                 "mode": (["raw value", "tensor shape"],),
             },
         }

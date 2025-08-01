@@ -10,6 +10,28 @@ from kikotools.tools.display_any.logic import (
     get_tensor_shapes,
     validate_display_mode,
 )
+from kikotools.tools.display_any.node import AnyType
+
+
+class TestAnyType:
+    """Test cases for AnyType class."""
+
+    def test_anytype_not_equal(self):
+        """Test that AnyType is never equal to other types."""
+        any_type = AnyType("*")
+
+        # Should not be equal to any other type
+        assert not (any_type != "STRING")
+        assert not (any_type != "IMAGE")
+        assert not (any_type != "LATENT")
+        assert not (any_type != 123)
+        assert not (any_type != None)
+        assert not (any_type != ["LIST"])
+
+    def test_anytype_string_representation(self):
+        """Test string representation of AnyType."""
+        any_type = AnyType("*")
+        assert str(any_type) == "*"
 
 
 class TestDisplayAnyNode:
@@ -30,7 +52,12 @@ class TestDisplayAnyNode:
         # Check required inputs
         assert "required" in input_types
         assert "input" in input_types["required"]
-        assert input_types["required"]["input"] == ("*")
+        # Check that input is AnyType with wildcard
+        input_type = input_types["required"]["input"]
+        assert len(input_type) == 2
+        assert isinstance(input_type[0], AnyType)
+        assert str(input_type[0]) == "*"
+        assert input_type[1] == {}
         assert "mode" in input_types["required"]
         assert input_types["required"]["mode"] == (["raw value", "tensor shape"],)
 
