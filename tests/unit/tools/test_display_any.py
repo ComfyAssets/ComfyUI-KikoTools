@@ -30,7 +30,7 @@ class TestDisplayAnyNode:
         # Check required inputs
         assert "required" in input_types
         assert "input" in input_types["required"]
-        assert input_types["required"]["input"] == ("*", {})
+        assert input_types["required"]["input"] == ("*")
         assert "mode" in input_types["required"]
         assert input_types["required"]["mode"] == (["raw value", "tensor shape"],)
 

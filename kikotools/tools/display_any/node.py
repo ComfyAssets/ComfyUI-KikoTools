@@ -19,7 +19,7 @@ class DisplayAnyNode(ComfyAssetsBaseNode):
         """Define input types for the node."""
         return {
             "required": {
-                "input": ("*", {}),  # Accept any type of input
+                "input": ("*"),  # Accept any type of input
                 "mode": (["raw value", "tensor shape"],),
             },
         }
