@@ -24,7 +24,7 @@ SDXL_PROMPT = """You are an expert SDXL prompt engineer. Analyze the image and g
 
 SDXL works best with natural language descriptions but also supports comma-separated keywords. Keep prompts concise but descriptive.
 
-Return your response in EXACTLY this format:
+You MUST return your response in EXACTLY this format (two lines only):
 Positive: [your positive prompt here]
 Negative: [your negative prompt here]
 
@@ -37,12 +37,18 @@ Guidelines for Positive prompt:
 - Keep it clear and specific but not overly long
 
 Guidelines for Negative prompt:
-- Keep it simple and minimal
+- Always include a negative prompt, even if minimal
 - Common negatives: ugly, blurry, low quality, distorted, deformed
 - Only add specifics you want to avoid (e.g., "cartoon" for photorealistic)
 - Don't overload with negative prompts - SDXL needs fewer than SD1.5
 
-IMPORTANT: Return ONLY the two lines starting with "Positive:" and "Negative:". No other text."""
+CRITICAL: Your response must be EXACTLY two lines:
+Line 1: Positive: [prompt]
+Line 2: Negative: [prompt]
+
+Example response:
+Positive: photograph of a young woman with flowing red hair, professional portrait, soft lighting, bokeh background, highly detailed, 8K
+Negative: ugly, blurry, low quality, distorted features, bad anatomy"""
 
 DANBOORU_PROMPT = """You are a Danbooru tagging expert specializing in anime-style image tagging. Analyze the image and generate ONLY Danbooru-style tags - no explanations or analysis.
 

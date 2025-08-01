@@ -118,15 +118,44 @@ Install: pip install google-generativeai
             positive_prompt = ""
             negative_prompt = ""
 
-            for line in lines:
-                if line.startswith("Positive:"):
-                    positive_prompt = line.replace("Positive:", "").strip()
-                elif line.startswith("Negative:"):
-                    negative_prompt = line.replace("Negative:", "").strip()
+            # Look for positive prompt
+            for i, line in enumerate(lines):
+                if line.strip().startswith("Positive:"):
+                    # Extract everything after "Positive:"
+                    positive_prompt = line.split("Positive:", 1)[1].strip()
+                    # Check if it continues on next lines (without "Negative:")
+                    j = i + 1
+                    while j < len(lines) and not lines[j].strip().startswith(
+                        "Negative:"
+                    ):
+                        if lines[j].strip():
+                            positive_prompt += " " + lines[j].strip()
+                        j += 1
+                    break
+
+            # Look for negative prompt
+            for i, line in enumerate(lines):
+                if line.strip().startswith("Negative:"):
+                    # Extract everything after "Negative:"
+                    negative_prompt = line.split("Negative:", 1)[1].strip()
+                    # Check if it continues on next lines
+                    j = i + 1
+                    while (
+                        j < len(lines)
+                        and lines[j].strip()
+                        and not lines[j].strip().startswith("Positive:")
+                    ):
+                        negative_prompt += " " + lines[j].strip()
+                        j += 1
+                    break
 
             # If format not found, assume entire response is positive prompt
-            if not positive_prompt:
+            if not positive_prompt and not negative_prompt:
                 positive_prompt = prompt
+                negative_prompt = ""
+            elif not negative_prompt:
+                # If we found positive but no negative, provide a basic negative
+                negative_prompt = "ugly, blurry, low quality, distorted, deformed"
 
             return (positive_prompt, negative_prompt)
 
