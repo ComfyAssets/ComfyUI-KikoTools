@@ -4,7 +4,9 @@ import torch
 from typing import Dict, Tuple
 
 
-def create_empty_latent_batch(width: int, height: int, batch_size: int = 1) -> Dict[str, torch.Tensor]:
+def create_empty_latent_batch(
+    width: int, height: int, batch_size: int = 1
+) -> Dict[str, torch.Tensor]:
     """
     Create empty latent tensor with batch support.
 
@@ -28,7 +30,9 @@ def create_empty_latent_batch(width: int, height: int, batch_size: int = 1) -> D
 
     # Ensure dimensions are divisible by 8 (VAE requirement)
     if width % 8 != 0 or height % 8 != 0:
-        raise ValueError(f"Width and height must be divisible by 8, got {width}x{height}")
+        raise ValueError(
+            f"Width and height must be divisible by 8, got {width}x{height}"
+        )
 
     # Convert pixel dimensions to latent space (divide by 8)
     latent_width = width // 8

@@ -287,15 +287,21 @@ PRESET_METADATA: Dict[str, PresetMetadata] = {
 
 # Legacy compatibility - maintain old preset dictionaries
 SDXL_PRESETS: Dict[str, Tuple[int, int]] = {
-    k: (v.width, v.height) for k, v in PRESET_METADATA.items() if v.model_group == "SDXL"
+    k: (v.width, v.height)
+    for k, v in PRESET_METADATA.items()
+    if v.model_group == "SDXL"
 }
 
 FLUX_PRESETS: Dict[str, Tuple[int, int]] = {
-    k: (v.width, v.height) for k, v in PRESET_METADATA.items() if v.model_group == "FLUX"
+    k: (v.width, v.height)
+    for k, v in PRESET_METADATA.items()
+    if v.model_group == "FLUX"
 }
 
 ULTRA_WIDE_PRESETS: Dict[str, Tuple[int, int]] = {
-    k: (v.width, v.height) for k, v in PRESET_METADATA.items() if v.model_group == "Ultra-Wide"
+    k: (v.width, v.height)
+    for k, v in PRESET_METADATA.items()
+    if v.model_group == "Ultra-Wide"
 }
 
 # Combined preset options for ComfyUI dropdown
@@ -308,28 +314,78 @@ PRESET_OPTIONS: Dict[str, Tuple[int, int]] = {
 PRESET_CATEGORIES = {
     "Custom": ["custom"],
     # SDXL Categories
-    "SDXL Square": [k for k, v in PRESET_METADATA.items() if v.model_group == "SDXL" and v.category == "Square"],
-    "SDXL Portrait": [k for k, v in PRESET_METADATA.items() if v.model_group == "SDXL" and v.category == "Portrait"],
-    "SDXL Landscape": [k for k, v in PRESET_METADATA.items() if v.model_group == "SDXL" and v.category == "Landscape"],
+    "SDXL Square": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "SDXL" and v.category == "Square"
+    ],
+    "SDXL Portrait": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "SDXL" and v.category == "Portrait"
+    ],
+    "SDXL Landscape": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "SDXL" and v.category == "Landscape"
+    ],
     # FLUX Categories
-    "FLUX Square": [k for k, v in PRESET_METADATA.items() if v.model_group == "FLUX" and v.category == "Square"],
-    "FLUX Portrait": [k for k, v in PRESET_METADATA.items() if v.model_group == "FLUX" and v.category == "Portrait"],
-    "FLUX Cinematic": [k for k, v in PRESET_METADATA.items() if v.model_group == "FLUX" and v.category == "Cinematic"],
-    "FLUX Classic": [k for k, v in PRESET_METADATA.items() if v.model_group == "FLUX" and v.category == "Classic"],
-    "FLUX Photography": [k for k, v in PRESET_METADATA.items() if v.model_group == "FLUX" and v.category == "Photography"],
+    "FLUX Square": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "FLUX" and v.category == "Square"
+    ],
+    "FLUX Portrait": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "FLUX" and v.category == "Portrait"
+    ],
+    "FLUX Cinematic": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "FLUX" and v.category == "Cinematic"
+    ],
+    "FLUX Classic": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "FLUX" and v.category == "Classic"
+    ],
+    "FLUX Photography": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "FLUX" and v.category == "Photography"
+    ],
     # Ultra-Wide Categories
-    "Ultra-Wide Gaming": [k for k, v in PRESET_METADATA.items() if v.model_group == "Ultra-Wide" and v.category == "Gaming"],
+    "Ultra-Wide Gaming": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "Ultra-Wide" and v.category == "Gaming"
+    ],
     "Ultra-Wide Cinematic": [
-        k for k, v in PRESET_METADATA.items() if v.model_group == "Ultra-Wide" and v.category == "Cinematic"
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "Ultra-Wide" and v.category == "Cinematic"
     ],
     "Ultra-Wide Panoramic": [
-        k for k, v in PRESET_METADATA.items() if v.model_group == "Ultra-Wide" and v.category == "Panoramic"
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "Ultra-Wide" and v.category == "Panoramic"
     ],
-    "Ultra-Wide Mobile": [k for k, v in PRESET_METADATA.items() if v.model_group == "Ultra-Wide" and v.category == "Mobile"],
+    "Ultra-Wide Mobile": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "Ultra-Wide" and v.category == "Mobile"
+    ],
     "Ultra-Wide Vertical": [
-        k for k, v in PRESET_METADATA.items() if v.model_group == "Ultra-Wide" and v.category == "Vertical"
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "Ultra-Wide" and v.category == "Vertical"
     ],
-    "Ultra-Wide Banner": [k for k, v in PRESET_METADATA.items() if v.model_group == "Ultra-Wide" and v.category == "Banner"],
+    "Ultra-Wide Banner": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "Ultra-Wide" and v.category == "Banner"
+    ],
 }
 
 # Legacy compatibility - preset descriptions
@@ -339,7 +395,9 @@ PRESET_DESCRIPTIONS = {k: v.description for k, v in PRESET_METADATA.items()}
 MODEL_RECOMMENDATIONS = {
     "SDXL": [k for k, v in PRESET_METADATA.items() if v.model_group == "SDXL"],
     "FLUX": [k for k, v in PRESET_METADATA.items() if v.model_group == "FLUX"],
-    "Ultra-Wide": [k for k, v in PRESET_METADATA.items() if v.model_group == "Ultra-Wide"],
+    "Ultra-Wide": [
+        k for k, v in PRESET_METADATA.items() if v.model_group == "Ultra-Wide"
+    ],
 }
 
 
@@ -393,7 +451,9 @@ def validate_preset_dimensions() -> bool:
 
         # Check divisible by 8
         if width % 8 != 0 or height % 8 != 0:
-            print(f"ERROR: {preset_name} dimensions not divisible by 8: {width}×{height}")
+            print(
+                f"ERROR: {preset_name} dimensions not divisible by 8: {width}×{height}"
+            )
             return False
 
         # Check reasonable bounds
@@ -409,7 +469,9 @@ def validate_metadata_consistency() -> bool:
     """Validate metadata consistency and completeness."""
     for preset_name, metadata in PRESET_METADATA.items():
         # Verify aspect ratio calculation
-        expected_ratio, expected_decimal = calculate_aspect_ratio(metadata.width, metadata.height)
+        expected_ratio, expected_decimal = calculate_aspect_ratio(
+            metadata.width, metadata.height
+        )
         if abs(metadata.aspect_decimal - expected_decimal) > 0.001:
             print(
                 f"ERROR: {preset_name} aspect ratio mismatch: "
@@ -420,7 +482,10 @@ def validate_metadata_consistency() -> bool:
         # Verify megapixel calculation
         expected_mp = (metadata.width * metadata.height) / 1_000_000
         if abs(metadata.megapixels - expected_mp) > 0.1:
-            print(f"ERROR: {preset_name} megapixel mismatch: " f"expected {expected_mp:.2f}, got {metadata.megapixels}")
+            print(
+                f"ERROR: {preset_name} megapixel mismatch: "
+                f"expected {expected_mp:.2f}, got {metadata.megapixels}"
+            )
             return False
 
     return True
