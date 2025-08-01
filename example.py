@@ -238,9 +238,7 @@ class HFHubLoraLoader:
             if self.loaded_lora_path == lora_path:
                 lora = self.loaded_lora
             else:
-                temp = self.loaded_lora
                 self.loaded_lora = None
-                del temp
                 self.loaded_lora_path = None
 
         if lora is None:
@@ -334,11 +332,11 @@ class GlifVariable:
         string_val = f"{variable}"
         try:
             int_val = int(variable)
-        except Exception as _:
+        except Exception:
             pass
         try:
             float_val = float(variable)
-        except Exception as _:
+        except Exception:
             pass
         return (string_val, int_val, float_val)
 
