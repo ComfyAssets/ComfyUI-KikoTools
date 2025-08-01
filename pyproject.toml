@@ -42,7 +42,7 @@ Icon = "https://avatars.githubusercontent.com/u/213204677?s=200"
 includes = []
 
 [tool.black]
-line-length = 127
+line-length = 88
 target-version = ['py310']
 include = '\.pyi?$'
 extend-exclude = '''

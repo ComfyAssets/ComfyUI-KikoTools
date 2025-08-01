@@ -70,7 +70,9 @@ class SamplerComboNode(ComfyAssetsBaseNode):
     FUNCTION = "get_sampler_combo"
     CATEGORY = "ComfyAssets"
 
-    def get_sampler_combo(self, sampler_name: str, scheduler: str, steps: int, cfg: float) -> Tuple[object, str, int, float]:
+    def get_sampler_combo(
+        self, sampler_name: str, scheduler: str, steps: int, cfg: float
+    ) -> Tuple[object, str, int, float]:
         """
         Get sampler combo configuration.
 
@@ -117,7 +119,10 @@ class SamplerComboNode(ComfyAssetsBaseNode):
                 # Return sampler name for testing
                 sampler = result[0]
 
-            self.log_info(f"Configured sampler combo: {result[0]}, {result[1]}, " f"{result[2]} steps, CFG {result[3]}")
+            self.log_info(
+                f"Configured sampler combo: {result[0]}, {result[1]}, "
+                f"{result[2]} steps, CFG {result[3]}"
+            )
 
             return (sampler, result[1], result[2], result[3])
 
@@ -139,7 +144,9 @@ class SamplerComboNode(ComfyAssetsBaseNode):
                 sampler = "euler"
             return (sampler, "normal", 20, 7.0)
 
-    def validate_inputs(self, sampler_name: str, scheduler: str, steps: int, cfg: float) -> None:
+    def validate_inputs(
+        self, sampler_name: str, scheduler: str, steps: int, cfg: float
+    ) -> None:
         """
         Validate sampler combo inputs.
 
@@ -154,7 +161,8 @@ class SamplerComboNode(ComfyAssetsBaseNode):
         """
         if not validate_sampler_settings(sampler_name, scheduler, steps, cfg):
             self.handle_error(
-                f"Invalid sampler settings: sampler={sampler_name}, " f"scheduler={scheduler}, steps={steps}, cfg={cfg}"
+                f"Invalid sampler settings: sampler={sampler_name}, "
+                f"scheduler={scheduler}, steps={steps}, cfg={cfg}"
             )
 
     def get_scheduler_suggestions(self, sampler_name: str) -> list:
@@ -205,7 +213,9 @@ class SamplerComboNode(ComfyAssetsBaseNode):
             "recommendation": f"Recommended range: {min_cfg}-{max_cfg} CFG",
         }
 
-    def get_combo_analysis(self, sampler_name: str, scheduler: str, steps: int, cfg: float) -> dict:
+    def get_combo_analysis(
+        self, sampler_name: str, scheduler: str, steps: int, cfg: float
+    ) -> dict:
         """
         Analyze the sampler combo configuration and provide recommendations.
 
@@ -264,7 +274,10 @@ class SamplerComboNode(ComfyAssetsBaseNode):
 
     def __str__(self) -> str:
         """String representation of the node."""
-        return f"SamplerComboNode(samplers={len(SAMPLERS)}, " f"schedulers={len(SCHEDULERS)})"
+        return (
+            f"SamplerComboNode(samplers={len(SAMPLERS)}, "
+            f"schedulers={len(SCHEDULERS)})"
+        )
 
     def __repr__(self) -> str:
         """Detailed string representation of the node."""

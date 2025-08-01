@@ -56,9 +56,13 @@ class TestDimensionExtraction:
         with pytest.raises(ValueError, match="Either image or latent must be provided"):
             extract_dimensions()
 
-    def test_extract_dimensions_both_inputs_prefers_image(self, mock_image_tensor, mock_latent_tensor):
+    def test_extract_dimensions_both_inputs_prefers_image(
+        self, mock_image_tensor, mock_latent_tensor
+    ):
         """Test that when both inputs provided, image takes precedence"""
-        width, height = extract_dimensions(image=mock_image_tensor, latent=mock_latent_tensor)
+        width, height = extract_dimensions(
+            image=mock_image_tensor, latent=mock_latent_tensor
+        )
 
         # Should return image dimensions, not latent
         assert width == 832
@@ -89,7 +93,9 @@ class TestScaledDimensionsCalculation:
         original_width, original_height = 832, 1216
         scale_factor = 1.5
 
-        new_width, new_height = calculate_scaled_dimensions(original_width, original_height, scale_factor)
+        new_width, new_height = calculate_scaled_dimensions(
+            original_width, original_height, scale_factor
+        )
 
         # Check aspect ratio is preserved (within floating point precision)
         original_ratio = original_width / original_height
@@ -101,7 +107,9 @@ class TestScaledDimensionsCalculation:
         base_width, base_height = 1024, 1024
 
         for scale_factor in sample_scale_factors:
-            width, height = calculate_scaled_dimensions(base_width, base_height, scale_factor)
+            width, height = calculate_scaled_dimensions(
+                base_width, base_height, scale_factor
+            )
 
             expected_width = int(base_width * scale_factor)
             expected_height = int(base_height * scale_factor)
@@ -205,7 +213,9 @@ class TestResolutionCalculatorNode:
         """Test node calculation with IMAGE input"""
         node = ResolutionCalculatorNode()
 
-        width, height = node.calculate_resolution(scale_factor=2.0, image=mock_image_tensor)
+        width, height = node.calculate_resolution(
+            scale_factor=2.0, image=mock_image_tensor
+        )
 
         # Original: 832x1216, 2x scale = 1664x2432
         assert isinstance(width, int)
@@ -220,7 +230,9 @@ class TestResolutionCalculatorNode:
         """Test node calculation with LATENT input"""
         node = ResolutionCalculatorNode()
 
-        width, height = node.calculate_resolution(scale_factor=1.5, latent=mock_latent_tensor)
+        width, height = node.calculate_resolution(
+            scale_factor=1.5, latent=mock_latent_tensor
+        )
 
         # Original: 832x1216, 1.5x scale = 1248x1824
         assert isinstance(width, int)
@@ -238,12 +250,16 @@ class TestResolutionCalculatorNode:
         with pytest.raises(ValueError):
             node.calculate_resolution(scale_factor=2.0)
 
-    def test_calculate_resolution_with_various_scale_factors(self, mock_image_tensor_square, sample_scale_factors):
+    def test_calculate_resolution_with_various_scale_factors(
+        self, mock_image_tensor_square, sample_scale_factors
+    ):
         """Test calculation with various scale factors"""
         node = ResolutionCalculatorNode()
 
         for scale_factor in sample_scale_factors:
-            width, height = node.calculate_resolution(scale_factor=scale_factor, image=mock_image_tensor_square)
+            width, height = node.calculate_resolution(
+                scale_factor=scale_factor, image=mock_image_tensor_square
+            )
 
             # All results should be integers divisible by 8
             assert isinstance(width, int)

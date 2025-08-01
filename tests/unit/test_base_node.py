@@ -32,7 +32,10 @@ class TestComfyAssetsBaseNode:
                 node.handle_error("Test error message")
 
             mock_logger.error.assert_called_once()
-            assert "ComfyAssetsBaseNode: Test error message" in mock_logger.error.call_args[0][0]
+            assert (
+                "ComfyAssetsBaseNode: Test error message"
+                in mock_logger.error.call_args[0][0]
+            )
 
     def test_handle_error_with_exception_logs_exception(self):
         """Test error handling with original exception logs both messages"""
@@ -55,7 +58,10 @@ class TestComfyAssetsBaseNode:
             node.log_info("Test information")
 
             mock_logger.info.assert_called_once()
-            assert "ComfyAssetsBaseNode: Test information" in mock_logger.info.call_args[0][0]
+            assert (
+                "ComfyAssetsBaseNode: Test information"
+                in mock_logger.info.call_args[0][0]
+            )
 
     def test_get_node_info_returns_metadata(self):
         """Test get_node_info returns correct metadata"""

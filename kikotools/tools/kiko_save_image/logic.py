@@ -48,7 +48,9 @@ def get_save_image_path(
     prefix_name = os.path.basename(filename_prefix)
 
     # Sanitize only the filename part (not the directory path)
-    safe_prefix = prefix_name.replace(":", "_")  # Only sanitize problematic chars for filenames
+    safe_prefix = prefix_name.replace(
+        ":", "_"
+    )  # Only sanitize problematic chars for filenames
     safe_prefix = "".join(c for c in safe_prefix if c.isalnum() or c in "._-")
 
     # Create unique filename with timestamp to avoid conflicts
@@ -114,7 +116,9 @@ def convert_tensor_to_pil(image_tensor: torch.Tensor) -> Image.Image:
     return img
 
 
-def create_png_metadata(prompt: Optional[Dict] = None, extra_pnginfo: Optional[Dict] = None) -> Optional[PngInfo]:
+def create_png_metadata(
+    prompt: Optional[Dict] = None, extra_pnginfo: Optional[Dict] = None
+) -> Optional[PngInfo]:
     """
     Create PNG metadata with workflow information
 
@@ -242,7 +246,10 @@ def process_image_batch(
     format_extensions = {"PNG": ".png", "JPEG": ".jpg", "WEBP": ".webp"}
 
     if format_type not in format_extensions:
-        raise ValueError(f"Unsupported format: {format_type}. " f"Supported: {list(format_extensions.keys())}")
+        raise ValueError(
+            f"Unsupported format: {format_type}. "
+            f"Supported: {list(format_extensions.keys())}"
+        )
 
     format_ext = format_extensions[format_type]
 
@@ -308,7 +315,9 @@ def process_image_batch(
     return results, enhanced_data
 
 
-def validate_save_inputs(images: torch.Tensor, format_type: str, quality: int, png_compress_level: int) -> None:
+def validate_save_inputs(
+    images: torch.Tensor, format_type: str, quality: int, png_compress_level: int
+) -> None:
     """
     Validate inputs for image saving
 
@@ -326,19 +335,31 @@ def validate_save_inputs(images: torch.Tensor, format_type: str, quality: int, p
         raise ValueError(f"images must be a torch.Tensor, got {type(images).__name__}")
 
     if len(images.shape) != 4:
-        raise ValueError(f"images tensor must have 4 dimensions [batch, height, width, channels], " f"got {len(images.shape)}")
+        raise ValueError(
+            f"images tensor must have 4 dimensions [batch, height, width, channels], "
+            f"got {len(images.shape)}"
+        )
 
     # Validate format
     supported_formats = ["PNG", "JPEG", "WEBP"]
     if format_type not in supported_formats:
-        raise ValueError(f"format must be one of {supported_formats}, got {format_type}")
+        raise ValueError(
+            f"format must be one of {supported_formats}, got {format_type}"
+        )
 
     # Validate quality (for JPEG/WebP)
     if format_type in ["JPEG", "WEBP"]:
         if not isinstance(quality, int) or not (1 <= quality <= 100):
-            raise ValueError(f"quality must be an integer between 1 and 100, got {quality}")
+            raise ValueError(
+                f"quality must be an integer between 1 and 100, got {quality}"
+            )
 
     # Validate PNG compression level
     if format_type == "PNG":
-        if not isinstance(png_compress_level, int) or not (0 <= png_compress_level <= 9):
-            raise ValueError(f"png_compress_level must be an integer between 0 and 9, " f"got {png_compress_level}")
+        if not isinstance(png_compress_level, int) or not (
+            0 <= png_compress_level <= 9
+        ):
+            raise ValueError(
+                f"png_compress_level must be an integer between 0 and 9, "
+                f"got {png_compress_level}"
+            )

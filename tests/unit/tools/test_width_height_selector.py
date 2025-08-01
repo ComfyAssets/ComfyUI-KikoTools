@@ -70,7 +70,9 @@ class TestWidthHeightSelectorNode:
 
         # Test formatted preset if available
         formatted_preset = "832×1216 - 13:19 (1.0MP) - SDXL"
-        result = self.node.get_dimensions(preset=formatted_preset, width=512, height=512)
+        result = self.node.get_dimensions(
+            preset=formatted_preset, width=512, height=512
+        )
         assert result == (832, 1216)
 
     def test_sdxl_landscape_preset(self):
@@ -81,7 +83,9 @@ class TestWidthHeightSelectorNode:
 
         # Test formatted preset if available
         formatted_preset = "1216×832 - 19:13 (1.0MP) - SDXL"
-        result = self.node.get_dimensions(preset=formatted_preset, width=512, height=512)
+        result = self.node.get_dimensions(
+            preset=formatted_preset, width=512, height=512
+        )
         assert result == (1216, 832)
 
     def test_flux_preset(self):
@@ -92,7 +96,9 @@ class TestWidthHeightSelectorNode:
 
         # Test formatted preset
         formatted_preset = "1920×1080 - 16:9 (2.1MP) - FLUX"
-        result = self.node.get_dimensions(preset=formatted_preset, width=512, height=512)
+        result = self.node.get_dimensions(
+            preset=formatted_preset, width=512, height=512
+        )
         assert result == (1920, 1080)
 
     def test_ultra_wide_preset(self):
@@ -103,7 +109,9 @@ class TestWidthHeightSelectorNode:
 
         # Test formatted preset if available
         formatted_preset = "2560×1080 - 64:27 (2.8MP) - Ultra-Wide"
-        result = self.node.get_dimensions(preset=formatted_preset, width=512, height=512)
+        result = self.node.get_dimensions(
+            preset=formatted_preset, width=512, height=512
+        )
         assert result == (2560, 1080)
 
     def test_all_presets_available(self):
@@ -135,7 +143,9 @@ class TestWidthHeightSelectorNode:
     def test_invalid_preset_fallback(self):
         """Test handling of invalid preset."""
         # Should fall back to custom dimensions
-        result = self.node.get_dimensions(preset="invalid_preset", width=800, height=600)
+        result = self.node.get_dimensions(
+            preset="invalid_preset", width=800, height=600
+        )
         assert result == (800, 600)
 
 
@@ -258,14 +268,18 @@ class TestPresetDefinitions:
         for preset_dict in [SDXL_PRESETS, FLUX_PRESETS, ULTRA_WIDE_PRESETS]:
             for preset_name, (width, height) in preset_dict.items():
                 assert width % 8 == 0, f"{preset_name} width {width} not divisible by 8"
-                assert height % 8 == 0, f"{preset_name} height {height} not divisible by 8"
+                assert (
+                    height % 8 == 0
+                ), f"{preset_name} height {height} not divisible by 8"
 
     def test_preset_dimensions_within_limits(self):
         """Test that all preset dimensions are within acceptable limits."""
         for preset_dict in [SDXL_PRESETS, FLUX_PRESETS, ULTRA_WIDE_PRESETS]:
             for preset_name, (width, height) in preset_dict.items():
                 assert 64 <= width <= 8192, f"{preset_name} width {width} out of range"
-                assert 64 <= height <= 8192, f"{preset_name} height {height} out of range"
+                assert (
+                    64 <= height <= 8192
+                ), f"{preset_name} height {height} out of range"
 
 
 class TestEdgeCases:
@@ -467,7 +481,9 @@ class TestFormattedPresets:
 
         for formatted_preset, expected in test_cases:
             result = self.node._extract_preset_name(formatted_preset)
-            assert result == expected, f"Expected {expected}, got {result} for input {formatted_preset}"
+            assert (
+                result == expected
+            ), f"Expected {expected}, got {result} for input {formatted_preset}"
 
     def test_formatted_preset_dimensions(self):
         """Test that formatted presets return correct dimensions."""
@@ -509,22 +525,34 @@ class TestFormattedPresets:
     def test_formatted_preset_metadata_accuracy(self):
         """Test that formatted presets contain accurate metadata."""
         input_types = self.node.INPUT_TYPES()
-        formatted_presets = [opt for opt in input_types["required"]["preset"][0] if " - " in opt]
+        formatted_presets = [
+            opt for opt in input_types["required"]["preset"][0] if " - " in opt
+        ]
 
         for formatted_preset in formatted_presets:
             # Extract components
             parts = formatted_preset.split(" - ")
-            assert len(parts) == 3, f"Formatted preset should have 3 parts: {formatted_preset}"
+            assert (
+                len(parts) == 3
+            ), f"Formatted preset should have 3 parts: {formatted_preset}"
 
             resolution = parts[0]
             aspect_and_mp = parts[1]
             model_group = parts[2]
 
             # Verify resolution exists in metadata
-            assert resolution in PRESET_METADATA, f"Resolution {resolution} not in metadata"
+            assert (
+                resolution in PRESET_METADATA
+            ), f"Resolution {resolution} not in metadata"
 
             # Verify metadata matches format
             metadata = PRESET_METADATA[resolution]
-            assert metadata.model_group == model_group, f"Model group mismatch for {resolution}"
-            assert metadata.aspect_ratio in aspect_and_mp, f"Aspect ratio not in {aspect_and_mp}"
-            assert f"{metadata.megapixels:.1f}MP" in aspect_and_mp, f"Megapixels not in {aspect_and_mp}"
+            assert (
+                metadata.model_group == model_group
+            ), f"Model group mismatch for {resolution}"
+            assert (
+                metadata.aspect_ratio in aspect_and_mp
+            ), f"Aspect ratio not in {aspect_and_mp}"
+            assert (
+                f"{metadata.megapixels:.1f}MP" in aspect_and_mp
+            ), f"Megapixels not in {aspect_and_mp}"
