@@ -43,7 +43,7 @@ Analyzes images using Google's Gemini AI to generate optimized prompts.
 
 Supports multiple prompt formats:
 - FLUX: Detailed artistic prompts with quality markers
-- SDXL: Positive/negative prompt pairs with weight emphasis  
+- SDXL: Positive/negative prompt pairs with weight emphasis
 - Danbooru: Anime-style booru tags with underscores
 - Video: Motion and temporal descriptions for video generation
 
