@@ -29,6 +29,8 @@ Calculate upscaled dimensions from image or latent inputs with precision.
 - Ensure ComfyUI tensor compatibility
 - Optimize batch processing workflows
 
+![Resolution Calculator Example](examples/workflows/resolution_calculator_example.png)
+
 #### 📏 Width Height Selector
 Advanced preset-based dimension selection with visual swap button.
 
@@ -59,6 +61,8 @@ Advanced seed tracking with interactive history management and UI.
 - Quickly return to successful generation parameters
 - Maintain reproducibility across sessions
 - Compare results from different seeds efficiently
+
+![Seed History functionality is shown in various workflow examples]
 
 #### ⚙️ Sampler Combo
 Unified sampling configuration interface combining sampler, scheduler, steps, and CFG.
@@ -92,6 +96,8 @@ Advanced empty latent creation with preset support and batch processing capabili
 - Optimize memory usage with batch size planning
 - Quick preset-based latent generation for different aspect ratios
 
+![Empty Latent Batch Example](examples/workflows/empty_latent_batch_example.png)
+
 #### 💾 Kiko Save Image
 Enhanced image saving with format selection, quality control, and floating popup viewer.
 
@@ -103,6 +109,8 @@ Enhanced image saving with format selection, quality control, and floating popup
 - **Format-Specific Settings**: Quality indicators, file size display, compression info
 - **Smart UI**: Auto-hide/show, minimize/maximize, roll-up functionality
 - **Popup Toggle**: Enable/disable popup viewer per save operation
+
+![Kiko Save Image Example](examples/workflows/kiko_save_image_example.png)
 
 #### 📋 Display Text
 Advanced text display node with intelligent formatting and enhanced user interaction.
@@ -121,6 +129,8 @@ Advanced text display node with intelligent formatting and enhanced user interac
 - Copy prompts without manual label removal
 - View long text content with proper wrapping
 - Debug prompt generation workflows
+
+![Display Text Example](examples/workflows/display_text_example.png)
 
 #### 🤖 Gemini Prompt Engineer
 AI-powered image analysis using Google's Gemini to generate optimized prompts for various models.
@@ -143,6 +153,44 @@ AI-powered image analysis using Google's Gemini to generate optimized prompts fo
 - Create detailed scene breakdowns for complex compositions
 - Analyze and replicate lighting/mood from existing artwork
 - Access latest Gemini models including 2.0 and 2.5 versions
+
+![Gemini Prompt Example](examples/workflows/gemini_prompt_example.png)
+
+#### 🔍 Display Any
+Universal debugging node that displays any type of input value or tensor information.
+
+- **Universal Input Acceptance**: Works with any data type (tensors, strings, numbers, lists, dicts)
+- **Two Display Modes**: Raw value showing string representation, or tensor shape extraction
+- **Nested Structure Support**: Finds tensors within complex nested data structures
+- **Debugging Focus**: Essential tool for understanding data flow and tensor dimensions
+- **Clean Output**: Formatted display directly in ComfyUI interface
+
+**Use Cases:**
+- Debug tensor dimensions at any point in workflow
+- Inspect latent space data structures
+- View metadata and configuration objects
+- Track shape changes through processing nodes
+- Understand complex data types in ComfyUI
+
+![Display Any Example](examples/workflows/display_any_example.png)
+
+#### 🖼️ Image to Multiple Of
+Adjusts image dimensions to be multiples of a specified value for model compatibility.
+
+- **Dimension Adjustment**: Ensures image dimensions are multiples of specified value (e.g., 64, 128)
+- **Two Processing Methods**: Center crop for minimal loss, or rescale to fit
+- **Model Compatibility**: Essential for models requiring specific dimension constraints
+- **Flexible Multiple Values**: Support from 1 to 256 with 16-step increments
+- **Preserves Quality**: Smart processing maintains image quality
+
+**Use Cases:**
+- Prepare images for VAE encoding (multiple of 8 requirement)
+- Ensure compatibility with specific model architectures
+- Standardize dimensions across image batches
+- Fix dimension errors in complex workflows
+- Optimize for tiled processing requirements
+
+![Image to Multiple Of Example](examples/workflows/image_to_multiple_of_example.png)
 
 ### 💾 Kiko Save Image Features
 
@@ -294,6 +342,29 @@ Load Image → Gemini Prompt → Display Text → Text Generation Model
 **API:** Requires Gemini API key (free tier available)
 **Refresh:** Click button to fetch latest available models
 
+### Display Any Example
+```
+Any Node → Display Any → Debug Output
+🔍 tensor  ↘ mode: shape ↘ "[[1, 3, 512, 512]]"
+```
+
+**Input:** Any data type (image, latent, config, etc.)
+**Mode:** "raw value" or "tensor shape"
+**Output:** Formatted display of value or tensor dimensions
+**Use Case:** Debug workflows, inspect data structures
+
+### Image to Multiple Of Example
+```
+Load Image → Image to Multiple Of → VAE Encode → KSampler
+🖼️ 513×769  ↘ multiple: 64    ↘ 512×768     → latent
+              method: crop
+```
+
+**Input:** Image with arbitrary dimensions
+**Multiple Of:** 64 (common for VAE compatibility)
+**Method:** "center crop" or "rescale"
+**Output:** Adjusted image with compatible dimensions
+
 ### Common Workflows
 
 <details>
@@ -338,6 +409,8 @@ Load Image → Gemini Prompt → Display Text → Text Generation Model
 | **Kiko Save Image** | Enhanced image saving with popup viewer and multi-format support | ✅ Complete | [Docs](examples/documentation/kiko_save_image.md) |
 | **Display Text** | Advanced text display with smart prompt detection and split view | ✅ Complete | [Docs](examples/documentation/display_text.md) |
 | **Gemini Prompt Engineer** | AI-powered image analysis with dynamic model refresh | ✅ Complete | [Docs](examples/documentation/gemini_prompt.md) |
+| **Display Any** | Universal debugging tool for any data type or tensor shapes | ✅ Complete | [Docs](examples/documentation/display_any.md) |
+| **Image to Multiple Of** | Adjust image dimensions to multiples for model compatibility | ✅ Complete | [Docs](examples/documentation/image_to_multiple_of.md) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
@@ -631,7 +704,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 8 (Resolution Calculator, Width Height Selector, Seed History, Sampler Combo, Empty Latent Batch, Kiko Save Image, Display Text, Gemini Prompt Engineer)
+- **Nodes**: 10 (Resolution Calculator, Width Height Selector, Seed History, Sampler Combo, Empty Latent Batch, Kiko Save Image, Display Text, Gemini Prompt Engineer, Display Any, Image to Multiple Of)
 - **Format Support**: 3 (PNG, JPEG, WebP with advanced controls)
 - **Presets**: 26 curated resolution presets
 - **Interactive Features**: 6 (Width/Height Swap Button, Seed History UI, Empty Latent Batch Swap Button, Kiko Save Image Popup Viewer, Display Text Split View, Gemini Model Refresh)

@@ -1,0 +1,147 @@
+{
+  "id": "kiko-save-image-example",
+  "revision": 0,
+  "last_node_id": 4,
+  "last_link_id": 1,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "KikoSaveImage",
+      "pos": [
+        390,
+        80
+      ],
+      "size": [
+        400,
+        390
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "271cd020c1b2f78e7ee40c1f08e70191fed00012",
+        "Node name for S&R": "KikoSaveImage"
+      },
+      "widgets_values": [
+        "KikoSave",
+        "PNG",
+        90,
+        4,
+        false,
+        true
+      ]
+    },
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "pos": [
+        -10,
+        80
+      ],
+      "size": [
+        315,
+        314
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.47",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "MarkdownNote",
+      "pos": [
+        -10,
+        460
+      ],
+      "size": [
+        370,
+        270
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "Kiko Save Image Example\n\nEnhanced image saving with:\n- Format selection: PNG, JPEG, WebP\n- Quality controls per format\n- Floating popup viewer (draggable)\n- Batch operations support\n- File size display\n\nPopup Features:\n- Click images to open in new tab\n- Download individual or selected images\n- Minimize/maximize/roll-up controls\n- Persistent across saves\n\nTry different formats to compare file sizes!"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      1,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Kiko save Image",
+      "bounding": [
+        -110,
+        -60,
+        1020,
+        870
+      ],
+      "color": "#ffffff",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.7513148009015777,
+      "offset": [
+        648.1018911400128,
+        110.02838653698085
+      ]
+    },
+    "frontendVersion": "1.23.4",
+    "VHS_latentpreview": true,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

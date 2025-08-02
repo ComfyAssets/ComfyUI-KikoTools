@@ -41,7 +41,10 @@ class GeminiPromptNode(ComfyAssetsBaseNode):
                         "placeholder": "Optional: Enter custom system prompt instead of using templates",
                     },
                 ),
-                "refresh_models": ("BOOLEAN", {"default": False, "label_on": "Refresh", "label_off": "Skip"}),
+                "refresh_models": (
+                    "BOOLEAN",
+                    {"default": False, "label_on": "Refresh", "label_off": "Skip"},
+                ),
             },
         }
 
@@ -63,7 +66,15 @@ Requires Gemini API key (set GEMINI_API_KEY env var or provide in node).
 Install: pip install google-generativeai
 """
 
-    def generate_prompt(self, image, prompt_type, model, api_key="", custom_prompt="", refresh_models=False):
+    def generate_prompt(
+        self,
+        image,
+        prompt_type,
+        model,
+        api_key="",
+        custom_prompt="",
+        refresh_models=False,
+    ):
         """Generate prompt from image using Gemini.
 
         Args:
@@ -81,12 +92,15 @@ Install: pip install google-generativeai
         if refresh_models and api_key:
             try:
                 from .models import clear_cache
+
                 # Clear cache to force refresh on next node creation
                 clear_cache()
-                print("Model cache cleared. Please recreate the node to see updated models.")
+                print(
+                    "Model cache cleared. Please recreate the node to see updated models."
+                )
             except Exception as e:
                 print(f"Failed to clear model cache: {e}")
-                
+
         # Validate prompt type
         if not validate_prompt_type(prompt_type):
             raise ValueError(f"Invalid prompt type: {prompt_type}")
@@ -132,9 +146,13 @@ Install: pip install google-generativeai
 
             for line in lines:
                 if line.lower().startswith("positive:"):
-                    positive_prompt = line.replace("Positive:", "").replace("positive:", "").strip()
+                    positive_prompt = (
+                        line.replace("Positive:", "").replace("positive:", "").strip()
+                    )
                 elif line.lower().startswith("negative:"):
-                    negative_prompt = line.replace("Negative:", "").replace("negative:", "").strip()
+                    negative_prompt = (
+                        line.replace("Negative:", "").replace("negative:", "").strip()
+                    )
 
             # If format not found, assume entire response is positive prompt
             if not positive_prompt:
