@@ -104,6 +104,24 @@ Enhanced image saving with format selection, quality control, and floating popup
 - **Smart UI**: Auto-hide/show, minimize/maximize, roll-up functionality
 - **Popup Toggle**: Enable/disable popup viewer per save operation
 
+#### 📋 Display Text
+Advanced text display node with intelligent formatting and enhanced user interaction.
+
+- **Smart Prompt Detection**: Automatically detects positive/negative prompt pairs and displays in split view
+- **Text Wrapping**: Proper word wrapping that reflows when node is resized
+- **Scrollable Content**: Mouse wheel scrolling for long texts with visual scroll indicators
+- **Copy Functionality**: Always-visible copy button with visual feedback
+- **Split View Mode**: Automatic detection and formatting of SDXL-style prompts
+- **Responsive Design**: Content adapts to node resizing with proper text reflow
+- **Clean Formatting**: Strips prompt labels when copying for direct use
+
+**Use Cases:**
+- Display generated prompts with proper formatting
+- Compare positive and negative prompts side-by-side
+- Copy prompts without manual label removal
+- View long text content with proper wrapping
+- Debug prompt generation workflows
+
 #### 🤖 Gemini Prompt Engineer
 AI-powered image analysis using Google's Gemini to generate optimized prompts for various models.
 
@@ -114,6 +132,9 @@ AI-powered image analysis using Google's Gemini to generate optimized prompts fo
 - **Flexible API Key Management**: Environment variable, config file, or direct input
 - **Visual Status Feedback**: Real-time processing indicators and error states
 - **Help Integration**: Built-in setup guide and documentation
+- **Dynamic Model Refresh**: Fetch latest Gemini models with refresh button
+- **Model Caching**: Persistent model list storage for offline access
+- **Enhanced SDXL Prompts**: Improved formatting with layered structure and quality boosters
 
 **Use Cases:**
 - Reverse-engineer prompts from reference images
@@ -121,6 +142,7 @@ AI-powered image analysis using Google's Gemini to generate optimized prompts fo
 - Generate consistent style descriptions across workflows
 - Create detailed scene breakdowns for complex compositions
 - Analyze and replicate lighting/mood from existing artwork
+- Access latest Gemini models including 2.0 and 2.5 versions
 
 ### 💾 Kiko Save Image Features
 
@@ -245,18 +267,32 @@ Generate Image → Kiko Save Image → Floating Popup Viewer
 **Features:** Click images to open in new tabs, download individual files, batch selection
 **Advantages:** Immediate preview without file explorer, multi-format comparison, advanced quality controls
 
+### Display Text Example
+
+```
+Gemini Prompt → Display Text → Copy to Clipboard
+📋 SDXL prompt ↘ auto-split  ↘ [📋 Positive] [📋 Negative]
+                view          → formatted display
+```
+
+**Input:** Text with "Positive prompt:" and "Negative prompt:" sections
+**Output:** Split view with individual copy buttons
+**Features:** Text wrapping, scrolling, responsive resizing
+**Smart Detection:** Automatically formats SDXL-style prompts
+
 ### Gemini Prompt Engineer Example
 ```
-Load Image → Gemini Prompt → Text Generation Model
-🖼️ reference ↘ type: FLUX   ↘ "majestic landscape..."
-               [API key]      → FLUX model
+Load Image → Gemini Prompt → Display Text → Text Generation Model
+🖼️ reference ↘ type: SDXL   ↘ split view  ↘ "detailed portrait..."
+               [Refresh Models]             → SDXL model
 ```
 
 **Input:** Reference image for style analysis
-**Prompt Type:** FLUX (detailed artistic prompts)
-**Output:** Optimized prompt with style, lighting, composition details
+**Prompt Type:** SDXL (positive/negative pairs with layered structure)
+**Model Selection:** Dynamic list with latest Gemini models (2.0, 2.5)
+**Output:** Optimized prompts following community best practices
 **API:** Requires Gemini API key (free tier available)
-**Use Case:** Recreate similar style/mood from reference images
+**Refresh:** Click button to fetch latest available models
 
 ### Common Workflows
 
@@ -300,6 +336,8 @@ Load Image → Gemini Prompt → Text Generation Model
 | **Sampler Combo** | Unified sampling configuration with smart recommendations | ✅ Complete | [Docs](examples/documentation/sampler_combo.md) |
 | **Empty Latent Batch** | Create empty latent batches with preset support | ✅ Complete | [Docs](examples/documentation/empty_latent_batch.md) |
 | **Kiko Save Image** | Enhanced image saving with popup viewer and multi-format support | ✅ Complete | [Docs](examples/documentation/kiko_save_image.md) |
+| **Display Text** | Advanced text display with smart prompt detection and split view | ✅ Complete | [Docs](examples/documentation/display_text.md) |
+| **Gemini Prompt Engineer** | AI-powered image analysis with dynamic model refresh | ✅ Complete | [Docs](examples/documentation/gemini_prompt.md) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
@@ -593,14 +631,15 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 6 (Resolution Calculator, Width Height Selector, Seed History, Sampler Combo, Empty Latent Batch, Kiko Save Image)
+- **Nodes**: 8 (Resolution Calculator, Width Height Selector, Seed History, Sampler Combo, Empty Latent Batch, Kiko Save Image, Display Text, Gemini Prompt Engineer)
 - **Format Support**: 3 (PNG, JPEG, WebP with advanced controls)
 - **Presets**: 26 curated resolution presets
-- **Interactive Features**: 4 (Width/Height Swap Button, Seed History UI, Empty Latent Batch Swap Button, Kiko Save Image Popup Viewer)
+- **Interactive Features**: 6 (Width/Height Swap Button, Seed History UI, Empty Latent Batch Swap Button, Kiko Save Image Popup Viewer, Display Text Split View, Gemini Model Refresh)
+- **AI Integration**: Gemini API with 40+ model support
 - **Test Coverage**: 100% (200+ comprehensive tests)
 - **Python Version**: 3.8+
 - **ComfyUI Compatibility**: Latest
-- **Dependencies**: Minimal (PyTorch, NumPy, Pillow)
+- **Dependencies**: Minimal (PyTorch, NumPy, Pillow, google-generativeai for Gemini)
 
 ---
 

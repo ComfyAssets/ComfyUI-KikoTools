@@ -26,6 +26,12 @@ app.registerExtension({
                 // Style the button
                 helpButton.serialize = false;
                 
+                // Add refresh models button
+                const refreshButton = this.addWidget("button", "Refresh Model List", null, () => {
+                    this.refreshModelList();
+                });
+                refreshButton.serialize = false;
+                
                 // Add status indicator
                 this.status = this.addWidget("text", "status", "Ready", () => {}, {
                     serialize: false
@@ -92,6 +98,28 @@ app.registerExtension({
             nodeType.prototype.updateCustomPromptVisibility = function() {
                 // You could implement logic here to show/hide custom prompt based on selection
                 // For now, it's always visible but this method provides extensibility
+            };
+            
+            // Add method to refresh model list
+            nodeType.prototype.refreshModelList = function() {
+                if (this.status) {
+                    this.status.value = "Refreshing models...";
+                }
+                
+                // Set the refresh_models flag
+                const refreshWidget = this.widgets.find(w => w.name === "refresh_models");
+                if (refreshWidget) {
+                    refreshWidget.value = true;
+                }
+                
+                // Show message
+                alert("Model list will refresh on next execution. Make sure API key is set and run the node.");
+                
+                if (this.status) {
+                    setTimeout(() => {
+                        this.status.value = "Ready - Run node to refresh";
+                    }, 2000);
+                }
             };
             
             // Override execute to show status

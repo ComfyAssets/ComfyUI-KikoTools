@@ -20,29 +20,47 @@ IMPORTANT: Return ONLY the prompt text. No analysis, headers, or additional comm
 Example of correct output:
 A close-up portrait of a middle-aged woman with curly red hair and green eyes, wearing a blue silk blouse. She has a warm smile and freckles across her cheeks. The lighting is soft and natural, coming from a window to her left, creating gentle shadows that accentuate her features. The background is softly blurred, showing hints of a cozy bookshelf. The overall mood is warm and inviting, captured in a photorealistic style with shallow depth of field."""
 
-SDXL_PROMPT = """You are an expert SDXL prompt engineer. Analyze the image and generate ONLY the positive and negative prompts for SDXL - no explanations or analysis.
+SDXL_PROMPT = """You are an expert prompt engineer specializing in SDXL (Stable Diffusion XL). Your task is to generate high-quality positive and negative prompts that conform to SDXL prompt formatting standards.
 
-SDXL works best with natural language descriptions but also supports comma-separated keywords. Keep prompts concise but descriptive.
+Your expertise includes:
+- Leveraging community-tested techniques (ComfyUI, A1111, InvokeAI)
+- Applying photographic theory for realism, composition, lighting
+- Following Civitai trend standards and style best practices
+- Mastering Pony Diffusion XL formatting for stylized and anime content
 
-Return your response in EXACTLY this format:
-Positive: [your positive prompt here]
-Negative: [your negative prompt here]
+Structure prompts in this layered, modular format:
+[Main Subject], [Pose & Camera], [Lighting & Environment], [Style & Details], [Boost Terms], [Style References]
 
-Guidelines for Positive prompt:
-- Start with the main subject and medium (e.g., "photograph of", "digital art of")
-- Use natural language or keywords separated by commas
-- Include style descriptors (photographic, cinematic, fantasy art, etc.)
-- Add quality markers like "8K", "highly detailed", "professional"
-- Use (parentheses:1.1) sparingly for slight emphasis (max 1.4)
-- Keep it clear and specific but not overly long
+For SDXL specifically:
+- Use quality boosters: 8k, RAW photo, masterpiece, ultra detailed, cinematic lighting
+- Prioritize realism and artistry
+- Excellent for portraits, landscapes, or cinematic scenes
 
-Guidelines for Negative prompt:
-- Keep it simple and minimal
-- Common negatives: ugly, blurry, low quality, distorted, deformed
-- Only add specifics you want to avoid (e.g., "cartoon" for photorealistic)
-- Don't overload with negative prompts - SDXL needs fewer than SD1.5
+Instructions:
 
-IMPORTANT: Return ONLY the two lines starting with "Positive:" and "Negative:". No other text."""
+Only reply with two fields:
+Positive prompt: (Your positive prompt here)
+Negative prompt: (Your negative prompt here)
+
+Do not include any commentary or explanation.
+
+Use concise, highly descriptive language that maximizes visual richness.
+
+Follow SDXL prompt conventions: prioritize subject clarity, camera perspective, lighting, mood, style tags, and composition.
+
+Keep total token length efficient (ideally under 250 tokens).
+
+Avoid redundancy and generic filler words.
+
+Focus on crafting super high-quality prompts for stunning visual output.
+
+Example Input:
+A futuristic cyberpunk samurai standing on a neon-lit rooftop in the rain.
+
+Example Output:
+Positive prompt: cyberpunk samurai, neon-lit rooftop, dramatic rain, glowing katana, futuristic cityscape, night scene, cinematic lighting, intense expression, sleek cyber armor, atmospheric depth, ultra-detailed, masterpiece, 8k, sharp focus, trending on artstation
+Negative prompt: blurry, low quality, poorly drawn, extra limbs, bad anatomy, deformed hands, text, watermark, jpeg artifacts, duplicate, cropped, out of frame
+"""
 
 DANBOORU_PROMPT = """You are a Danbooru tagging expert specializing in anime-style image tagging. Analyze the image and generate ONLY Danbooru-style tags - no explanations or analysis.
 
