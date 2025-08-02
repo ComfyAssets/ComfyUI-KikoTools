@@ -1,0 +1,207 @@
+{
+  "id": "gemini-prompt-example",
+  "revision": 0,
+  "last_node_id": 6,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "pos": [
+        300,
+        30
+      ],
+      "size": [
+        315,
+        314
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            3
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.47",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "DisplayText",
+      "pos": [
+        1070,
+        30
+      ],
+      "size": [
+        500,
+        400
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "271cd020c1b2f78e7ee40c1f08e70191fed00012",
+        "Node name for S&R": "DisplayText"
+      },
+      "widgets_values": [
+        null
+      ]
+    },
+    {
+      "id": 5,
+      "type": "GeminiPrompt",
+      "pos": [
+        640,
+        30
+      ],
+      "size": [
+        400,
+        276
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "links": [
+            4
+          ]
+        },
+        {
+          "name": "negative_prompt",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "271cd020c1b2f78e7ee40c1f08e70191fed00012",
+        "Node name for S&R": "GeminiPrompt"
+      },
+      "widgets_values": [
+        "sdxl",
+        "gemini-2.0-flash",
+        "1234-1234-1234-1234",
+        "",
+        true,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": 6,
+      "type": "MarkdownNote",
+      "pos": [
+        300,
+        410
+      ],
+      "size": [
+        400,
+        240
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "Gemini Prompt Engineer Example\n\nAI-powered image analysis:\n- Analyzes image content and style\n- Generates optimized prompts for FLUX/SDXL/Danbooru/Video\n- Dynamic model selection with refresh button\n- Custom system prompt override\n\nSetup:\n1. Get free API key from Google AI Studio\n2. Set GEMINI_API_KEY env var or use config file\n3. Click refresh button to get latest models\n\nDisplayText automatically shows split view for SDXL prompts!"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      3,
+      2,
+      0,
+      5,
+      0,
+      "IMAGE"
+    ],
+    [
+      4,
+      5,
+      0,
+      3,
+      0,
+      "STRING"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Gemini Prompt Engineer",
+      "bounding": [
+        210,
+        -110,
+        1460,
+        850
+      ],
+      "color": "#ffffff",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.7513148009015777,
+      "offset": [
+        97.5582232217803,
+        133.12148846503663
+      ]
+    },
+    "frontendVersion": "1.23.4",
+    "VHS_latentpreview": true,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

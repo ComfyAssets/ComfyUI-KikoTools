@@ -8,6 +8,9 @@ The Gemini Prompt Engineer node uses Google's Gemini AI to analyze images and ge
 - **Custom Prompts**: Override templates with your own system prompts
 - **Visual Feedback**: UI shows processing status and error states
 - **Flexible API Key Management**: Multiple ways to provide API credentials
+- **Dynamic Model Selection**: Fetch and use latest Gemini models with refresh button
+- **Model Caching**: Persistent storage of available models for offline access
+- **Help Integration**: Built-in setup guide accessible via help button
 
 ## Setup
 
@@ -49,6 +52,10 @@ Choose one of these methods:
   - `sdxl`: Positive/negative prompt pairs with weight emphasis
   - `danbooru`: Anime-style booru tags with underscores
   - `video`: Motion and temporal descriptions for video generation
+- **model** (DROPDOWN): Gemini model selection
+  - Dynamically populated list of available models
+  - Includes latest models like gemini-2.0-flash-exp
+  - Click refresh button to update model list
 - **api_key** (STRING, optional): Gemini API key if not set elsewhere
 - **custom_prompt** (STRING, optional): Override template with custom system prompt
 
@@ -72,15 +79,27 @@ majestic mountain landscape at golden hour, oil painting style, dramatic lightin
 ```
 
 ### SDXL Format
-Generates positive and negative prompt pairs:
-- Detailed positive prompts with weight emphasis
+Generates positive and negative prompt pairs with enhanced structure:
+- Layered positive prompts: main subject → style → composition → technical
 - Comprehensive negative prompts to avoid common issues
 - Uses parentheses for emphasis: `(detailed eyes:1.2)`
+- Includes quality boosters and technical specifications
 
 Example output:
 ```
-Positive: beautiful woman, (detailed eyes:1.2), flowing red dress, golden hour lighting, professional photography, 85mm lens, shallow depth of field, bokeh, high resolution, masterpiece
-Negative: low quality, blurry, distorted features, bad anatomy, poorly drawn, amateur, oversaturated, jpeg artifacts
+Positive prompt:
+beautiful woman with flowing red hair, elegant pose, (detailed eyes:1.2), serene expression
+oil painting style, renaissance art influence, classical portraiture
+golden hour lighting, warm color palette, soft shadows, dramatic chiaroscuro
+centered composition, rule of thirds, shallow depth of field, bokeh background
+masterpiece, best quality, highly detailed, 8k uhd, professional artwork
+
+Negative prompt:
+low quality, worst quality, blurry, out of focus, pixelated, low resolution
+bad anatomy, deformed features, extra limbs, missing limbs, disconnected limbs
+poorly drawn face, poorly drawn hands, amateur drawing, bad proportions
+oversaturated, overexposed, underexposed, bad lighting, harsh shadows
+jpeg artifacts, watermark, signature, text, cropped, duplicate
 ```
 
 ### Danbooru Format
@@ -130,12 +149,40 @@ The node provides clear error messages for common issues:
 
 Errors are displayed in the prompt output for easy debugging.
 
+## Model Selection
+
+### Dynamic Model List
+- Click the refresh button (🔄) next to the model dropdown to fetch latest models
+- Models are fetched from Google's API and include all available versions
+- Common models include:
+  - `gemini-2.0-flash-exp`: Latest experimental flash model
+  - `gemini-1.5-pro`: Advanced model with larger context
+  - `gemini-1.5-flash`: Fast and efficient for most tasks
+
+### Model Caching
+- Available models are cached locally for offline access
+- Cache persists across ComfyUI sessions
+- Refresh button updates the cache with latest models
+
+## UI Features
+
+### Help Button
+- Click the help button (?) for quick setup instructions
+- Shows API key setup methods
+- Links to Google AI Studio for key generation
+
+### Status Indicators
+- Processing spinner during API calls
+- Error messages displayed in red
+- Success feedback when prompt is generated
+
 ## Tips
 
 1. **API Usage**: Gemini has generous free tier limits, but be mindful of rate limits
 2. **Image Quality**: Higher resolution images provide better analysis results
 3. **Prompt Refinement**: You can chain multiple Gemini nodes with different custom prompts
 4. **Caching**: Results are not cached, so identical images will make new API calls
+5. **Model Selection**: Use flash models for faster responses, pro models for complex analysis
 
 ## Example Workflow
 

@@ -1,0 +1,144 @@
+{
+  "id": "display-text-example",
+  "revision": 0,
+  "last_node_id": 6,
+  "last_link_id": 2,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "DisplayText",
+      "pos": [
+        -160,
+        70
+      ],
+      "size": [
+        500,
+        400
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "271cd020c1b2f78e7ee40c1f08e70191fed00012",
+        "Node name for S&R": "DisplayText"
+      },
+      "widgets_values": [
+        null
+      ]
+    },
+    {
+      "id": 4,
+      "type": "easy positive",
+      "pos": [
+        -620,
+        70
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "positive",
+          "type": "STRING",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "1.3.1",
+        "Node name for S&R": "easy positive"
+      },
+      "widgets_values": [
+        "Positive prompt:\nbeautiful landscape, mountains in background, sunset lighting, golden hour, professional photography, high resolution, detailed textures, vibrant colors, masterpiece\n\nNegative prompt:\nlow quality, blurry, pixelated, bad composition, oversaturated, underexposed, amateur"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 6,
+      "type": "MarkdownNote",
+      "pos": [
+        -620,
+        330
+      ],
+      "size": [
+        360,
+        250
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "Display Text Example\n\nSmart text display with:\n- Auto-detection of SDXL prompt format\n- Split view for positive/negative prompts\n- Text wrapping and scrolling\n- Copy buttons (strips labels)\n- Responsive resizing\n\nTry editing the text to see:\n1. Single text mode (no prompt markers)\n2. Split view mode (with Positive/Negative prompts)\n\nPerfect for displaying Gemini-generated prompts!"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      2,
+      4,
+      0,
+      1,
+      0,
+      "STRING"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Display Text",
+      "bounding": [
+        -750,
+        -60,
+        1240,
+        700
+      ],
+      "color": "#ffffff",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.90909090909091,
+      "offset": [
+        720,
+        30
+      ]
+    },
+    "frontendVersion": "1.23.4",
+    "VHS_latentpreview": true,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}
