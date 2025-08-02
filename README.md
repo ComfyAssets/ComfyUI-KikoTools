@@ -14,6 +14,19 @@ ComfyUI-KikoTools provides carefully crafted, production-ready nodes grouped und
 
 ### ✨ Current Tools
 
+| Tool | Description | Category |
+|------|-------------|----------|
+| [📐 Resolution Calculator](#-resolution-calculator) | Calculate upscaled dimensions with model optimization | Image Processing |
+| [📏 Width Height Selector](#-width-height-selector) | Preset-based dimension selection with visual swap | Dimension Control |
+| [🎲 Seed History](#-seed-history) | Advanced seed tracking with interactive history | Generation Control |
+| [⚙️ Sampler Combo](#️-sampler-combo) | Unified sampling configuration interface | Sampling |
+| [📦 Empty Latent Batch](#-empty-latent-batch) | Create empty latent batches with preset support | Latent Generation |
+| [💾 Kiko Save Image](#-kiko-save-image) | Enhanced image saving with popup viewer | File Management |
+| [📋 Display Text](#-display-text) | Smart text display with prompt detection | Text Display |
+| [🤖 Gemini Prompt Engineer](#-gemini-prompt-engineer) | AI-powered image analysis and prompt generation | AI Integration |
+| [🔍 Display Any](#-display-any) | Universal debugging tool for any data type | Debugging |
+| [🖼️ Image to Multiple Of](#️-image-to-multiple-of) | Adjust dimensions to multiples for compatibility | Image Processing |
+
 #### 📐 Resolution Calculator
 Calculate upscaled dimensions from image or latent inputs with precision.
 
