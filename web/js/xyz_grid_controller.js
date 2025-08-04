@@ -1,5 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
+import "./xyz_grid_widgets.js";
+import "./xyz_grid_ui.js";
 
 // Helper function to trigger re-execution
 async function queueNextExecution(nodeId, batchId) {
