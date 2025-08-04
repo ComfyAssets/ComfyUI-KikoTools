@@ -298,9 +298,8 @@ function createEnhancedUI(node) {
     const container = document.createElement("div");
     container.className = "xyz-controller-ui";
     container.style.cssText = `
-        width: 100%;
-        height: 100%;
-        max-height: 620px;
+        width: 360px;
+        height: 620px;
         overflow-y: auto;
         overflow-x: hidden;
         box-sizing: border-box;
@@ -691,12 +690,14 @@ app.registerExtension({
                 
                 // Ensure widget has proper size
                 if (customWidget) {
-                    customWidget.computeSize = () => [this.size[0] - 20, this.size[1] - 60];
+                    customWidget.computeSize = () => [360, 620];
                     customWidget.size = customWidget.computeSize();
                     
                     // Ensure the element has proper height constraint
                     if (customWidget.element) {
-                        customWidget.element.style.maxHeight = (this.size[1] - 60) + 'px';
+                        customWidget.element.style.width = '360px';
+                        customWidget.element.style.height = '620px';
+                        customWidget.element.style.maxHeight = '620px';
                         customWidget.element.style.overflow = 'hidden';
                     }
                 }
