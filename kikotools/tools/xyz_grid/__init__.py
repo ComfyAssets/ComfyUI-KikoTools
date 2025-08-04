@@ -1,6 +1,6 @@
 """XYZ Grid nodes for ComfyUI parameter comparisons."""
 
-from .controller.simple_node import XYZPlotController
+from .controller.multi_select_node import XYZPlotController
 from .combiner.node import ImageGridCombiner
 
 NODE_CLASS_MAPPINGS = {

@@ -58,10 +58,67 @@ app.registerExtension({
                     }
                 };
                 
-                // Setup help for all axes
-                updateHelp('x');
-                updateHelp('y');
-                updateHelp('z');
+                // Update node title with selection counts
+                const updateTitle = () => {
+                    setTimeout(() => {
+                        let totalImages = 1;
+                        
+                        // Count selected models
+                        const modelCount = ['model_1', 'model_2', 'model_3', 'model_4', 'model_5']
+                            .filter(name => {
+                                const w = this.widgets.find(w => w.name === name);
+                                return w && w.value !== 'disabled';
+                            }).length;
+                        
+                        // Count selected VAEs
+                        const vaeCount = ['vae_1', 'vae_2', 'vae_3']
+                            .filter(name => {
+                                const w = this.widgets.find(w => w.name === name);
+                                return w && w.value !== 'disabled';
+                            }).length;
+                        
+                        // Count selected LoRAs
+                        const loraCount = ['lora_1', 'lora_2', 'lora_3']
+                            .filter(name => {
+                                const w = this.widgets.find(w => w.name === name);
+                                return w && w.value !== 'disabled';
+                            }).length;
+                        
+                        // Get axis types and calculate total
+                        const xType = this.widgets.find(w => w.name === 'x_type')?.value;
+                        const yType = this.widgets.find(w => w.name === 'y_type')?.value;
+                        const zType = this.widgets.find(w => w.name === 'z_type')?.value;
+                        
+                        const getCounts = (type) => {
+                            if (type === 'models') return modelCount;
+                            if (type === 'vaes') return vaeCount;
+                            if (type === 'loras') return loraCount;
+                            // For other types, would need to parse numeric_values or prompts
+                            return 1;
+                        };
+                        
+                        if (xType && xType !== 'none') totalImages *= getCounts(xType);
+                        if (yType && yType !== 'none') totalImages *= getCounts(yType);
+                        if (zType && zType !== 'none') totalImages *= getCounts(zType);
+                        
+                        this.title = `XYZ Plot Controller (${totalImages} images)`;
+                    }, 100);
+                };
+                
+                // Add callbacks to update title when selections change
+                this.widgets.forEach(w => {
+                    if (w.name.includes('_type') || w.name.includes('model_') || 
+                        w.name.includes('vae_') || w.name.includes('lora_')) {
+                        const originalCallback = w.callback;
+                        w.callback = function(value) {
+                            if (originalCallback) originalCallback.call(this, value);
+                            updateTitle();
+                        };
+                    }
+                });
+                
+                // Initial title update
+                updateTitle();
                 
                 // Add a title to show total combinations
                 const originalOnConnectionsChange = this.onConnectionsChange;
