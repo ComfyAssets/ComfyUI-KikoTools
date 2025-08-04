@@ -644,6 +644,9 @@ app.registerExtension({
                     onNodeCreated.apply(this, arguments);
                 }
                 
+                // Set initial size immediately
+                this.size = [350, 550];
+                
                 // Store original widgets for later access but hide them completely
                 this.originalWidgets = this.widgets.slice();
                 
@@ -676,25 +679,8 @@ app.registerExtension({
                 // Add our custom widget to the widgets array
                 this.widgets = [customWidget];
                 
-                // Override computeSize to handle our custom widget
-                const originalComputeSize = this.computeSize;
-                this.computeSize = function() {
-                    if (originalComputeSize) {
-                        originalComputeSize.call(this);
-                    }
-                    // Set width based on content
-                    this.size[0] = 350;
-                    // Set height based on our fixed layout
-                    this.size[1] = 520; // Approximate height for all 3 axis groups
-                    
-                    // Account for title bar
-                    if (this.title) {
-                        this.size[1] += 30;
-                    }
-                };
-                
-                // Initial size computation
-                this.computeSize();
+                // Make sure size is correct
+                this.size = [350, 550];
             };
         }
     }
