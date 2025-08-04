@@ -115,14 +115,18 @@ class ImageGridCombiner:
         grids_count = dims["grids_count"]
         
         # Calculate grid dimensions
+        row_label_width = 100 if include_labels else 0  # Space for Y labels
+        z_label_height = 40 if include_labels and grids_count > 1 else 0  # Space for Z label
+        
         if include_labels:
-            grid_width = cols * img_width + (cols - 1) * grid_gap
-            grid_height = rows * img_height + (rows - 1) * grid_gap + label_height
+            grid_width = cols * img_width + (cols - 1) * grid_gap + row_label_width
+            grid_height = rows * img_height + (rows - 1) * grid_gap + label_height + z_label_height
         else:
             grid_width = cols * img_width + (cols - 1) * grid_gap
             grid_height = rows * img_height + (rows - 1) * grid_gap
         
         grids = []
+        z_labels = config["axes"]["z"]["labels"] if config["axes"]["z"]["labels"] else []
         
         # Create each grid (for Z axis)
         for z_idx in range(grids_count):
@@ -135,32 +139,44 @@ class ImageGridCombiner:
                 # Try to use a better font if available
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+                    title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size + 4)
                 except:
                     font = ImageFont.load_default()
+                    title_font = font
+                
+                # Draw Z-axis label if applicable
+                if z_labels and z_idx < len(z_labels):
+                    z_label = z_labels[z_idx]
+                    # Center the Z label
+                    bbox = draw.textbbox((0, 0), z_label, font=title_font)
+                    text_width = bbox[2] - bbox[0]
+                    z_x = (grid_width - text_width) // 2
+                    self._draw_label(draw, z_label, z_x, 5, text_width + 20, 
+                                   z_label_height - 10, title_font, max_label_length * 2)
                 
                 # Draw column labels (X axis)
                 x_labels = config["axes"]["x"]["labels"]
                 for col_idx, label in enumerate(x_labels):
-                    x = col_idx * (img_width + grid_gap)
-                    self._draw_label(draw, label, x, 0, img_width, label_height, font, max_label_length)
+                    x = col_idx * (img_width + grid_gap) + row_label_width
+                    y = z_label_height
+                    self._draw_label(draw, label, x, y, img_width, label_height, font, max_label_length)
+                
+                # Draw row labels (Y axis) - on the left side
+                y_labels = config["axes"]["y"]["labels"]
+                for row_idx, label in enumerate(y_labels):
+                    y = row_idx * (img_height + grid_gap) + label_height + z_label_height
+                    self._draw_label(draw, label, 5, y + img_height // 2 - font_size // 2, 
+                                   row_label_width - 10, font_size + 4, font, max_label_length, 
+                                   align="right")
             
             # Place images
             for y_idx in range(rows):
                 for x_idx in range(cols):
                     img_idx = z_idx * (rows * cols) + y_idx * cols + x_idx
                     if img_idx < len(pil_images):
-                        x = x_idx * (img_width + grid_gap)
-                        y = y_idx * (img_height + grid_gap) + (label_height if include_labels else 0)
+                        x = x_idx * (img_width + grid_gap) + row_label_width
+                        y = y_idx * (img_height + grid_gap) + label_height + z_label_height
                         grid.paste(pil_images[img_idx], (x, y))
-                        
-                        # Add row label (Y axis) on first column
-                        if include_labels and x_idx == 0:
-                            y_labels = config["axes"]["y"]["labels"]
-                            if y_idx < len(y_labels):
-                                label_y = y + img_height // 2 - font_size // 2
-                                self._draw_label(draw, y_labels[y_idx], x - 5, label_y, 
-                                               img_width // 3, font_size, font, max_label_length, 
-                                               align="right")
             
             grids.append(grid)
         
