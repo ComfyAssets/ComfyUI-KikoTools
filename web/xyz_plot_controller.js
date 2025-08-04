@@ -298,11 +298,16 @@ function createEnhancedUI(node) {
     const container = document.createElement("div");
     container.className = "xyz-controller-ui";
     container.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         width: 100%;
         height: 100%;
-        min-height: 600px;
         overflow-y: auto;
         overflow-x: hidden;
+        box-sizing: border-box;
     `;
     container.innerHTML = `
         <style>
@@ -676,29 +681,43 @@ app.registerExtension({
                     return false;
                 });
                 
-                // Create custom UI
-                const ui = createEnhancedUI(this);
-                
-                // Create the DOM widget with specific size
-                const customWidget = this.addDOMWidget("xyz_enhanced_ui", "div", ui, {
-                    serialize: false,
-                    hideOnZoom: false,
-                    computeSize: () => [380 - 20, 680 - 60] // Account for node padding
-                });
-                
-                // Add our custom widget to the widgets array
-                this.widgets = [customWidget];
-                
-                // Make sure size is correct
+                // Set size before creating widget
                 this.size = [380, 680];
                 
-                // Force the widget to update its size
-                if (customWidget.computeSize) {
-                    customWidget.size = customWidget.computeSize();
-                }
+                // Add placeholder widget first
+                this.widgets = [];
                 
-                // Force a redraw
-                this.setDirtyCanvas(true, true);
+                // Delay widget creation to ensure node is ready
+                const self = this;
+                setTimeout(() => {
+                    // Create custom UI
+                    const ui = createEnhancedUI(self);
+                    
+                    // Create the DOM widget with specific size
+                    const customWidget = self.addDOMWidget("xyz_enhanced_ui", "div", ui, {
+                        serialize: false,
+                        hideOnZoom: false
+                    });
+                    
+                    // Set widget size explicitly
+                    customWidget.size = [360, 620];
+                    if (customWidget.element) {
+                        customWidget.element.style.width = '360px';
+                        customWidget.element.style.height = '620px';
+                    }
+                    
+                    // Update widgets array
+                    self.widgets = [customWidget];
+                    
+                    // Force updates
+                    self.setSize(self.size);
+                    self.setDirtyCanvas(true, true);
+                    
+                    // Force another update after a brief delay
+                    setTimeout(() => {
+                        self.setDirtyCanvas(true, true);
+                    }, 100);
+                }, 50);
             };
             
             // Override onResize to handle widget sizing
