@@ -301,14 +301,14 @@ function createEnhancedUI(node) {
         <style>
             .xyz-controller-ui {
                 font-family: Arial, sans-serif;
-                padding: 10px;
+                padding: 5px;
                 background: #1e1e1e;
-                border-radius: 6px;
+                border-radius: 4px;
                 color: #ddd;
             }
             .xyz-axis-group {
-                margin-bottom: 20px;
-                padding: 15px;
+                margin-bottom: 12px;
+                padding: 10px;
                 background: #2a2a2a;
                 border-radius: 4px;
                 border: 1px solid #333;
@@ -316,84 +316,89 @@ function createEnhancedUI(node) {
             .xyz-axis-header {
                 font-weight: bold;
                 color: #4ecdc4;
-                margin-bottom: 10px;
-                font-size: 14px;
+                margin-bottom: 8px;
+                font-size: 12px;
             }
             .xyz-axis-row {
                 display: flex;
                 align-items: center;
-                margin-bottom: 10px;
-                gap: 10px;
+                margin-bottom: 8px;
+                gap: 8px;
             }
             .xyz-axis-label {
-                width: 80px;
-                font-size: 12px;
+                width: 70px;
+                font-size: 11px;
                 color: #aaa;
             }
             .xyz-axis-select {
                 flex: 1;
-                padding: 5px;
+                padding: 4px;
                 background: #333;
                 border: 1px solid #444;
                 border-radius: 3px;
                 color: #fff;
-                font-size: 12px;
+                font-size: 11px;
+                height: 24px;
             }
             .xyz-axis-values {
                 width: 100%;
-                margin-top: 10px;
-                padding: 8px;
+                margin-top: 8px;
+                padding: 6px;
                 background: #333;
                 border: 1px solid #444;
                 border-radius: 3px;
                 color: #fff;
-                font-size: 12px;
-                min-height: 60px;
+                font-size: 11px;
+                min-height: 40px;
+                max-height: 60px;
                 resize: vertical;
             }
             .xyz-select-button {
                 width: 100%;
-                margin-top: 8px;
-                padding: 8px;
+                margin-top: 6px;
+                padding: 6px;
                 background: #4a90e2;
                 color: white;
                 border: none;
-                border-radius: 4px;
+                border-radius: 3px;
                 cursor: pointer;
-                font-size: 12px;
+                font-size: 11px;
                 transition: all 0.2s;
             }
             .xyz-select-button:hover {
                 background: #357abd;
                 transform: translateY(-1px);
-                box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
             }
             .xyz-info-box {
-                margin-top: 10px;
-                padding: 10px;
+                margin-top: 6px;
+                padding: 6px 8px;
                 background: #1a1a1a;
-                border-radius: 4px;
-                font-size: 11px;
+                border-radius: 3px;
+                font-size: 10px;
                 border: 1px solid #333;
             }
             .xyz-info-box strong {
                 color: #4ecdc4;
+                font-size: 10px;
             }
             .xyz-info-example {
                 color: #888;
                 font-style: italic;
                 white-space: pre-wrap;
-                margin-top: 5px;
+                margin-top: 3px;
+                font-size: 9px;
             }
             .xyz-total-count {
                 text-align: center;
-                padding: 15px;
+                padding: 10px;
                 background: #2a2a2a;
                 border-radius: 4px;
-                font-size: 16px;
+                font-size: 14px;
                 font-weight: bold;
                 color: #4ecdc4;
                 border: 1px solid #333;
+                margin-top: 5px;
             }
             .xyz-total-count.warning {
                 color: #ffaa00;
@@ -671,8 +676,25 @@ app.registerExtension({
                 // Add our custom widget to the widgets array
                 this.widgets = [customWidget];
                 
-                // Set node size
-                this.size = [400, 850];
+                // Override computeSize to handle our custom widget
+                const originalComputeSize = this.computeSize;
+                this.computeSize = function() {
+                    if (originalComputeSize) {
+                        originalComputeSize.call(this);
+                    }
+                    // Set width based on content
+                    this.size[0] = 350;
+                    // Set height based on our fixed layout
+                    this.size[1] = 520; // Approximate height for all 3 axis groups
+                    
+                    // Account for title bar
+                    if (this.title) {
+                        this.size[1] += 30;
+                    }
+                };
+                
+                // Initial size computation
+                this.computeSize();
             };
         }
     }
