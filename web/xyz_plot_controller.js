@@ -298,13 +298,8 @@ function createEnhancedUI(node) {
     const container = document.createElement("div");
     container.className = "xyz-controller-ui";
     container.style.cssText = `
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
         width: 100%;
-        height: 100%;
+        height: 620px;
         overflow-y: auto;
         overflow-x: hidden;
         box-sizing: border-box;
@@ -681,43 +676,32 @@ app.registerExtension({
                     return false;
                 });
                 
-                // Set size before creating widget
+                // Set initial size
                 this.size = [380, 680];
                 
-                // Add placeholder widget first
-                this.widgets = [];
+                // Create custom UI immediately
+                const ui = createEnhancedUI(this);
                 
-                // Delay widget creation to ensure node is ready
-                const self = this;
+                // Create the DOM widget
+                const customWidget = this.addDOMWidget("xyz_enhanced_ui", "div", ui, {
+                    serialize: false,
+                    hideOnZoom: false
+                });
+                
+                // Ensure widget has proper size
+                if (customWidget) {
+                    customWidget.computeSize = () => [this.size[0] - 20, this.size[1] - 60];
+                    customWidget.size = customWidget.computeSize();
+                }
+                
+                // Update widgets array
+                this.widgets = [customWidget];
+                
+                // Schedule a resize to ensure proper display
                 setTimeout(() => {
-                    // Create custom UI
-                    const ui = createEnhancedUI(self);
-                    
-                    // Create the DOM widget with specific size
-                    const customWidget = self.addDOMWidget("xyz_enhanced_ui", "div", ui, {
-                        serialize: false,
-                        hideOnZoom: false
-                    });
-                    
-                    // Set widget size explicitly
-                    customWidget.size = [360, 620];
-                    if (customWidget.element) {
-                        customWidget.element.style.width = '360px';
-                        customWidget.element.style.height = '620px';
-                    }
-                    
-                    // Update widgets array
-                    self.widgets = [customWidget];
-                    
-                    // Force updates
-                    self.setSize(self.size);
-                    self.setDirtyCanvas(true, true);
-                    
-                    // Force another update after a brief delay
-                    setTimeout(() => {
-                        self.setDirtyCanvas(true, true);
-                    }, 100);
-                }, 50);
+                    this.setSize(this.size);
+                    this.setDirtyCanvas(true, true);
+                }, 0);
             };
             
             // Override onResize to handle widget sizing
