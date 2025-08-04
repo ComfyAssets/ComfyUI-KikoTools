@@ -14,6 +14,7 @@ from .tools.image_scale_down_by import ImageScaleDownByNode
 from .tools.gemini_prompt import GeminiPromptNode
 from .tools.display_any import DisplayAnyNode
 from .tools.display_text import DisplayTextNode
+from .tools.xyz_grid import XYZPlotControllerAdvanced, ImageGridCombiner
 
 # ComfyUI node registration mappings
 NODE_CLASS_MAPPINGS = {
@@ -29,6 +30,8 @@ NODE_CLASS_MAPPINGS = {
     "GeminiPrompt": GeminiPromptNode,
     "DisplayAny": DisplayAnyNode,
     "DisplayText": DisplayTextNode,
+    "XYZPlotController": XYZPlotControllerAdvanced,
+    "ImageGridCombiner": ImageGridCombiner,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -44,6 +47,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "GeminiPrompt": "Gemini Prompt Engineer",
     "DisplayAny": "Display Any",
     "DisplayText": "Display Text",
+    "XYZPlotController": "XYZ Plot Controller",
+    "ImageGridCombiner": "Image Grid Combiner",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
