@@ -1,428 +1,101 @@
 import { app } from "../../scripts/app.js";
+import { ComfyWidgets } from "../../scripts/widgets.js";
 
-console.log("[XYZ Plot Controller] Extension loading...");
-
-app.registerExtension({
-    name: "ComfyAssets.XYZPlotController",
-    
-    async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        console.log("[XYZ Plot Controller] beforeRegisterNodeDef called for:", nodeData.name);
-        
-        if (nodeData.name === "XYZPlotController") {
-            console.log("[XYZ Plot Controller] Configuring XYZPlotController node...");
-            const onNodeCreated = nodeType.prototype.onNodeCreated;
-            
-            nodeType.prototype.onNodeCreated = function() {
-                console.log("[XYZ Plot Controller] onNodeCreated called");
-                
-                if (onNodeCreated) {
-                    onNodeCreated.apply(this, arguments);
-                }
-                
-                // Store reference to node
-                this.parameterHelpers = createParameterHelpers();
-                this.setupComplete = false;
-                
-                // Setup UI after a delay to ensure widgets are ready
-                setTimeout(() => {
-                    console.log("[XYZ Plot Controller] Setting up enhanced UI...");
-                    if (!this.setupComplete) {
-                        setupEnhancedUI(this);
-                        this.setupComplete = true;
-                    }
-                }, 100);
-            };
-            
-            // Handle widget changes
-            const onWidgetChange = nodeType.prototype.onWidgetChange;
-            nodeType.prototype.onWidgetChange = function(name, value, oldValue, widget) {
-                if (onWidgetChange) {
-                    onWidgetChange.call(this, name, value, oldValue, widget);
-                }
-                
-                // Handle axis type changes
-                if (name.endsWith('_axis_type')) {
-                    const axisPrefix = name.split('_')[0];
-                    const valueWidgetName = `${axisPrefix}_values`;
-                    console.log(`[XYZ Plot Controller] Axis type changed: ${name} = ${value}`);
-                    updateValueWidget(this, valueWidgetName, value);
-                }
-                
-                // Update total count for any value change
-                if (name.includes('_values') || name.includes('_axis_type')) {
-                    updateImageCount(this);
-                }
-            };
-        }
-    }
-});
-
-// Parameter information
-const parameterInfo = {
-    none: { description: "No parameter selected" },
+// Parameter definitions
+const PARAM_INFO = {
+    none: { 
+        description: "No parameter selected",
+        hasOptions: false 
+    },
     model: {
         description: "Checkpoint/Model files",
-        example: "Click 'Select Models' to choose multiple checkpoints",
-        hasOptions: true
+        hasOptions: true,
+        inputNames: ['ckpt_name', 'checkpoint', 'model_name', 'unet_name']
     },
     vae: {
         description: "VAE models",
-        example: "Click 'Select Vaes' to choose VAEs\n'Automatic' uses the model's built-in VAE",
-        hasOptions: true
+        hasOptions: true,
+        inputNames: ['vae_name', 'vae'],
+        addDefault: "Automatic"
     },
     lora: {
         description: "LoRA models",
-        example: "Click 'Select Loras' to choose LoRAs\n'None' disables LoRA",
-        hasOptions: true
+        hasOptions: true,
+        inputNames: ['lora_name', 'lora'],
+        addDefault: "None"
     },
     sampler: {
         description: "Sampling algorithms",
-        example: "Click 'Select Samplers' to choose sampling methods",
-        hasOptions: true
+        hasOptions: true,
+        inputNames: ['sampler_name', 'sampler']
     },
     scheduler: {
         description: "Noise schedulers",
-        example: "Click 'Select Schedulers' to choose scheduler types",
-        hasOptions: true
+        hasOptions: true,
+        inputNames: ['scheduler', 'scheduler_name']
     },
     cfg_scale: {
-        description: "CFG Scale (Classifier-Free Guidance)",
-        example: "Examples:\n5, 7.5, 10, 12.5\n5:15:2.5 (range from 5 to 15, step 2.5)"
+        description: "CFG Scale values",
+        example: "Examples: 5, 7.5, 10\nRange: 5:15:2.5"
     },
     steps: {
-        description: "Denoising steps",
-        example: "Examples:\n20, 30, 40, 50\n10:50:10 (range)"
-    },
-    clip_skip: {
-        description: "CLIP layers to skip",
-        example: "Common values: 1, 2\nSDXL typically uses 1 or 2"
+        description: "Sampling steps",
+        example: "Examples: 20, 30, 40\nRange: 10:50:10"
     },
     seed: {
-        description: "Random seed",
-        example: "Examples:\n42, 123, 456\n0:1000:100 (range)"
+        description: "Random seeds",
+        example: "Examples: 42, 123, 456\nRange: 0:1000:100"
     },
     denoise: {
         description: "Denoising strength",
-        example: "Examples:\n0.3, 0.5, 0.7, 1.0\n0.2:1.0:0.2 (range)"
+        example: "Examples: 0.3, 0.5, 0.7\nRange: 0.2:1.0:0.2"
     },
     flux_guidance: {
         description: "Flux guidance strength",
-        example: "Examples:\n1.0, 2.0, 3.5, 5.0\n1:5:0.5 (range)"
+        example: "Examples: 1.0, 3.5, 5.0\nRange: 1:5:0.5"
     },
     prompt: {
-        description: "Text prompts (one per line)",
-        example: "Enter different prompts, one per line:\n\na beautiful sunset\na mystical forest\na futuristic city"
+        description: "Text prompts",
+        example: "Enter one prompt per line:\n\na beautiful sunset\na mystical forest"
     }
 };
 
-// Generic function to find options from any node type
-async function findOptionsForParameter(paramType) {
+// Get options for parameter types
+async function getParameterOptions(paramType) {
+    if (!PARAM_INFO[paramType]?.hasOptions) return [];
+    
     try {
-        console.log(`[XYZ Plot Controller] Finding options for ${paramType}`);
         const resp = await fetch('/object_info');
         const data = await resp.json();
         
-        // Map parameter types to common input names
-        const parameterMappings = {
-            model: ['ckpt_name', 'checkpoint', 'model_name', 'unet_name'],
-            vae: ['vae_name', 'vae'],
-            lora: ['lora_name', 'lora'],
-            sampler: ['sampler_name', 'sampler'],
-            scheduler: ['scheduler', 'scheduler_name'],
-            // Add more mappings as needed
-        };
-        
-        const possibleNames = parameterMappings[paramType] || [paramType];
+        const inputNames = PARAM_INFO[paramType].inputNames || [paramType];
         let allOptions = [];
         
-        // Search through all nodes for matching inputs
+        // Search through all nodes
         for (const [nodeName, nodeData] of Object.entries(data)) {
             if (nodeData.input?.required) {
                 for (const [inputName, inputDef] of Object.entries(nodeData.input.required)) {
-                    // Check if this input name matches what we're looking for
-                    if (possibleNames.includes(inputName)) {
-                        // Check if it's a list (array as first element)
-                        if (Array.isArray(inputDef[0])) {
-                            console.log(`[XYZ Plot Controller] Found ${paramType} options in ${nodeName}.${inputName}`);
-                            allOptions = [...new Set([...allOptions, ...inputDef[0]])];
-                        }
+                    if (inputNames.includes(inputName) && Array.isArray(inputDef[0])) {
+                        allOptions = [...new Set([...allOptions, ...inputDef[0]])];
                     }
                 }
             }
         }
         
-        console.log(`[XYZ Plot Controller] Total ${paramType} options found:`, allOptions.length);
+        // Add default option if specified
+        if (PARAM_INFO[paramType].addDefault) {
+            allOptions.unshift(PARAM_INFO[paramType].addDefault);
+        }
+        
         return allOptions;
     } catch (e) {
-        console.error(`[XYZ Plot Controller] Error finding options for ${paramType}:`, e);
+        console.error(`Error fetching ${paramType} options:`, e);
         return [];
     }
 }
 
-function createParameterHelpers() {
-    return {
-        model: {
-            getOptions: async () => {
-                const options = await findOptionsForParameter('model');
-                return options.length > 0 ? options : [];
-            }
-        },
-        vae: {
-            getOptions: async () => {
-                const options = await findOptionsForParameter('vae');
-                // Add "Automatic" as first option for VAEs
-                return ["Automatic", ...options];
-            }
-        },
-        lora: {
-            getOptions: async () => {
-                const options = await findOptionsForParameter('lora');
-                // Add "None" as first option for LoRAs
-                return ["None", ...options];
-            }
-        },
-        sampler: {
-            getOptions: async () => {
-                const options = await findOptionsForParameter('sampler');
-                return options.length > 0 ? options : 
-                    ["euler", "euler_ancestral", "heun", "dpm_2", "dpm_2_ancestral", 
-                     "lms", "dpm_fast", "dpm_adaptive", "dpmpp_2s_ancestral", 
-                     "dpmpp_sde", "dpmpp_2m", "dpmpp_2m_sde", "ddim", "uni_pc"];
-            }
-        },
-        scheduler: {
-            getOptions: async () => {
-                const options = await findOptionsForParameter('scheduler');
-                return options.length > 0 ? options :
-                    ["normal", "karras", "exponential", "sgm_uniform", "simple", "ddim_uniform"];
-            }
-        }
-    };
-}
-
-function setupEnhancedUI(node) {
-    console.log("[XYZ Plot Controller] setupEnhancedUI called for node:", node);
-    
-    // Add custom UI container
-    const container = document.createElement("div");
-    container.style.cssText = `
-        padding: 10px;
-        background: #1e1e1e;
-        border-radius: 6px;
-        margin: 10px 5px;
-        border: 1px solid #333;
-    `;
-    
-    // Add info display
-    const infoDiv = document.createElement("div");
-    infoDiv.id = "xyz-info-display";
-    infoDiv.style.cssText = `
-        background: #2a2a2a;
-        padding: 8px;
-        border-radius: 4px;
-        margin-bottom: 10px;
-        font-size: 12px;
-        color: #ccc;
-        display: none;
-    `;
-    container.appendChild(infoDiv);
-    
-    // Add total count display
-    const countDiv = document.createElement("div");
-    countDiv.id = "xyz-count-display";
-    countDiv.style.cssText = `
-        background: #2a2a2a;
-        padding: 8px;
-        border-radius: 4px;
-        text-align: center;
-        font-weight: bold;
-        color: #4ecdc4;
-    `;
-    countDiv.textContent = "Total Images: 0";
-    container.appendChild(countDiv);
-    
-    console.log("[XYZ Plot Controller] Adding DOM widget...");
-    
-    // Add widget
-    try {
-        node.addDOMWidget("xyz_ui", "div", container);
-        console.log("[XYZ Plot Controller] DOM widget added successfully");
-    } catch (error) {
-        console.error("[XYZ Plot Controller] Error adding DOM widget:", error);
-    }
-    
-    // Setup axis handlers
-    ['x', 'y', 'z'].forEach(axis => {
-        const typeWidget = node.widgets.find(w => w.name === `${axis}_axis_type`);
-        const valueWidget = node.widgets.find(w => w.name === `${axis}_values`);
-        
-        console.log(`[XYZ Plot Controller] Setting up ${axis} axis - type: ${typeWidget?.value}`);
-        
-        if (typeWidget && valueWidget) {
-            // Initial setup
-            if (typeWidget.value && typeWidget.value !== 'none') {
-                updateValueWidget(node, `${axis}_values`, typeWidget.value);
-            }
-            
-            // Force widget callback setup
-            if (!typeWidget._xyz_initialized) {
-                typeWidget._xyz_initialized = true;
-                const originalCallback = typeWidget.callback;
-                typeWidget.callback = function(value) {
-                    console.log(`[XYZ Plot Controller] ${axis}_axis_type changed to: ${value}`);
-                    updateValueWidget(node, `${axis}_values`, value);
-                    updateImageCount(node);
-                    if (originalCallback) {
-                        originalCallback.call(this, value);
-                    }
-                };
-            }
-        }
-    });
-    
-    // Initial count update
-    updateImageCount(node);
-}
-
-function updateValueWidget(node, widgetName, paramType) {
-    console.log(`[XYZ Plot Controller] updateValueWidget called: ${widgetName} -> ${paramType}`);
-    
-    const widget = node.widgets.find(w => w.name === widgetName);
-    if (!widget) {
-        console.error(`[XYZ Plot Controller] Widget ${widgetName} not found`);
-        return;
-    }
-    
-    // Always remove existing custom elements first
-    const existingDiv = node.element?.querySelector(`#${widgetName}-custom`);
-    if (existingDiv) {
-        console.log(`[XYZ Plot Controller] Removing existing button for ${widgetName}`);
-        existingDiv.remove();
-    }
-    
-    const info = parameterInfo[paramType];
-    if (!info || paramType === 'none') {
-        // Hide info display if no parameter selected
-        const infoDiv = node.element?.querySelector('#xyz-info-display');
-        if (infoDiv) {
-            infoDiv.style.display = 'none';
-        }
-        return;
-    }
-    
-    // Update info display
-    const infoDiv = node.element?.querySelector('#xyz-info-display');
-    if (infoDiv) {
-        infoDiv.style.display = 'block';
-        infoDiv.innerHTML = `
-            <div style="margin-bottom: 8px;">
-                <strong style="color: #4ecdc4;">${paramType.toUpperCase()}</strong>
-            </div>
-            <div style="margin-bottom: 4px;">${info.description}</div>
-            <small style="color: #888; white-space: pre-wrap;">${info.example || ''}</small>
-        `;
-    }
-    
-    // Add select button for options-based parameters
-    if (info.hasOptions && node.parameterHelpers[paramType]) {
-        console.log(`[XYZ Plot Controller] Creating select button for ${paramType}`);
-        
-        // Create new button
-        let customDiv = document.createElement("div");
-        customDiv.id = `${widgetName}-custom`;
-        customDiv.style.cssText = `
-            margin-top: 5px;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-        `;
-        
-        const selectBtn = document.createElement("button");
-        // Better pluralization
-        const buttonLabels = {
-            model: "Select Models",
-            vae: "Select VAEs", 
-            lora: "Select LoRAs",
-            sampler: "Select Samplers",
-            scheduler: "Select Schedulers"
-        };
-        selectBtn.textContent = `📁 ${buttonLabels[paramType] || `Select ${paramType}s`}`;
-        selectBtn.style.cssText = `
-            padding: 6px 12px;
-            background: #4a90e2;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            width: 100%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: all 0.2s;
-        `;
-        
-        selectBtn.onmouseenter = () => {
-            selectBtn.style.background = "#357abd";
-            selectBtn.style.transform = "translateY(-1px)";
-            selectBtn.style.boxShadow = "0 3px 6px rgba(0,0,0,0.3)";
-        };
-        
-        selectBtn.onmouseleave = () => {
-            selectBtn.style.background = "#4a90e2";
-            selectBtn.style.transform = "translateY(0)";
-            selectBtn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
-        };
-        
-        selectBtn.onclick = async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log(`[XYZ Plot Controller] Getting ${paramType} options...`);
-            const options = await node.parameterHelpers[paramType].getOptions();
-            console.log(`[XYZ Plot Controller] Got ${options.length} ${paramType} options:`, options);
-            showSelectDialog(options, widget, paramType);
-        };
-        
-        customDiv.appendChild(selectBtn);
-        
-        // Insert after widget
-        const widgetElement = widget.inputEl || widget.element;
-        console.log(`[XYZ Plot Controller] Widget element for ${widgetName}:`, widgetElement);
-        console.log(`[XYZ Plot Controller] Widget parent:`, widgetElement?.parentElement);
-        
-        if (widgetElement && widgetElement.parentElement) {
-            widgetElement.parentElement.appendChild(customDiv);
-            console.log(`[XYZ Plot Controller] Button added for ${paramType}`);
-            
-            // Trigger node resize
-            if (node.computeSize) {
-                node.computeSize();
-            }
-            node.setDirtyCanvas(true, true);
-        } else {
-            console.error(`[XYZ Plot Controller] Could not find widget element for ${widgetName}`);
-        }
-    }
-    
-    // Add validation for numeric types
-    if (['cfg_scale', 'steps', 'clip_skip', 'seed', 'denoise', 'flux_guidance'].includes(paramType)) {
-        if (widget.inputEl) {
-            widget.inputEl.addEventListener('input', () => {
-                const value = widget.inputEl.value.trim();
-                let isValid = true;
-                
-                if (value) {
-                    const rangePattern = /^\d+(\.\d+)?:\d+(\.\d+)?(:\d+(\.\d+)?)?$/;
-                    const listPattern = /^[\d\.\s,]+$/;
-                    isValid = rangePattern.test(value) || listPattern.test(value);
-                }
-                
-                widget.inputEl.style.borderColor = isValid ? "#4ecdc4" : "#ff6b6b";
-            });
-        }
-    }
-}
-
-function showSelectDialog(options, widget, paramType) {
-    console.log(`[XYZ Plot Controller] showSelectDialog called with ${options.length} options for ${paramType}`);
-    
+// Create multi-select dialog
+function showMultiSelectDialog(options, currentValues, paramType, onApply) {
     // Create overlay
     const overlay = document.createElement("div");
     overlay.style.cssText = `
@@ -446,6 +119,7 @@ function showSelectDialog(options, widget, paramType) {
         border-radius: 8px;
         padding: 20px;
         max-width: 500px;
+        width: 90%;
         max-height: 70vh;
         overflow: hidden;
         display: flex;
@@ -455,16 +129,24 @@ function showSelectDialog(options, widget, paramType) {
     
     // Title
     const title = document.createElement("h3");
-    const titleLabels = {
-        model: "Select Models",
-        vae: "Select VAEs", 
-        lora: "Select LoRAs",
-        sampler: "Select Samplers",
-        scheduler: "Select Schedulers"
-    };
-    title.textContent = titleLabels[paramType] || `Select ${paramType} values`;
+    title.textContent = `Select ${paramType.charAt(0).toUpperCase() + paramType.slice(1)}s`;
     title.style.cssText = "margin: 0 0 15px 0; color: #4ecdc4; font-size: 16px;";
     dialog.appendChild(title);
+    
+    // Search box
+    const searchBox = document.createElement("input");
+    searchBox.type = "text";
+    searchBox.placeholder = "Search...";
+    searchBox.style.cssText = `
+        padding: 8px;
+        margin-bottom: 10px;
+        background: #2a2a2a;
+        border: 1px solid #444;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 14px;
+    `;
+    dialog.appendChild(searchBox);
     
     // Options container
     const optionsContainer = document.createElement("div");
@@ -478,16 +160,15 @@ function showSelectDialog(options, widget, paramType) {
         max-height: 400px;
     `;
     
-    // Get current values
-    const currentValues = widget.value.split(',').map(v => v.trim()).filter(v => v);
+    const checkboxes = [];
+    const labels = [];
     
     // Create checkboxes
-    const checkboxes = [];
     options.forEach(option => {
         const label = document.createElement("label");
         label.style.cssText = `
             display: block;
-            padding: 8px 10px;
+            padding: 8px;
             cursor: pointer;
             color: #ddd;
             transition: background 0.2s;
@@ -509,19 +190,24 @@ function showSelectDialog(options, widget, paramType) {
         label.appendChild(checkbox);
         label.appendChild(document.createTextNode(option));
         
-        // Hover effect
-        label.onmouseenter = () => {
-            label.style.background = "rgba(78, 205, 196, 0.1)";
-        };
-        label.onmouseleave = () => {
-            label.style.background = "transparent";
-        };
+        label.onmouseenter = () => label.style.background = "rgba(78, 205, 196, 0.1)";
+        label.onmouseleave = () => label.style.background = "transparent";
         
         checkboxes.push(checkbox);
+        labels.push(label);
         optionsContainer.appendChild(label);
     });
     
     dialog.appendChild(optionsContainer);
+    
+    // Search functionality
+    searchBox.oninput = () => {
+        const searchTerm = searchBox.value.toLowerCase();
+        labels.forEach((label, i) => {
+            const text = options[i].toLowerCase();
+            label.style.display = text.includes(searchTerm) ? "block" : "none";
+        });
+    };
     
     // Buttons
     const buttonContainer = document.createElement("div");
@@ -531,6 +217,38 @@ function showSelectDialog(options, widget, paramType) {
         gap: 10px;
         justify-content: flex-end;
     `;
+    
+    const selectAllBtn = document.createElement("button");
+    selectAllBtn.textContent = "Select All";
+    selectAllBtn.style.cssText = `
+        padding: 8px 15px;
+        background: #666;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    `;
+    selectAllBtn.onclick = () => {
+        checkboxes.forEach(cb => {
+            if (cb.parentElement.style.display !== "none") {
+                cb.checked = true;
+            }
+        });
+    };
+    
+    const clearBtn = document.createElement("button");
+    clearBtn.textContent = "Clear All";
+    clearBtn.style.cssText = `
+        padding: 8px 15px;
+        background: #666;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    `;
+    clearBtn.onclick = () => {
+        checkboxes.forEach(cb => cb.checked = false);
+    };
     
     const cancelBtn = document.createElement("button");
     cancelBtn.textContent = "Cancel";
@@ -558,11 +276,12 @@ function showSelectDialog(options, widget, paramType) {
         const selected = checkboxes
             .filter(cb => cb.checked)
             .map(cb => cb.value);
-        widget.value = selected.join(", ");
-        widget.callback?.(widget.value);
+        onApply(selected);
         document.body.removeChild(overlay);
     };
     
+    buttonContainer.appendChild(selectAllBtn);
+    buttonContainer.appendChild(clearBtn);
     buttonContainer.appendChild(cancelBtn);
     buttonContainer.appendChild(applyBtn);
     dialog.appendChild(buttonContainer);
@@ -570,22 +289,280 @@ function showSelectDialog(options, widget, paramType) {
     overlay.appendChild(dialog);
     document.body.appendChild(overlay);
     
-    console.log("[XYZ Plot Controller] Dialog added to document body");
+    // Focus search box
+    searchBox.focus();
 }
 
-function updateImageCount(node) {
-    const countDiv = node.element?.querySelector('#xyz-count-display');
-    if (!countDiv) return;
-    
-    let xCount = 1, yCount = 1, zCount = 1;
-    
-    ['x', 'y', 'z'].forEach(axis => {
-        const typeWidget = node.widgets.find(w => w.name === `${axis}_axis_type`);
-        const valueWidget = node.widgets.find(w => w.name === `${axis}_values`);
+// Create the enhanced UI
+function createEnhancedUI(node) {
+    const container = document.createElement("div");
+    container.className = "xyz-controller-ui";
+    container.innerHTML = `
+        <style>
+            .xyz-controller-ui {
+                font-family: Arial, sans-serif;
+                padding: 10px;
+                background: #1e1e1e;
+                border-radius: 6px;
+                color: #ddd;
+            }
+            .xyz-axis-group {
+                margin-bottom: 20px;
+                padding: 15px;
+                background: #2a2a2a;
+                border-radius: 4px;
+                border: 1px solid #333;
+            }
+            .xyz-axis-header {
+                font-weight: bold;
+                color: #4ecdc4;
+                margin-bottom: 10px;
+                font-size: 14px;
+            }
+            .xyz-axis-row {
+                display: flex;
+                align-items: center;
+                margin-bottom: 10px;
+                gap: 10px;
+            }
+            .xyz-axis-label {
+                width: 80px;
+                font-size: 12px;
+                color: #aaa;
+            }
+            .xyz-axis-select {
+                flex: 1;
+                padding: 5px;
+                background: #333;
+                border: 1px solid #444;
+                border-radius: 3px;
+                color: #fff;
+                font-size: 12px;
+            }
+            .xyz-axis-values {
+                width: 100%;
+                margin-top: 10px;
+                padding: 8px;
+                background: #333;
+                border: 1px solid #444;
+                border-radius: 3px;
+                color: #fff;
+                font-size: 12px;
+                min-height: 60px;
+                resize: vertical;
+            }
+            .xyz-select-button {
+                width: 100%;
+                margin-top: 8px;
+                padding: 8px;
+                background: #4a90e2;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+                transition: all 0.2s;
+            }
+            .xyz-select-button:hover {
+                background: #357abd;
+                transform: translateY(-1px);
+                box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            }
+            .xyz-info-box {
+                margin-top: 10px;
+                padding: 10px;
+                background: #1a1a1a;
+                border-radius: 4px;
+                font-size: 11px;
+                border: 1px solid #333;
+            }
+            .xyz-info-box strong {
+                color: #4ecdc4;
+            }
+            .xyz-info-example {
+                color: #888;
+                font-style: italic;
+                white-space: pre-wrap;
+                margin-top: 5px;
+            }
+            .xyz-total-count {
+                text-align: center;
+                padding: 15px;
+                background: #2a2a2a;
+                border-radius: 4px;
+                font-size: 16px;
+                font-weight: bold;
+                color: #4ecdc4;
+                border: 1px solid #333;
+            }
+            .xyz-total-count.warning {
+                color: #ffaa00;
+            }
+            .xyz-total-count.danger {
+                color: #ff6b6b;
+            }
+        </style>
         
-        if (typeWidget?.value && typeWidget.value !== 'none' && valueWidget?.value) {
-            const values = valueWidget.value.trim();
-            if (values) {
+        <!-- X Axis -->
+        <div class="xyz-axis-group">
+            <div class="xyz-axis-header">X AXIS</div>
+            <div class="xyz-axis-row">
+                <span class="xyz-axis-label">Parameter:</span>
+                <select class="xyz-axis-select" id="x_axis_type">
+                    <option value="none">None</option>
+                    <option value="model">Model</option>
+                    <option value="vae">VAE</option>
+                    <option value="lora">LoRA</option>
+                    <option value="sampler">Sampler</option>
+                    <option value="scheduler">Scheduler</option>
+                    <option value="cfg_scale">CFG Scale</option>
+                    <option value="steps">Steps</option>
+                    <option value="seed">Seed</option>
+                    <option value="denoise">Denoise</option>
+                    <option value="flux_guidance">Flux Guidance</option>
+                    <option value="prompt">Prompt</option>
+                </select>
+            </div>
+            <textarea class="xyz-axis-values" id="x_values" placeholder="Values will appear here..."></textarea>
+            <button class="xyz-select-button" id="x_select_btn" style="display: none;">Select Values</button>
+            <div class="xyz-info-box" id="x_info" style="display: none;"></div>
+        </div>
+        
+        <!-- Y Axis -->
+        <div class="xyz-axis-group">
+            <div class="xyz-axis-header">Y AXIS</div>
+            <div class="xyz-axis-row">
+                <span class="xyz-axis-label">Parameter:</span>
+                <select class="xyz-axis-select" id="y_axis_type">
+                    <option value="none">None</option>
+                    <option value="model">Model</option>
+                    <option value="vae">VAE</option>
+                    <option value="lora">LoRA</option>
+                    <option value="sampler">Sampler</option>
+                    <option value="scheduler">Scheduler</option>
+                    <option value="cfg_scale">CFG Scale</option>
+                    <option value="steps">Steps</option>
+                    <option value="seed">Seed</option>
+                    <option value="denoise">Denoise</option>
+                    <option value="flux_guidance">Flux Guidance</option>
+                    <option value="prompt">Prompt</option>
+                </select>
+            </div>
+            <textarea class="xyz-axis-values" id="y_values" placeholder="Values will appear here..."></textarea>
+            <button class="xyz-select-button" id="y_select_btn" style="display: none;">Select Values</button>
+            <div class="xyz-info-box" id="y_info" style="display: none;"></div>
+        </div>
+        
+        <!-- Z Axis -->
+        <div class="xyz-axis-group">
+            <div class="xyz-axis-header">Z AXIS (Optional)</div>
+            <div class="xyz-axis-row">
+                <span class="xyz-axis-label">Parameter:</span>
+                <select class="xyz-axis-select" id="z_axis_type">
+                    <option value="none">None</option>
+                    <option value="model">Model</option>
+                    <option value="vae">VAE</option>
+                    <option value="lora">LoRA</option>
+                    <option value="sampler">Sampler</option>
+                    <option value="scheduler">Scheduler</option>
+                    <option value="cfg_scale">CFG Scale</option>
+                    <option value="steps">Steps</option>
+                    <option value="seed">Seed</option>
+                    <option value="denoise">Denoise</option>
+                    <option value="flux_guidance">Flux Guidance</option>
+                    <option value="prompt">Prompt</option>
+                </select>
+            </div>
+            <textarea class="xyz-axis-values" id="z_values" placeholder="Values will appear here..."></textarea>
+            <button class="xyz-select-button" id="z_select_btn" style="display: none;">Select Values</button>
+            <div class="xyz-info-box" id="z_info" style="display: none;"></div>
+        </div>
+        
+        <!-- Total Count -->
+        <div class="xyz-total-count" id="xyz_total_count">Total Images: 0</div>
+    `;
+    
+    // Setup event handlers
+    function setupAxisHandlers(axis) {
+        const typeSelect = container.querySelector(`#${axis}_axis_type`);
+        const valuesTextarea = container.querySelector(`#${axis}_values`);
+        const selectBtn = container.querySelector(`#${axis}_select_btn`);
+        const infoBox = container.querySelector(`#${axis}_info`);
+        
+        typeSelect.addEventListener('change', async () => {
+            const paramType = typeSelect.value;
+            const info = PARAM_INFO[paramType];
+            
+            // Update widget values
+            const typeWidget = node.widgets.find(w => w.name === `${axis}_axis_type`);
+            if (typeWidget) {
+                typeWidget.value = paramType;
+                typeWidget.callback?.(paramType);
+            }
+            
+            if (!info || paramType === 'none') {
+                selectBtn.style.display = 'none';
+                infoBox.style.display = 'none';
+                valuesTextarea.placeholder = 'Values will appear here...';
+                return;
+            }
+            
+            // Show info
+            infoBox.style.display = 'block';
+            infoBox.innerHTML = `
+                <strong>${info.description}</strong>
+                ${info.example ? `<div class="xyz-info-example">${info.example}</div>` : ''}
+            `;
+            
+            // Show/hide select button
+            if (info.hasOptions) {
+                selectBtn.style.display = 'block';
+                selectBtn.textContent = `📁 Select ${paramType.charAt(0).toUpperCase() + paramType.slice(1)}s`;
+                valuesTextarea.placeholder = 'Click the button above to select values...';
+            } else {
+                selectBtn.style.display = 'none';
+                valuesTextarea.placeholder = 'Enter values...';
+            }
+            
+            updateTotalCount();
+        });
+        
+        selectBtn.addEventListener('click', async () => {
+            const paramType = typeSelect.value;
+            const options = await getParameterOptions(paramType);
+            const currentValues = valuesTextarea.value.split(',').map(v => v.trim()).filter(v => v);
+            
+            showMultiSelectDialog(options, currentValues, paramType, (selected) => {
+                valuesTextarea.value = selected.join(', ');
+                const valueWidget = node.widgets.find(w => w.name === `${axis}_values`);
+                if (valueWidget) {
+                    valueWidget.value = valuesTextarea.value;
+                    valueWidget.callback?.(valuesTextarea.value);
+                }
+                updateTotalCount();
+            });
+        });
+        
+        valuesTextarea.addEventListener('input', () => {
+            const valueWidget = node.widgets.find(w => w.name === `${axis}_values`);
+            if (valueWidget) {
+                valueWidget.value = valuesTextarea.value;
+                valueWidget.callback?.(valuesTextarea.value);
+            }
+            updateTotalCount();
+        });
+    }
+    
+    function updateTotalCount() {
+        let xCount = 1, yCount = 1, zCount = 1;
+        
+        ['x', 'y', 'z'].forEach(axis => {
+            const typeSelect = container.querySelector(`#${axis}_axis_type`);
+            const valuesTextarea = container.querySelector(`#${axis}_values`);
+            
+            if (typeSelect.value !== 'none' && valuesTextarea.value.trim()) {
+                const values = valuesTextarea.value.trim();
+                
                 // Check for range syntax
                 if (values.includes(':')) {
                     const parts = values.split(':');
@@ -606,21 +583,81 @@ function updateImageCount(node) {
                     else if (axis === 'z') zCount = count;
                 }
             }
+        });
+        
+        const total = xCount * yCount * zCount;
+        const totalDiv = container.querySelector('#xyz_total_count');
+        totalDiv.textContent = `Total Images: ${total}`;
+        
+        totalDiv.className = 'xyz-total-count';
+        if (total > 100) {
+            totalDiv.className += ' danger';
+            totalDiv.textContent += ' ⚠️';
+        } else if (total > 50) {
+            totalDiv.className += ' warning';
         }
-    });
-    
-    const total = xCount * yCount * zCount;
-    countDiv.textContent = `Total Images: ${total}`;
-    
-    // Update color based on count
-    if (total > 100) {
-        countDiv.style.color = "#ff6b6b";
-        countDiv.textContent += " ⚠️";
-    } else if (total > 50) {
-        countDiv.style.color = "#ffaa00";
-    } else {
-        countDiv.style.color = "#4ecdc4";
     }
+    
+    // Initialize handlers
+    ['x', 'y', 'z'].forEach(axis => setupAxisHandlers(axis));
+    
+    // Sync with existing widget values
+    function syncFromWidgets() {
+        ['x', 'y', 'z'].forEach(axis => {
+            const typeWidget = node.widgets.find(w => w.name === `${axis}_axis_type`);
+            const valueWidget = node.widgets.find(w => w.name === `${axis}_values`);
+            
+            if (typeWidget) {
+                const typeSelect = container.querySelector(`#${axis}_axis_type`);
+                typeSelect.value = typeWidget.value;
+                typeSelect.dispatchEvent(new Event('change'));
+            }
+            
+            if (valueWidget) {
+                const valuesTextarea = container.querySelector(`#${axis}_values`);
+                valuesTextarea.value = valueWidget.value;
+            }
+        });
+        updateTotalCount();
+    }
+    
+    setTimeout(syncFromWidgets, 100);
+    
+    return container;
 }
 
-console.log("[XYZ Plot Controller] Extension module loaded successfully");
+app.registerExtension({
+    name: "ComfyAssets.XYZPlotControllerV2",
+    
+    async beforeRegisterNodeDef(nodeType, nodeData, app) {
+        if (nodeData.name === "XYZPlotController") {
+            const onNodeCreated = nodeType.prototype.onNodeCreated;
+            
+            nodeType.prototype.onNodeCreated = function() {
+                if (onNodeCreated) {
+                    onNodeCreated.apply(this, arguments);
+                }
+                
+                // Hide all original widgets
+                this.widgets.forEach(w => {
+                    if (w.element) {
+                        w.element.style.display = 'none';
+                    }
+                    if (w.inputEl) {
+                        w.inputEl.style.display = 'none';
+                    }
+                });
+                
+                // Create custom UI
+                const ui = createEnhancedUI(this);
+                this.addDOMWidget("xyz_enhanced_ui", "div", ui, {
+                    serialize: false,
+                    hideOnZoom: false
+                });
+                
+                // Set node size
+                this.size = [400, 850];
+            };
+        }
+    }
+});
