@@ -297,6 +297,13 @@ function showMultiSelectDialog(options, currentValues, paramType, onApply) {
 function createEnhancedUI(node) {
     const container = document.createElement("div");
     container.className = "xyz-controller-ui";
+    container.style.cssText = `
+        width: 100%;
+        height: 100%;
+        min-height: 600px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    `;
     container.innerHTML = `
         <style>
             .xyz-controller-ui {
@@ -671,9 +678,12 @@ app.registerExtension({
                 
                 // Create custom UI
                 const ui = createEnhancedUI(this);
+                
+                // Create the DOM widget with specific size
                 const customWidget = this.addDOMWidget("xyz_enhanced_ui", "div", ui, {
                     serialize: false,
-                    hideOnZoom: false
+                    hideOnZoom: false,
+                    computeSize: () => [380 - 20, 680 - 60] // Account for node padding
                 });
                 
                 // Add our custom widget to the widgets array
@@ -681,6 +691,33 @@ app.registerExtension({
                 
                 // Make sure size is correct
                 this.size = [380, 680];
+                
+                // Force the widget to update its size
+                if (customWidget.computeSize) {
+                    customWidget.size = customWidget.computeSize();
+                }
+                
+                // Force a redraw
+                this.setDirtyCanvas(true, true);
+            };
+            
+            // Override onResize to handle widget sizing
+            const onResize = nodeType.prototype.onResize;
+            nodeType.prototype.onResize = function(size) {
+                if (onResize) {
+                    onResize.apply(this, arguments);
+                }
+                
+                // Update widget size when node is resized
+                const customWidget = this.widgets?.find(w => w.name === "xyz_enhanced_ui");
+                if (customWidget) {
+                    customWidget.size = [size[0] - 20, size[1] - 60];
+                    if (customWidget.element) {
+                        customWidget.element.style.width = customWidget.size[0] + 'px';
+                        customWidget.element.style.height = customWidget.size[1] + 'px';
+                    }
+                    this.setDirtyCanvas(true);
+                }
             };
         }
     }
