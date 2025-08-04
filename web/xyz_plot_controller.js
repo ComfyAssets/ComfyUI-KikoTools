@@ -654,11 +654,11 @@ app.registerExtension({
                 // Set initial size immediately - adjusted for compact layout
                 this.size = [380, 680];
                 
-                // Store original widgets for later access but hide them completely
-                this.originalWidgets = this.widgets.slice();
+                // Store reference to original widgets but hide them visually
+                this.originalWidgets = this.widgets;
                 
-                // Remove all original widgets from display
-                this.widgets = this.widgets.filter(w => {
+                // Hide all original widgets visually but keep them in the array
+                this.widgets.forEach(w => {
                     // Hide DOM elements
                     if (w.element) {
                         w.element.style.display = 'none';
@@ -672,12 +672,7 @@ app.registerExtension({
                             w.inputEl.parentElement.style.display = 'none';
                         }
                     }
-                    // Keep only non-visual widgets
-                    return false;
                 });
-                
-                // Set initial size
-                this.size = [380, 680];
                 
                 // Create custom UI immediately
                 const ui = createEnhancedUI(this);
@@ -702,8 +697,8 @@ app.registerExtension({
                     }
                 }
                 
-                // Update widgets array
-                this.widgets = [customWidget];
+                // Add our custom widget to the widgets array
+                this.widgets.push(customWidget);
                 
                 // Schedule a resize to ensure proper display
                 setTimeout(() => {
