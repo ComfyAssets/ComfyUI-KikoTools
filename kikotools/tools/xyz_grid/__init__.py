@@ -1,10 +1,10 @@
 """XYZ Grid nodes for ComfyUI parameter comparisons."""
 
-from .controller.advanced_node import XYZPlotControllerAdvanced
+from .controller.simple_node import XYZPlotController
 from .combiner.node import ImageGridCombiner
 
 NODE_CLASS_MAPPINGS = {
-    "XYZPlotController": XYZPlotControllerAdvanced,
+    "XYZPlotController": XYZPlotController,
     "ImageGridCombiner": ImageGridCombiner,
 }
 
@@ -13,4 +13,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ImageGridCombiner": "Image Grid Combiner",
 }
 
-__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "XYZPlotControllerAdvanced", "ImageGridCombiner"]
+__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "XYZPlotController", "ImageGridCombiner"]
