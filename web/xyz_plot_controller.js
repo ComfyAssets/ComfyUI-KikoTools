@@ -307,8 +307,8 @@ function createEnhancedUI(node) {
                 color: #ddd;
             }
             .xyz-axis-group {
-                margin-bottom: 12px;
-                padding: 10px;
+                margin-bottom: 8px;
+                padding: 8px;
                 background: #2a2a2a;
                 border-radius: 4px;
                 border: 1px solid #333;
@@ -342,15 +342,15 @@ function createEnhancedUI(node) {
             }
             .xyz-axis-values {
                 width: 100%;
-                margin-top: 8px;
-                padding: 6px;
+                margin-top: 6px;
+                padding: 4px 6px;
                 background: #333;
                 border: 1px solid #444;
                 border-radius: 3px;
                 color: #fff;
                 font-size: 11px;
-                min-height: 40px;
-                max-height: 60px;
+                min-height: 35px;
+                max-height: 50px;
                 resize: vertical;
             }
             .xyz-select-button {
@@ -644,8 +644,8 @@ app.registerExtension({
                     onNodeCreated.apply(this, arguments);
                 }
                 
-                // Set initial size immediately
-                this.size = [350, 550];
+                // Set initial size immediately - adjusted for compact layout
+                this.size = [380, 680];
                 
                 // Store original widgets for later access but hide them completely
                 this.originalWidgets = this.widgets.slice();
@@ -680,7 +680,7 @@ app.registerExtension({
                 this.widgets = [customWidget];
                 
                 // Make sure size is correct
-                this.size = [350, 550];
+                this.size = [380, 680];
             };
         }
     }
