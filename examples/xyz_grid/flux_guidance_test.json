@@ -1,0 +1,235 @@
+{
+  "last_node_id": 11,
+  "last_link_id": 16,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "XYZPlotController",
+      "pos": [100, 100],
+      "size": [450, 350],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "grid_data", "type": "XYZ_GRID", "links": [10]},
+        {"name": "x_float", "type": "FLOAT", "links": [11]},
+        {"name": "y_float", "type": "FLOAT", "links": [12]}
+      ],
+      "properties": {},
+      "widgets_values": [
+        "flux_guidance",
+        "1.0:5.0:0.5",
+        "Guidance: ",
+        "cfg_scale", 
+        "1.0, 3.0, 5.0, 7.0",
+        "CFG: ",
+        true,
+        "none",
+        "",
+        "",
+        true,
+        false
+      ]
+    },
+    {
+      "id": 2,
+      "type": "CheckpointLoaderSimple",
+      "pos": [600, 100],
+      "size": [315, 98],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "MODEL", "type": "MODEL", "links": [1]},
+        {"name": "CLIP", "type": "CLIP", "links": [2, 3]},
+        {"name": "VAE", "type": "VAE", "links": [4]}
+      ],
+      "properties": {},
+      "widgets_values": ["flux1-dev.safetensors"]
+    },
+    {
+      "id": 3,
+      "type": "FluxGuidance",
+      "pos": [950, 100],
+      "size": [315, 58],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {"name": "conditioning", "type": "CONDITIONING", "link": 14},
+        {"name": "guidance", "type": "FLOAT", "link": 11}
+      ],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [5]}
+      ],
+      "properties": {},
+      "widgets_values": [3.5]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "pos": [600, 250],
+      "size": [400, 200],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {"name": "clip", "type": "CLIP", "link": 2}
+      ],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [14]}
+      ],
+      "properties": {},
+      "widgets_values": ["a stunning digital artwork of a phoenix rising from ashes, vibrant colors, dramatic lighting, highly detailed feathers with fire effects"]
+    },
+    {
+      "id": 5,
+      "type": "CLIPTextEncode",
+      "pos": [600, 500],
+      "size": [400, 200],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {"name": "clip", "type": "CLIP", "link": 3}
+      ],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [6]}
+      ],
+      "properties": {},
+      "widgets_values": [""]
+    },
+    {
+      "id": 6,
+      "type": "EmptyLatentImage",
+      "pos": [1050, 250],
+      "size": [315, 106],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "LATENT", "type": "LATENT", "links": [7]}
+      ],
+      "properties": {},
+      "widgets_values": [1024, 1024, 1]
+    },
+    {
+      "id": 7,
+      "type": "KSamplerAdvanced",
+      "pos": [1050, 400],
+      "size": [315, 334],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {"name": "model", "type": "MODEL", "link": 1},
+        {"name": "positive", "type": "CONDITIONING", "link": 5},
+        {"name": "negative", "type": "CONDITIONING", "link": 6},
+        {"name": "latent_image", "type": "LATENT", "link": 7},
+        {"name": "cfg", "type": "FLOAT", "link": 12}
+      ],
+      "outputs": [
+        {"name": "LATENT", "type": "LATENT", "links": [8]}
+      ],
+      "properties": {},
+      "widgets_values": ["enable", 42, "fixed", 20, 1.0, "euler", "simple", 0, 20, "disable"]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [1400, 400],
+      "size": [210, 46],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {"name": "samples", "type": "LATENT", "link": 8},
+        {"name": "vae", "type": "VAE", "link": 4}
+      ],
+      "outputs": [
+        {"name": "IMAGE", "type": "IMAGE", "links": [9]}
+      ],
+      "properties": {}
+    },
+    {
+      "id": 9,
+      "type": "ImageGridCombiner",
+      "pos": [1650, 400],
+      "size": [315, 200],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 9},
+        {"name": "grid_data", "type": "XYZ_GRID", "link": 10}
+      ],
+      "outputs": [
+        {"name": "grid_image", "type": "IMAGE", "links": [15]},
+        {"name": "grid_info", "type": "STRING", "links": null}
+      ],
+      "properties": {},
+      "widgets_values": [20, 10, 30, 30, true]
+    },
+    {
+      "id": 10,
+      "type": "SaveImage",
+      "pos": [2000, 400],
+      "size": [315, 270],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 15}
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": ["flux_guidance_cfg_grid"]
+    }
+  ],
+  "links": [
+    [1, 2, 0, 7, 0, "MODEL"],
+    [2, 2, 1, 4, 0, "CLIP"],
+    [3, 2, 1, 5, 0, "CLIP"],
+    [4, 2, 2, 8, 1, "VAE"],
+    [5, 3, 0, 7, 1, "CONDITIONING"],
+    [6, 5, 0, 7, 2, "CONDITIONING"],
+    [7, 6, 0, 7, 3, "LATENT"],
+    [8, 7, 0, 8, 0, "LATENT"],
+    [9, 8, 0, 9, 0, "IMAGE"],
+    [10, 1, 0, 9, 1, "XYZ_GRID"],
+    [11, 1, 2, 3, 1, "FLOAT"],
+    [12, 1, 5, 7, 4, "FLOAT"],
+    [14, 4, 0, 3, 0, "CONDITIONING"],
+    [15, 9, 0, 10, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "Flux Parameter Grid Setup",
+      "bounding": [80, 20, 490, 430],
+      "color": "#3f789e"
+    },
+    {
+      "title": "Flux Model Pipeline",
+      "bounding": [580, 20, 450, 200],
+      "color": "#8b4c7a"
+    },
+    {
+      "title": "Generation Pipeline",
+      "bounding": [580, 240, 810, 520],
+      "color": "#4c7a3f"
+    },
+    {
+      "title": "Grid Output",
+      "bounding": [1630, 320, 700, 400],
+      "color": "#7a4c3f"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "info": "This workflow demonstrates testing Flux-specific parameters. It creates a 9x4 grid comparing Flux guidance values (1.0 to 5.0 in 0.5 steps) against different CFG scales. This is useful for finding the optimal balance between Flux guidance and traditional CFG for your specific use case. Note: Requires Flux model and FluxGuidance node."
+  },
+  "version": 0.4
+}
