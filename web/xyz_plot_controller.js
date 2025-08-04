@@ -299,7 +299,8 @@ function createEnhancedUI(node) {
     container.className = "xyz-controller-ui";
     container.style.cssText = `
         width: 100%;
-        height: 620px;
+        height: 100%;
+        max-height: 620px;
         overflow-y: auto;
         overflow-x: hidden;
         box-sizing: border-box;
@@ -692,6 +693,12 @@ app.registerExtension({
                 if (customWidget) {
                     customWidget.computeSize = () => [this.size[0] - 20, this.size[1] - 60];
                     customWidget.size = customWidget.computeSize();
+                    
+                    // Ensure the element has proper height constraint
+                    if (customWidget.element) {
+                        customWidget.element.style.maxHeight = (this.size[1] - 60) + 'px';
+                        customWidget.element.style.overflow = 'hidden';
+                    }
                 }
                 
                 // Update widgets array
@@ -717,7 +724,9 @@ app.registerExtension({
                     customWidget.size = [size[0] - 20, size[1] - 60];
                     if (customWidget.element) {
                         customWidget.element.style.width = customWidget.size[0] + 'px';
-                        customWidget.element.style.height = customWidget.size[1] + 'px';
+                        customWidget.element.style.maxHeight = customWidget.size[1] + 'px';
+                        customWidget.element.style.height = 'auto';
+                        customWidget.element.style.overflow = 'hidden';
                     }
                     this.setDirtyCanvas(true);
                 }
