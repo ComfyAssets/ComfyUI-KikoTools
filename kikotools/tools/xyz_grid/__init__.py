@@ -13,4 +13,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ImageGridCombiner": "Image Grid Combiner",
 }
 
-__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "XYZPlotController", "ImageGridCombiner"]
+__all__ = ["XYZPlotController", "ImageGridCombiner"]
