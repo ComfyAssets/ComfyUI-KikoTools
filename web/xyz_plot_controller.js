@@ -494,7 +494,7 @@ function createEnhancedUI(node) {
             const info = PARAM_INFO[paramType];
             
             // Update widget values
-            const typeWidget = node.widgets.find(w => w.name === `${axis}_axis_type`);
+            const typeWidget = (node.originalWidgets || node.widgets).find(w => w.name === `${axis}_axis_type`);
             if (typeWidget) {
                 typeWidget.value = paramType;
                 typeWidget.callback?.(paramType);
@@ -534,7 +534,7 @@ function createEnhancedUI(node) {
             
             showMultiSelectDialog(options, currentValues, paramType, (selected) => {
                 valuesTextarea.value = selected.join(', ');
-                const valueWidget = node.widgets.find(w => w.name === `${axis}_values`);
+                const valueWidget = (node.originalWidgets || node.widgets).find(w => w.name === `${axis}_values`);
                 if (valueWidget) {
                     valueWidget.value = valuesTextarea.value;
                     valueWidget.callback?.(valuesTextarea.value);
@@ -544,7 +544,7 @@ function createEnhancedUI(node) {
         });
         
         valuesTextarea.addEventListener('input', () => {
-            const valueWidget = node.widgets.find(w => w.name === `${axis}_values`);
+            const valueWidget = (node.originalWidgets || node.widgets).find(w => w.name === `${axis}_values`);
             if (valueWidget) {
                 valueWidget.value = valuesTextarea.value;
                 valueWidget.callback?.(valuesTextarea.value);
@@ -604,8 +604,9 @@ function createEnhancedUI(node) {
     // Sync with existing widget values
     function syncFromWidgets() {
         ['x', 'y', 'z'].forEach(axis => {
-            const typeWidget = node.widgets.find(w => w.name === `${axis}_axis_type`);
-            const valueWidget = node.widgets.find(w => w.name === `${axis}_values`);
+            const widgets = node.originalWidgets || node.widgets;
+            const typeWidget = widgets.find(w => w.name === `${axis}_axis_type`);
+            const valueWidget = widgets.find(w => w.name === `${axis}_values`);
             
             if (typeWidget) {
                 const typeSelect = container.querySelector(`#${axis}_axis_type`);
@@ -638,22 +639,37 @@ app.registerExtension({
                     onNodeCreated.apply(this, arguments);
                 }
                 
-                // Hide all original widgets
-                this.widgets.forEach(w => {
+                // Store original widgets for later access but hide them completely
+                this.originalWidgets = this.widgets.slice();
+                
+                // Remove all original widgets from display
+                this.widgets = this.widgets.filter(w => {
+                    // Hide DOM elements
                     if (w.element) {
                         w.element.style.display = 'none';
+                        if (w.element.parentElement) {
+                            w.element.parentElement.style.display = 'none';
+                        }
                     }
                     if (w.inputEl) {
                         w.inputEl.style.display = 'none';
+                        if (w.inputEl.parentElement) {
+                            w.inputEl.parentElement.style.display = 'none';
+                        }
                     }
+                    // Keep only non-visual widgets
+                    return false;
                 });
                 
                 // Create custom UI
                 const ui = createEnhancedUI(this);
-                this.addDOMWidget("xyz_enhanced_ui", "div", ui, {
+                const customWidget = this.addDOMWidget("xyz_enhanced_ui", "div", ui, {
                     serialize: false,
                     hideOnZoom: false
                 });
+                
+                // Add our custom widget to the widgets array
+                this.widgets = [customWidget];
                 
                 // Set node size
                 this.size = [400, 850];
