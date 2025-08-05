@@ -1,0 +1,64 @@
+{
+  "last_node_id": 5,
+  "last_link_id": 6,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "XYZPlotController",
+      "pos": [100, 100],
+      "size": [400, 300],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "grid_data", "type": "XYZ_GRID", "links": [1]},
+        {"name": "x_string", "type": "STRING", "links": null},
+        {"name": "x_int", "type": "INT", "links": null},
+        {"name": "x_float", "type": "FLOAT", "links": null},
+        {"name": "y_string", "type": "STRING", "links": null},
+        {"name": "y_int", "type": "INT", "links": null},
+        {"name": "y_float", "type": "FLOAT", "links": null},
+        {"name": "z_string", "type": "STRING", "links": null},
+        {"name": "z_int", "type": "INT", "links": null},
+        {"name": "z_float", "type": "FLOAT", "links": null},
+        {"name": "batch_id", "type": "STRING", "links": null}
+      ],
+      "properties": {},
+      "widgets_values": [
+        "models",
+        "cfg_scale", 
+        "none",
+        true
+      ]
+    },
+    {
+      "id": 2,
+      "type": "ImageGridCombiner",
+      "pos": [600, 100],
+      "size": [315, 200],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": null},
+        {"name": "grid_data", "type": "XYZ_GRID", "link": 1}
+      ],
+      "outputs": [
+        {"name": "grid_image", "type": "IMAGE", "links": null},
+        {"name": "grid_info", "type": "STRING", "links": null}
+      ],
+      "properties": {},
+      "widgets_values": [20, 10, 30, 30, true]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 1, "XYZ_GRID"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "info": "Example workflow showing the new advanced XYZ Plot Controller with dynamic widget addition."
+  },
+  "version": 0.4
+}

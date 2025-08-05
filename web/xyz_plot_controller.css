@@ -1,0 +1,18 @@
+/* XYZ Plot Controller Widget Styles */
+.xyz-plot-controller-widget {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.xyz-plot-controller-toggle {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Ensure combo widgets don't overflow */
+.comfy-multiline-input {
+    font-family: monospace;
+    resize: vertical;
+}
