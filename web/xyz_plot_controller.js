@@ -614,20 +614,43 @@ app.registerExtension({
                     updateNodeTitle(this);
                 };
                 
+                // Override getSlotInPosition to return widget as a fake slot
+                const originalGetSlotInPosition = node.getSlotInPosition;
+                node.getSlotInPosition = function(canvasX, canvasY) {
+                    // First check the normal slots
+                    const slot = originalGetSlotInPosition ? originalGetSlotInPosition.call(this, canvasX, canvasY) : null;
+                    if (slot) {
+                        return slot;
+                    }
+                    
+                    // Check if we clicked on a widget
+                    let lastWidget = null;
+                    for (const widget of this.widgets) {
+                        if (!widget.last_y) continue;
+                        if (canvasY > this.pos[1] + widget.last_y) {
+                            lastWidget = widget;
+                            continue;
+                        }
+                        break;
+                    }
+                    
+                    // If we found a widget and it's one of ours, return a fake slot
+                    if (lastWidget instanceof XYZSelectionWidget) {
+                        return { widget: lastWidget, output: { type: "XYZ_WIDGET" } };
+                    }
+                    
+                    return null;
+                };
+                
                 // Override getSlotMenuOptions for right-click menu
                 const originalGetSlotMenuOptions = node.getSlotMenuOptions;
                 node.getSlotMenuOptions = function(slot) {
-                    // Find if we clicked on a widget
-                    const localY = app.canvas.last_mouse_position[1] - this.pos[1];
-                    
-                    for (const widget of this.widgets) {
-                        if (widget instanceof XYZSelectionWidget && 
-                            localY > widget.last_y && 
-                            localY < widget.last_y + LiteGraph.NODE_WIDGET_HEIGHT) {
-                            
-                            const axis = widget.value._axis;
-                            const array = this.dynamicWidgets[axis];
-                            const currentIndex = array.indexOf(widget);
+                    // Check if slot has a widget and it's one of ours
+                    if (slot?.widget instanceof XYZSelectionWidget) {
+                        const widget = slot.widget;
+                        const axis = widget.value._axis;
+                        const array = this.dynamicWidgets[axis];
+                        const currentIndex = array.indexOf(widget);
                             
                             return [
                                 {
@@ -699,7 +722,6 @@ app.registerExtension({
                                     }
                                 }
                             ];
-                        }
                     }
                     
                     return originalGetSlotMenuOptions ? originalGetSlotMenuOptions.call(this, slot) : null;
