@@ -162,3 +162,4 @@ experiments/
 
 # Gemini model cache
 .gemini_models_cache.json
+CLAUDE.md
