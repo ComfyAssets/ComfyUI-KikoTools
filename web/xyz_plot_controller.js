@@ -839,31 +839,51 @@ function updateAxisWidgets(node, axis, type, skipClear = false) {
             console.log(`Creating text widget: ${widgetName}`);
             console.log("Widgets before creation:", node.widgets.length);
             
+            // Create text widget with proper configuration
             const textWidget = ComfyWidgets.STRING(node, widgetName, ["STRING", {
                 default: "",
-                multiline: type === "prompt",
-                placeholder: PARAM_HELP[type] || ""
-            }]);
+                multiline: true,  // Always multiline for better display of hints
+                dynamicPrompts: false
+            }], app);
             
             console.log("Widgets after creation:", node.widgets.length);
             console.log("All widget names:", node.widgets.map(w => w.name));
             
-            // Find the actual widget that was added - get the last one with this name
-            const matchingWidgets = node.widgets.filter(w => w.name === widgetName);
-            const addedWidget = matchingWidgets[matchingWidgets.length - 1];
+            // The widget returned by ComfyWidgets.STRING is an object with a 'widget' property
+            const addedWidget = textWidget.widget;
             
             if (addedWidget) {
                 node.textWidgets[axis] = addedWidget;
                 console.log(`Text widget created and stored: ${widgetName}`);
                 
-                // Set placeholder
+                // Set placeholder and styling after widget is created
                 if (addedWidget.inputEl && PARAM_HELP[type]) {
                     addedWidget.inputEl.placeholder = PARAM_HELP[type];
+                    // Make the placeholder more visible
+                    addedWidget.inputEl.style.fontFamily = "monospace";
+                    if (type !== "prompt") {
+                        // For non-prompt fields, adjust the height
+                        addedWidget.inputEl.style.minHeight = "60px";
+                    }
                 }
             }
+            
+            // Resize node to fit the new widget
+            node.setDirtyCanvas(true, true);
+            const size = node.computeSize();
+            node.size[1] = size[1] + 30; // Add padding to prevent overflow
         } else {
             console.log(`Text widget already exists: ${widgetName}`);
             node.textWidgets[axis] = existingWidget;
+            
+            // Ensure existing widget has placeholder set
+            if (existingWidget.inputEl && PARAM_HELP[type]) {
+                existingWidget.inputEl.placeholder = PARAM_HELP[type];
+                existingWidget.inputEl.style.fontFamily = "monospace";
+                if (type !== "prompt") {
+                    existingWidget.inputEl.style.minHeight = "60px";
+                }
+            }
         }
     } else if (needsDropdownWidget(type)) {
         // Only add button if not already present
@@ -882,6 +902,11 @@ function updateAxisWidgets(node, axis, type, skipClear = false) {
                 }
             }
             node.addButtons[axis] = button;
+            
+            // Resize node to fit the new button
+            node.setDirtyCanvas(true, true);
+            const size = node.computeSize();
+            node.size[1] = Math.max(node.size[1], size[1]);
         }
     }
 }
