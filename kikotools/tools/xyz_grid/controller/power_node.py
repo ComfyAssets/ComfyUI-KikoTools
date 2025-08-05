@@ -154,7 +154,30 @@ class XYZPlotController:
                 "values": z_parsed,
                 "count": z_count
             },
-            "total_images": total_images,
+            "axes": {
+                "x": {
+                    "type": x_type,
+                    "labels": self._create_labels(x_type, x_parsed)
+                },
+                "y": {
+                    "type": y_type,
+                    "labels": self._create_labels(y_type, y_parsed)
+                },
+                "z": {
+                    "type": z_type,
+                    "labels": self._create_labels(z_type, z_parsed) if z_type != "none" else []
+                }
+            },
+            "dimensions": {
+                "total_images": total_images,
+                "x_count": x_count,
+                "y_count": y_count,
+                "z_count": z_count,
+                "cols": x_count,  # X axis forms columns
+                "rows": y_count,  # Y axis forms rows
+                "grids_count": z_count  # Z axis creates multiple grids
+            },
+            "total_images": total_images,  # Keep for backward compatibility
             "current_index": 0,
             "auto_queue": auto_queue
         }
@@ -272,6 +295,36 @@ class XYZPlotController:
             return ("", 0, float(value))
         else:
             return ("", 0, 0.0)
+    
+    def _create_labels(self, axis_type: str, values: list) -> list:
+        """Create human-readable labels for axis values."""
+        labels = []
+        for value in values:
+            if axis_type == "prompt":
+                # Truncate long prompts
+                label = str(value)[:30] + "..." if len(str(value)) > 30 else str(value)
+            elif axis_type in ["models", "vaes", "loras"]:
+                # Use just the filename without path/extension for resources
+                if isinstance(value, dict) and "name" in value:
+                    name = value["name"]
+                else:
+                    name = str(value)
+                # Remove extension and path
+                label = name.split("/")[-1].split(".")[0]
+            elif axis_type in ["cfg_scale", "denoise"]:
+                # Format floats nicely
+                label = f"{float(value):.1f}"
+            elif axis_type in ["steps", "seed", "clip_skip"]:
+                # Just show the integer
+                label = str(int(value))
+            elif axis_type in ["samplers", "schedulers"]:
+                # Just use the name as-is
+                label = str(value)
+            else:
+                # Default: convert to string
+                label = str(value)
+            labels.append(label)
+        return labels
     
     def _apply_lora(self, model, clip, lora_data: dict):
         """Apply a lora to model and clip."""

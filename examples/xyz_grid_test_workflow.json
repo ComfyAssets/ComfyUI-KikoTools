@@ -1,0 +1,238 @@
+{
+  "last_node_id": 20,
+  "last_link_id": 30,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "XYZPrompt",
+      "pos": [100, 100],
+      "size": {"0": 350, "1": 400},
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "outputs": [
+        {"name": "prompts", "type": "XYZ_PROMPTS", "links": [1]},
+        {"name": "positive", "type": "STRING", "links": [2]},
+        {"name": "negative", "type": "STRING", "links": [3]},
+        {"name": "count", "type": "INT", "links": null}
+      ],
+      "properties": {"Node name for S&R": "XYZPrompt"},
+      "widgets_values": [
+        true,
+        true,
+        "a beautiful landscape",
+        "ugly, blurry, watermark",
+        "a serene mountain scene",
+        "a vibrant cityscape at night",
+        "a peaceful forest path"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "XYZPlotController",
+      "pos": [500, 100],
+      "size": {"0": 400, "1": 500},
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {"name": "prompts", "type": "XYZ_PROMPTS", "link": 1}
+      ],
+      "outputs": [
+        {"name": "grid_data", "type": "XYZ_GRID", "links": [4]},
+        {"name": "x_string", "type": "STRING", "links": [5]},
+        {"name": "x_int", "type": "INT", "links": null},
+        {"name": "x_float", "type": "FLOAT", "links": null},
+        {"name": "y_string", "type": "STRING", "links": null},
+        {"name": "y_int", "type": "INT", "links": [6]},
+        {"name": "y_float", "type": "FLOAT", "links": null},
+        {"name": "z_string", "type": "STRING", "links": null},
+        {"name": "z_int", "type": "INT", "links": null},
+        {"name": "z_float", "type": "FLOAT", "links": null},
+        {"name": "batch_id", "type": "STRING", "links": null}
+      ],
+      "properties": {"Node name for S&R": "XYZPlotController"},
+      "widgets_values": [
+        "prompt",
+        "steps",
+        "none",
+        true,
+        "20\n30\n40",
+        ""
+      ]
+    },
+    {
+      "id": 3,
+      "type": "CheckpointLoaderSimple",
+      "pos": [100, 550],
+      "size": {"0": 315, "1": 98},
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "outputs": [
+        {"name": "MODEL", "type": "MODEL", "links": [7]},
+        {"name": "CLIP", "type": "CLIP", "links": [8, 9]},
+        {"name": "VAE", "type": "VAE", "links": [10]}
+      ],
+      "properties": {"Node name for S&R": "CheckpointLoaderSimple"},
+      "widgets_values": ["sd_xl_base_1.0.safetensors"]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "pos": [500, 650],
+      "size": {"0": 400, "1": 200},
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {"name": "clip", "type": "CLIP", "link": 8},
+        {"name": "text", "type": "STRING", "link": 2, "widget": {"name": "text"}}
+      ],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [11]}
+      ],
+      "properties": {"Node name for S&R": "CLIPTextEncode"},
+      "widgets_values": [""]
+    },
+    {
+      "id": 5,
+      "type": "CLIPTextEncode",
+      "pos": [500, 900],
+      "size": {"0": 400, "1": 200},
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {"name": "clip", "type": "CLIP", "link": 9},
+        {"name": "text", "type": "STRING", "link": 3, "widget": {"name": "text"}}
+      ],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [12]}
+      ],
+      "properties": {"Node name for S&R": "CLIPTextEncode"},
+      "widgets_values": [""]
+    },
+    {
+      "id": 6,
+      "type": "EmptyLatentImage",
+      "pos": [950, 550],
+      "size": {"0": 315, "1": 106},
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "outputs": [
+        {"name": "LATENT", "type": "LATENT", "links": [13]}
+      ],
+      "properties": {"Node name for S&R": "EmptyLatentImage"},
+      "widgets_values": [1024, 1024, 1]
+    },
+    {
+      "id": 7,
+      "type": "KSampler",
+      "pos": [950, 700],
+      "size": {"0": 315, "1": 262},
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {"name": "model", "type": "MODEL", "link": 7},
+        {"name": "positive", "type": "CONDITIONING", "link": 11},
+        {"name": "negative", "type": "CONDITIONING", "link": 12},
+        {"name": "latent_image", "type": "LATENT", "link": 13},
+        {"name": "steps", "type": "INT", "link": 6, "widget": {"name": "steps"}}
+      ],
+      "outputs": [
+        {"name": "LATENT", "type": "LATENT", "links": [14]}
+      ],
+      "properties": {"Node name for S&R": "KSampler"},
+      "widgets_values": [
+        156680208700286,
+        "randomize",
+        20,
+        8,
+        "euler",
+        "normal",
+        1
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [1300, 700],
+      "size": {"0": 210, "1": 46},
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {"name": "samples", "type": "LATENT", "link": 14},
+        {"name": "vae", "type": "VAE", "link": 10}
+      ],
+      "outputs": [
+        {"name": "IMAGE", "type": "IMAGE", "links": [15]}
+      ],
+      "properties": {"Node name for S&R": "VAEDecode"}
+    },
+    {
+      "id": 9,
+      "type": "ImageGridCombiner",
+      "pos": [1550, 700],
+      "size": {"0": 315, "1": 202},
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 15},
+        {"name": "grid_data", "type": "XYZ_GRID", "link": 4}
+      ],
+      "outputs": [
+        {"name": "grid_image", "type": "IMAGE", "links": [16]},
+        {"name": "grid_info", "type": "STRING", "links": null}
+      ],
+      "properties": {"Node name for S&R": "ImageGridCombiner"},
+      "widgets_values": [20, 10, 30, 30, true]
+    },
+    {
+      "id": 10,
+      "type": "SaveImage",
+      "pos": [1900, 700],
+      "size": {"0": 315, "1": 270},
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 16}
+      ],
+      "properties": {},
+      "widgets_values": ["xyz_grid"]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "XYZ_PROMPTS"],
+    [2, 1, 1, 4, 1, "STRING"],
+    [3, 1, 2, 5, 1, "STRING"],
+    [4, 2, 0, 9, 1, "XYZ_GRID"],
+    [5, 2, 1, 4, 1, "STRING"],
+    [6, 2, 5, 7, 4, "INT"],
+    [7, 3, 0, 7, 0, "MODEL"],
+    [8, 3, 1, 4, 0, "CLIP"],
+    [9, 3, 1, 5, 0, "CLIP"],
+    [10, 3, 2, 8, 1, "VAE"],
+    [11, 4, 0, 7, 1, "CONDITIONING"],
+    [12, 5, 0, 7, 2, "CONDITIONING"],
+    [13, 6, 0, 7, 3, "LATENT"],
+    [14, 7, 0, 8, 0, "LATENT"],
+    [15, 8, 0, 9, 0, "IMAGE"],
+    [16, 9, 0, 10, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "XYZ Grid Test Workflow",
+      "bounding": [80, 20, 2160, 1100],
+      "color": "#3f789e"
+    }
+  ],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
