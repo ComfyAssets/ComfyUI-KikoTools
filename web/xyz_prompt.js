@@ -73,7 +73,7 @@ app.registerExtension({
                 const showNegative = includeNegative && (!repeatNegative || index === 0);
                 
                 // Create positive prompt widget
-                const positiveWidget = ComfyWidgets.STRING(
+                const positiveWidgetObj = ComfyWidgets.STRING(
                     this, 
                     `positive_${index}`, 
                     ["STRING", {
@@ -82,7 +82,11 @@ app.registerExtension({
                         dynamicPrompts: false
                     }], 
                     app
-                ).widget;
+                );
+                const positiveWidget = positiveWidgetObj.widget;
+                
+                // Debug log
+                console.log(`Created positive_${index} widget:`, positiveWidget);
                 
                 // Style the positive prompt
                 if (positiveWidget.inputEl) {
@@ -120,7 +124,6 @@ app.registerExtension({
                         negativeWidget.inputEl.style.minHeight = "70px";
                         negativeWidget.inputEl.style.fontFamily = "monospace";
                         negativeWidget.inputEl.style.backgroundColor = "#3d1a1a"; // Slight red tint
-                        negativeWidget.inputEl.style.marginBottom = "5px"; // Add spacing below for separation
                     }
                     
                     // Add callback to update count
@@ -131,15 +134,28 @@ app.registerExtension({
                     };
                 }
                 
-                // Add a spacer widget to create separation before the remove button
-                const spacerWidget = {
+                // Create a container widget for the remove button with protected space
+                const buttonContainerWidget = {
                     type: "custom",
-                    name: `spacer_${index}`,
-                    size: [0, 10], // 10px height spacer
-                    draw: function() { /* empty spacer */ },
-                    computeSize: function() { return [0, 10]; }
+                    name: `button_container_${index}`,
+                    size: [0, 40], // Fixed 40px height for button area
+                    draw: function(ctx, node, width, y, H) {
+                        // Draw a subtle separator line
+                        ctx.strokeStyle = "#444";
+                        ctx.beginPath();
+                        ctx.moveTo(15, y + 5);
+                        ctx.lineTo(width - 15, y + 5);
+                        ctx.stroke();
+                        
+                        // Optional: Draw a semi-transparent background for the button area
+                        ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+                        ctx.fillRect(0, y + 10, width, 30);
+                    },
+                    computeSize: function() { 
+                        return [0, 40]; // Fixed height to protect button space
+                    }
                 };
-                this.widgets.push(spacerWidget);
+                this.widgets.push(buttonContainerWidget);
                 
                 // Add remove button for this prompt set
                 const removeButton = this.addWidget(
@@ -157,7 +173,7 @@ app.registerExtension({
                     positive: positiveWidget,
                     negative: negativeWidget,
                     removeButton: removeButton,
-                    spacer: spacerWidget
+                    buttonContainer: buttonContainerWidget
                 });
                 
                 this.promptCount++;
@@ -185,8 +201,8 @@ app.registerExtension({
                 const promptSet = this.promptWidgets.find(p => p.index === index);
                 if (!promptSet) return;
                 
-                // Remove widgets (including spacer)
-                const widgets = [promptSet.positive, promptSet.negative, promptSet.spacer, promptSet.removeButton].filter(w => w);
+                // Remove widgets (including button container)
+                const widgets = [promptSet.positive, promptSet.negative, promptSet.buttonContainer, promptSet.removeButton].filter(w => w);
                 for (const widget of widgets) {
                     const widgetIndex = this.widgets.indexOf(widget);
                     if (widgetIndex > -1) {
@@ -244,7 +260,6 @@ app.registerExtension({
                             negativeWidget.inputEl.style.minHeight = "70px";
                             negativeWidget.inputEl.style.fontFamily = "monospace";
                             negativeWidget.inputEl.style.backgroundColor = "#3d1a1a";
-                            negativeWidget.inputEl.style.marginBottom = "5px"; // Add spacing below for separation
                         }
                         
                         const negOriginalCallback = negativeWidget.callback;
@@ -307,6 +322,13 @@ app.registerExtension({
             const onSerialize = nodeType.prototype.onSerialize;
             nodeType.prototype.onSerialize = function(info) {
                 if (onSerialize) onSerialize.call(this, info);
+                
+                // Debug: Log widget values during serialization
+                console.log("XYZ Prompt serialize - widgets:", this.widgets.map(w => ({
+                    name: w.name,
+                    value: w.value,
+                    type: w.type
+                })));
                 
                 // Save prompt widget data
                 info.promptData = {

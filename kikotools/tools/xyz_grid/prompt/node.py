@@ -3,6 +3,16 @@
 from typing import Dict, List, Any, Tuple
 
 
+class FlexibleOptionalInputType(dict):
+    """Special input type that accepts any dynamic widget values from JavaScript."""
+    def __contains__(self, key):
+        return True
+    
+    def __getitem__(self, key):
+        # Accept string inputs for dynamic prompts
+        return ("STRING", {"multiline": True, "forceInput": False})
+
+
 class XYZPrompt:
     """XYZ Prompt node for creating prompt variations for grid generation."""
     
@@ -19,9 +29,7 @@ class XYZPrompt:
                     "tooltip": "Use the first negative prompt for all variations"
                 }),
             },
-            "optional": {
-                # Dynamic prompts will be added via JavaScript
-            }
+            "optional": FlexibleOptionalInputType()
         }
     
     RETURN_TYPES = ("XYZ_PROMPTS", "STRING", "STRING", "INT")
@@ -41,6 +49,10 @@ class XYZPrompt:
         Returns:
             Tuple of (prompts dict, first positive, first negative, count)
         """
+        # Debug: Log all received kwargs
+        print(f"XYZPrompt.process_prompts - Received kwargs: {kwargs}")
+        print(f"XYZPrompt.process_prompts - include_negative: {include_negative}, repeat_negative: {repeat_negative}")
+        
         prompts = []
         first_negative = ""
         
