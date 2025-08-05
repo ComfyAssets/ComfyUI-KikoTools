@@ -76,7 +76,7 @@ class XYZPlotController:
                 "auto_queue": ("BOOLEAN", {"default": True}),
             },
             # Accept any number of dynamic inputs from JavaScript
-            "optional": FlexibleOptionalInputType(any_type),
+            "optional": {},
             "hidden": {
                 "unique_id": "UNIQUE_ID",
             }

@@ -293,6 +293,7 @@ class XYZSelectionWidget extends XYZBaseWidget {
                     callback: (value) => {
                         this.value.value = value;
                         node.setDirtyCanvas(true, true);
+                        updateNodeTitle(node);
                     }
                 }
             );
@@ -520,10 +521,11 @@ app.registerExtension({
                     }
                 });
                 
-                // Pre-fetch common options
+                // Pre-fetch common options and set initial title
                 setTimeout(() => {
                     getSamplers();
                     getSchedulers();
+                    updateNodeTitle(node);
                 }, 100);
                 
                 // Override configuration for proper restoration
@@ -866,6 +868,13 @@ function updateAxisWidgets(node, axis, type, skipClear = false) {
                         addedWidget.inputEl.style.minHeight = "60px";
                     }
                 }
+                
+                // Add callback to update node title when text changes
+                const originalCallback = addedWidget.callback;
+                addedWidget.callback = function(value) {
+                    if (originalCallback) originalCallback.call(this, value);
+                    updateNodeTitle(node);
+                };
             }
             
             // Resize node to fit the new widget
@@ -884,6 +893,13 @@ function updateAxisWidgets(node, axis, type, skipClear = false) {
                     existingWidget.inputEl.style.minHeight = "60px";
                 }
             }
+            
+            // Add callback to update node title when text changes
+            const originalCallback = existingWidget.callback;
+            existingWidget.callback = function(value) {
+                if (originalCallback) originalCallback.call(this, value);
+                updateNodeTitle(node);
+            };
         }
     } else if (needsDropdownWidget(type)) {
         // Only add button if not already present

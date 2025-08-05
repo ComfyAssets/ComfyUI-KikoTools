@@ -7,16 +7,16 @@ from ..utils.helpers import create_unique_id
 
 
 class FlexibleOptionalInputType(dict):
-    """Input that allows any input to be connected."""
+    """Input that allows dynamic widget values from JavaScript."""
     
-    def __init__(self, input_type):
-        super().__init__()
-        self.update({
-            "input": {
-                "type": input_type,
-                "match": ["*"]
-            }
-        })
+    def __contains__(self, key):
+        # Accept any key from JavaScript widgets
+        return True
+    
+    def __getitem__(self, key):
+        # Return a tuple that ComfyUI expects for input types
+        # This allows the JavaScript to pass widget values
+        return ("STRING", {"forceInput": False})
 
 
 class XYZPlotController:
@@ -70,9 +70,9 @@ class XYZPlotController:
             }
         }
         
-        # Since we will pass any number of selections from the UI, 
-        # this needs to always allow an optional input
-        inputs["optional"] = FlexibleOptionalInputType("*")
+        # Use FlexibleOptionalInputType to accept dynamic widget values from JavaScript
+        # But don't create an actual input connection
+        inputs["optional"] = FlexibleOptionalInputType()
         
         return inputs
     
