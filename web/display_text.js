@@ -10,7 +10,7 @@ app.registerExtension({
                 if (this.widgets) {
                     const toRemove = [];
                     for (let i = 0; i < this.widgets.length; i++) {
-                        if (this.widgets[i].name?.startsWith("text_")) {
+                        if (this.widgets[i].name?.startsWith("text_") || this.widgets[i].name?.startsWith("copy_")) {
                             this.widgets[i].onRemove?.();
                             toRemove.push(i);
                         }
@@ -56,29 +56,25 @@ app.registerExtension({
                     posWidget.inputEl.style.opacity = 0.9;
                     posWidget.value = positiveText;
                     
-                    // Store reference for copy button
-                    posWidget._copyText = positiveText;
-                    posWidget._node = this;
-                    
-                    // Add copy button for positive prompt after DOM is ready
-                    if (posWidget.inputEl && posWidget.inputEl.parentNode) {
-                        requestAnimationFrame(() => {
-                            if (posWidget.inputEl && posWidget.inputEl.parentNode) {
-                                const posCopyBtn = document.createElement("button");
-                                posCopyBtn.textContent = "📋 Copy Positive";
-                                posCopyBtn.style.cssText = "margin: 5px; padding: 5px 10px; background: #4a4a4a; color: white; border: 1px solid #666; cursor: pointer; border-radius: 3px;";
-                                posCopyBtn.onclick = () => {
-                                    navigator.clipboard.writeText(posWidget._copyText).then(() => {
-                                        posCopyBtn.textContent = "✓ Copied!";
-                                        setTimeout(() => {
-                                            posCopyBtn.textContent = "📋 Copy Positive";
-                                        }, 1500);
-                                    });
-                                };
-                                posWidget.inputEl.parentNode.appendChild(posCopyBtn);
-                            }
-                        });
-                    }
+                    // Create copy button widget for positive prompt
+                    const posCopyWidget = {
+                        type: "button",
+                        name: "copy_positive",
+                        text: "📋 Copy Positive",
+                        callback: () => {
+                            navigator.clipboard.writeText(positiveText).then(() => {
+                                posCopyWidget.text = "✓ Copied!";
+                                this.setDirtyCanvas(true);
+                                setTimeout(() => {
+                                    posCopyWidget.text = "📋 Copy Positive";
+                                    this.setDirtyCanvas(true);
+                                }, 1500);
+                            }).catch(err => {
+                                console.error('Failed to copy:', err);
+                            });
+                        }
+                    };
+                    this.addCustomWidget(posCopyWidget);
                     
                     // Create header widget for negative prompt
                     const negHeader = ComfyWidgets["STRING"](this, "text_neg_header", ["STRING", { multiline: false }], app).widget;
@@ -95,29 +91,25 @@ app.registerExtension({
                     negWidget.inputEl.style.opacity = 0.9;
                     negWidget.value = negativeText;
                     
-                    // Store reference for copy button
-                    negWidget._copyText = negativeText;
-                    negWidget._node = this;
-                    
-                    // Add copy button for negative prompt after DOM is ready
-                    if (negWidget.inputEl && negWidget.inputEl.parentNode) {
-                        requestAnimationFrame(() => {
-                            if (negWidget.inputEl && negWidget.inputEl.parentNode) {
-                                const negCopyBtn = document.createElement("button");
-                                negCopyBtn.textContent = "📋 Copy Negative";
-                                negCopyBtn.style.cssText = "margin: 5px; padding: 5px 10px; background: #4a4a4a; color: white; border: 1px solid #666; cursor: pointer; border-radius: 3px;";
-                                negCopyBtn.onclick = () => {
-                                    navigator.clipboard.writeText(negWidget._copyText).then(() => {
-                                        negCopyBtn.textContent = "✓ Copied!";
-                                        setTimeout(() => {
-                                            negCopyBtn.textContent = "📋 Copy Negative";
-                                        }, 1500);
-                                    });
-                                };
-                                negWidget.inputEl.parentNode.appendChild(negCopyBtn);
-                            }
-                        });
-                    }
+                    // Create copy button widget for negative prompt
+                    const negCopyWidget = {
+                        type: "button",
+                        name: "copy_negative",
+                        text: "📋 Copy Negative",
+                        callback: () => {
+                            navigator.clipboard.writeText(negativeText).then(() => {
+                                negCopyWidget.text = "✓ Copied!";
+                                this.setDirtyCanvas(true);
+                                setTimeout(() => {
+                                    negCopyWidget.text = "📋 Copy Negative";
+                                    this.setDirtyCanvas(true);
+                                }, 1500);
+                            }).catch(err => {
+                                console.error('Failed to copy:', err);
+                            });
+                        }
+                    };
+                    this.addCustomWidget(negCopyWidget);
                     
                 } else {
                     // Single text display with ComfyUI's standard STRING widget
@@ -126,29 +118,25 @@ app.registerExtension({
                     w.inputEl.style.opacity = 0.9;
                     w.value = text;
                     
-                    // Store reference for copy button
-                    w._copyText = text;
-                    w._node = this;
-                    
-                    // Add copy button after DOM is ready
-                    if (w.inputEl && w.inputEl.parentNode) {
-                        requestAnimationFrame(() => {
-                            if (w.inputEl && w.inputEl.parentNode) {
-                                const copyBtn = document.createElement("button");
-                                copyBtn.textContent = "📋 Copy";
-                                copyBtn.style.cssText = "margin: 5px; padding: 5px 10px; background: #4a4a4a; color: white; border: 1px solid #666; cursor: pointer; border-radius: 3px;";
-                                copyBtn.onclick = () => {
-                                    navigator.clipboard.writeText(w._copyText).then(() => {
-                                        copyBtn.textContent = "✓ Copied!";
-                                        setTimeout(() => {
-                                            copyBtn.textContent = "📋 Copy";
-                                        }, 1500);
-                                    });
-                                };
-                                w.inputEl.parentNode.appendChild(copyBtn);
-                            }
-                        });
-                    }
+                    // Create copy button widget
+                    const copyWidget = {
+                        type: "button",
+                        name: "copy_text",
+                        text: "📋 Copy",
+                        callback: () => {
+                            navigator.clipboard.writeText(text).then(() => {
+                                copyWidget.text = "✓ Copied!";
+                                this.setDirtyCanvas(true);
+                                setTimeout(() => {
+                                    copyWidget.text = "📋 Copy";
+                                    this.setDirtyCanvas(true);
+                                }, 1500);
+                            }).catch(err => {
+                                console.error('Failed to copy:', err);
+                            });
+                        }
+                    };
+                    this.addCustomWidget(copyWidget);
                 }
 
                 requestAnimationFrame(() => {

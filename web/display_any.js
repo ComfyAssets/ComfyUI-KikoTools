@@ -10,7 +10,7 @@ app.registerExtension({
                 if (this.widgets) {
                     const toRemove = [];
                     for (let i = 0; i < this.widgets.length; i++) {
-                        if (this.widgets[i].name?.startsWith("display_")) {
+                        if (this.widgets[i].name?.startsWith("display_") || this.widgets[i].name === "copy_value") {
                             this.widgets[i].onRemove?.();
                             toRemove.push(i);
                         }
@@ -38,6 +38,26 @@ app.registerExtension({
                     w.inputEl.style.fontFamily = "monospace";
                     w.value = chunk;
                 });
+                
+                // Add copy button widget
+                const copyWidget = {
+                    type: "button",
+                    name: "copy_value",
+                    text: "📋 Copy Value",
+                    callback: () => {
+                        navigator.clipboard.writeText(text || '').then(() => {
+                            copyWidget.text = "✓ Copied!";
+                            this.setDirtyCanvas(true);
+                            setTimeout(() => {
+                                copyWidget.text = "📋 Copy Value";
+                                this.setDirtyCanvas(true);
+                            }, 1500);
+                        }).catch(err => {
+                            console.error('Failed to copy:', err);
+                        });
+                    }
+                };
+                this.addCustomWidget(copyWidget);
                 
                 // Update node title with condensed info
                 const firstLine = text ? text.split('\n')[0] : '';
