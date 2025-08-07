@@ -145,7 +145,7 @@ class TestImageScaleDownByNode:
 
     def test_category_is_comfyassets(self):
         """Test that the node is in the ComfyAssets category."""
-        assert ImageScaleDownByNode.CATEGORY == "ComfyAssets"
+        assert ImageScaleDownByNode.CATEGORY == "ComfyAssets/🖼️ Resolution"
 
     def test_scale_down_with_batch(self, node):
         """Test scaling down with batch of images."""
@@ -156,15 +156,16 @@ class TestImageScaleDownByNode:
 
         assert result[0].shape == (3, 160, 120, 3)
 
-    def test_error_handling(self, node, mocker):
+    def test_error_handling(self, node):
         """Test that errors are properly handled."""
+        from unittest.mock import patch
+
         # Mock the scale_down_image function to raise an exception
-        mocker.patch(
+        with patch(
             "kikotools.tools.image_scale_down_by.node.scale_down_image",
             side_effect=RuntimeError("Test error"),
-        )
+        ):
+            images = torch.randn(1, 512, 512, 3)
 
-        images = torch.randn(1, 512, 512, 3)
-
-        with pytest.raises(ValueError, match="Failed to scale down images"):
-            node.scale_down(images, 0.5)
+            with pytest.raises(ValueError, match="Failed to scale down images"):
+                node.scale_down(images, 0.5)

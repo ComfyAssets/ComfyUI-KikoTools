@@ -1,0 +1,169 @@
+{
+  "name": "Sampler and Scheduler Comparison Workflow",
+  "description": "Compare different sampler and scheduler combinations using xyz_helpers",
+  "nodes": [
+    {
+      "id": "1",
+      "type": "SamplerSelectHelper",
+      "title": "Select Optimal Sampler",
+      "category": "ComfyAssets/🧰 xyz-helpers",
+      "inputs": {
+        "model_type": "auto",
+        "quality_preset": "balanced",
+        "sampler_override": "auto",
+        "model_name": "sdxl_model.safetensors"
+      },
+      "outputs": {
+        "sampler_name": "STRING",
+        "scheduler": "STRING",
+        "recommended_steps": "INT",
+        "recommended_cfg": "FLOAT"
+      },
+      "pos": [100, 100]
+    },
+    {
+      "id": "2",
+      "type": "SchedulerSelectHelper",
+      "title": "Optimize Scheduler",
+      "category": "ComfyAssets/🧰 xyz-helpers",
+      "inputs": {
+        "sampler_name": ["1", "sampler_name"],
+        "model_type": "sdxl",
+        "schedule_type": "smooth",
+        "visualize": true
+      },
+      "outputs": {
+        "scheduler": "STRING",
+        "schedule_curve": "IMAGE"
+      },
+      "pos": [400, 100]
+    },
+    {
+      "id": "3",
+      "type": "TextEncodeSamplerParams",
+      "title": "Setup Text and Params",
+      "category": "ComfyAssets/🧰 xyz-helpers",
+      "inputs": {
+        "text": "a majestic mountain landscape at sunset, highly detailed",
+        "negative_text": "low quality, blurry, artifacts",
+        "clip": ["model", "clip"],
+        "sampler_name": ["1", "sampler_name"],
+        "scheduler": ["2", "scheduler"],
+        "steps": ["1", "recommended_steps"],
+        "cfg": ["1", "recommended_cfg"],
+        "template": "landscape"
+      },
+      "outputs": {
+        "positive": "CONDITIONING",
+        "negative": "CONDITIONING",
+        "sampler_params": "DICT"
+      },
+      "pos": [700, 100]
+    },
+    {
+      "id": "4",
+      "type": "EmptyLatentBatch",
+      "title": "Create Test Latents",
+      "category": "ComfyAssets/📦 Latents",
+      "inputs": {
+        "preset": "1216×832 (SDXL Landscape)",
+        "batch_size": 4
+      },
+      "outputs": {
+        "latent": "LATENT"
+      },
+      "pos": [100, 300]
+    },
+    {
+      "id": "5",
+      "type": "KSampler",
+      "title": "Generate with Optimal Settings",
+      "inputs": {
+        "model": ["model", "model"],
+        "positive": ["3", "positive"],
+        "negative": ["3", "negative"],
+        "latent_image": ["4", "latent"],
+        "sampler_name": ["1", "sampler_name"],
+        "scheduler": ["2", "scheduler"],
+        "steps": ["1", "recommended_steps"],
+        "cfg": ["1", "recommended_cfg"],
+        "seed": 42
+      },
+      "outputs": {
+        "latent": "LATENT"
+      },
+      "pos": [1000, 200]
+    },
+    {
+      "id": "6",
+      "type": "PlotParameters",
+      "title": "Visualize Parameters",
+      "category": "ComfyAssets/🧰 xyz-helpers",
+      "inputs": {
+        "sampler_params": ["3", "sampler_params"],
+        "plot_type": "bar",
+        "x_axis": "parameter_name",
+        "y_axis": "value",
+        "title": "Sampler Configuration Analysis",
+        "show_grid": true
+      },
+      "outputs": {
+        "plot_image": "IMAGE"
+      },
+      "pos": [700, 400]
+    },
+    {
+      "id": "7",
+      "type": "DisplayAny",
+      "title": "Show Schedule Curve",
+      "category": "ComfyAssets/🔍 Debug",
+      "inputs": {
+        "input": ["2", "schedule_curve"],
+        "mode": "tensor shape"
+      },
+      "pos": [400, 400]
+    },
+    {
+      "id": "8",
+      "type": "VAEDecode",
+      "title": "Decode Results",
+      "inputs": {
+        "samples": ["5", "latent"],
+        "vae": ["model", "vae"]
+      },
+      "outputs": {
+        "image": "IMAGE"
+      },
+      "pos": [1300, 200]
+    },
+    {
+      "id": "9",
+      "type": "KikoSaveImage",
+      "title": "Save Comparison",
+      "category": "ComfyAssets/💾 Images",
+      "inputs": {
+        "images": ["8", "image"],
+        "filename_prefix": "sampler_comparison",
+        "format": "WEBP",
+        "quality": 90,
+        "popup": true
+      },
+      "pos": [1600, 200]
+    }
+  ],
+  "workflow_notes": {
+    "purpose": "Compare and optimize sampler/scheduler combinations for best quality",
+    "features": [
+      "Automatic sampler selection based on model",
+      "Scheduler optimization with visualization",
+      "Parameter analysis and plotting",
+      "Batch generation for comparison"
+    ],
+    "tips": [
+      "Try different quality_preset values",
+      "Use visualize=true to see noise schedules",
+      "Compare results across multiple seeds"
+    ],
+    "attribution": "xyz_helpers nodes adapted from comfyui-essentials-nodes"
+  }
+}

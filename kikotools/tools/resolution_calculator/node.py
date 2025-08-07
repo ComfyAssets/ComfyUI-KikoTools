@@ -60,6 +60,7 @@ class ResolutionCalculatorNode(ComfyAssetsBaseNode):
         }
 
     RETURN_TYPES = ("INT", "INT")
+    CATEGORY = "ComfyAssets/🖼️ Resolution"
     RETURN_NAMES = ("width", "height")
     FUNCTION = "calculate_resolution"
 

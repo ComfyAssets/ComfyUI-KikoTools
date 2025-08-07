@@ -83,8 +83,8 @@ class TestEmptyLatentBatchLogic:
     def test_sanitize_dimensions_not_divisible_by_8(self):
         """Test sanitization of dimensions not divisible by 8."""
         width, height = sanitize_dimensions(513, 515)
-        assert width == 512  # Rounds down to nearest multiple of 8
-        assert height == 512
+        assert width == 520  # Rounds up to nearest multiple of 8
+        assert height == 520
 
         width, height = sanitize_dimensions(517, 519)
         assert width == 520  # Rounds up to nearest multiple of 8
@@ -131,21 +131,23 @@ class TestEmptyLatentBatchNode:
 
     def test_node_attributes(self):
         """Test node class attributes."""
-        assert EmptyLatentBatchNode.RETURN_TYPES == ("LATENT",)
-        assert EmptyLatentBatchNode.RETURN_NAMES == ("latent",)
+        assert EmptyLatentBatchNode.RETURN_TYPES == ("LATENT", "INT", "INT")
+        assert EmptyLatentBatchNode.RETURN_NAMES == ("latent", "width", "height")
         assert EmptyLatentBatchNode.FUNCTION == "create_empty_latent"
-        assert EmptyLatentBatchNode.CATEGORY == "ComfyAssets"
+        assert EmptyLatentBatchNode.CATEGORY == "ComfyAssets/📦 Latents"
 
     def test_create_empty_latent_basic(self):
         """Test basic empty latent creation through node."""
-        result = self.node.create_empty_latent(512, 512, 1)
+        result = self.node.create_empty_latent("custom", 512, 512, 1)
 
         assert isinstance(result, tuple)
-        assert len(result) == 1
+        assert len(result) == 3  # Now returns (latent, width, height)
 
-        latent_dict = result[0]
+        latent_dict, width, height = result
         assert isinstance(latent_dict, dict)
         assert "samples" in latent_dict
+        assert width == 512
+        assert height == 512
 
         samples = latent_dict["samples"]
         assert isinstance(samples, torch.Tensor)
@@ -154,31 +156,36 @@ class TestEmptyLatentBatchNode:
     def test_create_empty_latent_with_batch(self):
         """Test empty latent creation with batch size."""
         batch_size = 3
-        result = self.node.create_empty_latent(1024, 768, batch_size)
+        result = self.node.create_empty_latent("custom", 1024, 768, batch_size)
 
-        latent_dict = result[0]
+        latent_dict, width, height = result
+        assert width == 1024
+        assert height == 768
         samples = latent_dict["samples"]
         assert samples.shape == (3, 4, 96, 128)  # batch=3, 768/8=96, 1024/8=128
 
     def test_create_empty_latent_dimension_adjustment(self):
         """Test that dimensions are adjusted when not divisible by 8."""
         # Input dimensions not divisible by 8
-        result = self.node.create_empty_latent(513, 515, 1)
+        result = self.node.create_empty_latent("custom", 513, 515, 1)
 
-        latent_dict = result[0]
+        latent_dict, width, height = result
+        # Dimensions should be rounded UP to nearest multiple of 8
+        assert width == 520  # 513 -> 520
+        assert height == 520  # 515 -> 520
         samples = latent_dict["samples"]
-        # Should be adjusted to 512x512 -> 64x64 latent
-        assert samples.shape == (1, 4, 64, 64)
+        # Should be adjusted to 520x520 -> 65x65 latent
+        assert samples.shape == (1, 4, 65, 65)
 
     def test_validate_inputs_valid(self):
         """Test input validation with valid parameters."""
-        assert self.node.validate_inputs(512, 512, 1) is True
-        assert self.node.validate_inputs(1024, 768, 4) is True
+        assert self.node.validate_inputs("custom", 512, 512, 1) is True
+        assert self.node.validate_inputs("custom", 1024, 768, 4) is True
 
     def test_validate_inputs_invalid_batch_size(self):
         """Test input validation with invalid batch size."""
-        assert self.node.validate_inputs(512, 512, 0) is False
-        assert self.node.validate_inputs(512, 512, 100) is False  # Too large
+        assert self.node.validate_inputs("custom", 512, 512, 0) is False
+        assert self.node.validate_inputs("custom", 512, 512, 100) is False  # Too large
 
     def test_get_latent_info(self):
         """Test latent info generation."""

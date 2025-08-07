@@ -1,5 +1,6 @@
 """Unit tests for DisplayAny node."""
 
+import json
 import numpy as np
 import pytest
 import torch
@@ -39,7 +40,7 @@ class TestDisplayAnyNode:
 
     def test_node_properties(self):
         """Test node has correct properties."""
-        assert DisplayAnyNode.CATEGORY == "ComfyAssets"
+        assert DisplayAnyNode.CATEGORY == "ComfyAssets/👁️ Display"
         assert DisplayAnyNode.FUNCTION == "display"
         assert DisplayAnyNode.RETURN_TYPES == ("STRING",)
         assert DisplayAnyNode.RETURN_NAMES == ("display_text",)
@@ -74,7 +75,7 @@ class TestDisplayAnyNode:
 
         assert "ui" in result
         assert "text" in result["ui"]
-        assert result["ui"]["text"] == "Hello, World!"
+        assert result["ui"]["text"] == ["Hello, World!"]
         assert "result" in result
         assert result["result"] == ("Hello, World!",)
 
@@ -83,7 +84,7 @@ class TestDisplayAnyNode:
         node = DisplayAnyNode()
         result = node.display(42, "raw value")
 
-        assert result["ui"]["text"] == "42"
+        assert result["ui"]["text"] == ["42"]
         assert result["result"] == ("42",)
 
     def test_display_raw_value_list(self):
@@ -92,8 +93,9 @@ class TestDisplayAnyNode:
         test_list = [1, 2, 3, "test"]
         result = node.display(test_list, "raw value")
 
-        assert result["ui"]["text"] == str(test_list)
-        assert result["result"] == (str(test_list),)
+        expected_text = json.dumps(test_list, indent=2)
+        assert result["ui"]["text"] == [expected_text]
+        assert result["result"][0] == json.dumps(test_list, indent=2)
 
     def test_display_raw_value_dict(self):
         """Test displaying raw dictionary value."""
@@ -101,8 +103,9 @@ class TestDisplayAnyNode:
         test_dict = {"key": "value", "number": 123}
         result = node.display(test_dict, "raw value")
 
-        assert result["ui"]["text"] == str(test_dict)
-        assert result["result"] == (str(test_dict),)
+        expected_text = json.dumps(test_dict, indent=2)
+        assert result["ui"]["text"] == [expected_text]
+        assert result["result"][0] == json.dumps(test_dict, indent=2)
 
     def test_display_tensor_shape_numpy(self):
         """Test displaying numpy tensor shape."""
@@ -110,7 +113,7 @@ class TestDisplayAnyNode:
         tensor = np.random.rand(4, 3, 224, 224)
         result = node.display(tensor, "tensor shape")
 
-        assert result["ui"]["text"] == "[[4, 3, 224, 224]]"
+        assert result["ui"]["text"] == ["[[4, 3, 224, 224]]"]
         assert result["result"] == ("[[4, 3, 224, 224]]",)
 
     @pytest.mark.skipif(not torch, reason="PyTorch not installed")
@@ -120,7 +123,7 @@ class TestDisplayAnyNode:
         tensor = torch.randn(2, 10, 512, 512)
         result = node.display(tensor, "tensor shape")
 
-        assert result["ui"]["text"] == "[[2, 10, 512, 512]]"
+        assert result["ui"]["text"] == ["[[2, 10, 512, 512]]"]
         assert result["result"] == ("[[2, 10, 512, 512]]",)
 
     def test_display_nested_tensors(self):
@@ -137,7 +140,7 @@ class TestDisplayAnyNode:
         result = node.display(nested_data, "tensor shape")
 
         expected = "[[1, 3, 256, 256], [256, 256], [256, 256, 1], [10]]"
-        assert result["ui"]["text"] == expected
+        assert result["ui"]["text"] == [expected]
         assert result["result"] == (expected,)
 
     def test_display_no_tensors(self):
@@ -146,7 +149,7 @@ class TestDisplayAnyNode:
         data = {"text": "hello", "number": 42, "list": [1, 2, 3]}
         result = node.display(data, "tensor shape")
 
-        assert result["ui"]["text"] == "No tensors found in input"
+        assert result["ui"]["text"] == ["No tensors found in input"]
         assert result["result"] == ("No tensors found in input",)
 
     def test_invalid_mode_defaults_to_raw(self):
@@ -154,7 +157,7 @@ class TestDisplayAnyNode:
         node = DisplayAnyNode()
         result = node.display("test", "invalid_mode")
 
-        assert result["ui"]["text"] == "test"
+        assert result["ui"]["text"] == ["test"]
         assert result["result"] == ("test",)
 
 
@@ -209,7 +212,9 @@ class TestDisplayAnyLogic:
     def test_format_display_value_raw(self):
         """Test formatting for raw value display."""
         result = format_display_value({"key": "value"}, "raw value")
-        assert result == "{'key': 'value'}"
+        # Now returns JSON formatted string for dicts
+        expected = json.dumps({"key": "value"}, indent=2)
+        assert result == expected
 
     def test_format_display_value_tensor_shape(self):
         """Test formatting for tensor shape display."""
@@ -238,19 +243,19 @@ class TestDisplayAnyEdgeCases:
         """Test displaying None value."""
         node = DisplayAnyNode()
         result = node.display(None, "raw value")
-        assert result["ui"]["text"] == "None"
+        assert result["ui"]["text"] == ["None"]
 
     def test_display_empty_list(self):
         """Test displaying empty list."""
         node = DisplayAnyNode()
         result = node.display([], "raw value")
-        assert result["ui"]["text"] == "[]"
+        assert result["ui"]["text"] == ["[]"]
 
     def test_display_empty_dict(self):
         """Test displaying empty dictionary."""
         node = DisplayAnyNode()
         result = node.display({}, "raw value")
-        assert result["ui"]["text"] == "{}"
+        assert result["ui"]["text"] == ["{}"]
 
     def test_display_complex_nested_structure(self):
         """Test displaying complex nested structure."""
@@ -268,7 +273,7 @@ class TestDisplayAnyEdgeCases:
         result = node.display(complex_data, "tensor shape")
 
         # Should find 4 tensors total (3 images + 1 latent)
-        shapes_text = result["ui"]["text"]
+        shapes_text = result["ui"]["text"][0]  # Get first element of array
         assert "[1, 3, 64, 64]" in shapes_text
         assert "[1, 4, 32, 32]" in shapes_text
 
@@ -277,11 +282,11 @@ class TestDisplayAnyEdgeCases:
         node = DisplayAnyNode()
         long_string = "x" * 10000
         result = node.display(long_string, "raw value")
-        assert result["ui"]["text"] == long_string
+        assert result["ui"]["text"] == [long_string]
 
     def test_display_unicode(self):
         """Test displaying unicode characters."""
         node = DisplayAnyNode()
         unicode_text = "Hello 世界 🌍"
         result = node.display(unicode_text, "raw value")
-        assert result["ui"]["text"] == unicode_text
+        assert result["ui"]["text"] == [unicode_text]

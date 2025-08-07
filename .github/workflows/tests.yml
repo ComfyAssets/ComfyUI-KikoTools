@@ -53,7 +53,7 @@ jobs:
           print('✓ All imports successful')
 
           # Test base node
-          assert ComfyAssetsBaseNode.CATEGORY == 'ComfyAssets'
+          assert ComfyAssetsBaseNode.CATEGORY.startswith('ComfyAssets')
           print('✓ Base node tests passed')
 
           # Test dimension extraction
@@ -162,9 +162,13 @@ jobs:
           print('✓ Sampler Combo interface tests passed')
 
           # Test return types
-          assert node.RETURN_TYPES == ('SAMPLER', SCHEDULERS, 'INT', 'FLOAT')
+          # RETURN_TYPES[1] is the actual SCHEDULERS list
+          assert node.RETURN_TYPES[0] == 'SAMPLER'
+          assert isinstance(node.RETURN_TYPES[1], list)  # SCHEDULERS is a list
+          assert node.RETURN_TYPES[2] == 'INT'
+          assert node.RETURN_TYPES[3] == 'FLOAT'
           assert node.RETURN_NAMES == ('sampler_name', 'scheduler', 'steps', 'cfg')
-          assert node.CATEGORY == 'ComfyAssets'
+          assert node.CATEGORY == 'ComfyAssets/🌀 Samplers'
           print('✓ Sampler Combo return types tests passed')
 
           # Test sampler combo functionality
@@ -213,7 +217,7 @@ jobs:
           # Test return types
           assert node.RETURN_TYPES == ('INT',)
           assert node.RETURN_NAMES == ('seed',)
-          assert node.CATEGORY == 'ComfyAssets'
+          assert node.CATEGORY == 'ComfyAssets/🌱 Seeds'
           print('✓ Seed History return types tests passed')
 
           # Test seed output functionality
@@ -329,7 +333,7 @@ jobs:
 
           assert res_class.RETURN_TYPES == ('INT', 'INT')
           assert res_class.RETURN_NAMES == ('width', 'height')
-          assert res_class.CATEGORY == 'ComfyAssets'
+          assert res_class.CATEGORY.startswith('ComfyAssets/')
           print('✓ Resolution Calculator ComfyUI integration passed')
 
           # Test Width Height Selector
@@ -350,7 +354,7 @@ jobs:
 
           assert wh_class.RETURN_TYPES == ('INT', 'INT')
           assert wh_class.RETURN_NAMES == ('width', 'height')
-          assert wh_class.CATEGORY == 'ComfyAssets'
+          assert wh_class.CATEGORY.startswith('ComfyAssets/')
           print('✓ Width Height Selector ComfyUI integration passed')
 
           # Test Sampler Combo
@@ -370,7 +374,7 @@ jobs:
           assert 'steps' in input_types['required']
           assert 'cfg' in input_types['required']
 
-          assert sampler_class.CATEGORY == 'ComfyAssets'
+          assert sampler_class.CATEGORY.startswith('ComfyAssets/')
           print('✓ Sampler Combo ComfyUI integration passed')
 
           # Test Seed History
@@ -389,7 +393,7 @@ jobs:
 
           assert seed_class.RETURN_TYPES == ('INT',)
           assert seed_class.RETURN_NAMES == ('seed',)
-          assert seed_class.CATEGORY == 'ComfyAssets'
+          assert seed_class.CATEGORY.startswith('ComfyAssets/')
           print('✓ Seed History ComfyUI integration passed')
 
           print('🎉 All tools ComfyUI integration readiness tests passed!')

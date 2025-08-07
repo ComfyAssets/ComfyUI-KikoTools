@@ -589,6 +589,24 @@ app.registerExtension({
                 
                 // Add placeholder text
                 this.updateTextDisplay("Text will appear here after execution...");
+                
+                // Mark this node as having a scrollable widget
+                this.flags = this.flags || {};
+                this.flags.allow_interaction = true;
+            };
+            
+            // Override mouse wheel handler at node level
+            const onMouseWheel = nodeType.prototype.onMouseWheel;
+            nodeType.prototype.onMouseWheel = function(event, local_pos, delta) {
+                const textWidget = this.widgets?.find(w => w.name === "displayed_text");
+                if (textWidget) {
+                    // Let the widget handle the mouse event
+                    const fakeEvent = { type: "wheel", deltaY: -delta[1] * 100 };
+                    if (textWidget.mouse && textWidget.mouse.call(textWidget, fakeEvent, local_pos, this)) {
+                        return true;
+                    }
+                }
+                return onMouseWheel?.apply(this, arguments) || false;
             };
         }
     }

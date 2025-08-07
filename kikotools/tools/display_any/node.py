@@ -38,6 +38,7 @@ class DisplayAnyNode(ComfyAssetsBaseNode):
         return True
 
     RETURN_TYPES = ("STRING",)
+    CATEGORY = "ComfyAssets/👁️ Display"
     RETURN_NAMES = ("display_text",)
     FUNCTION = "display"
     OUTPUT_NODE = True  # This node displays output in the UI
@@ -61,6 +62,6 @@ class DisplayAnyNode(ComfyAssetsBaseNode):
 
         # Return both UI display and result
         return {
-            "ui": {"text": display_text},
+            "ui": {"text": [display_text]},  # UI expects array
             "result": (display_text,),
         }
