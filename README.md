@@ -18,13 +18,13 @@ ComfyUI-KikoTools provides carefully crafted, production-ready nodes grouped und
 |------|-------------|----------|
 | [📐 Resolution Calculator](#-resolution-calculator) | Calculate upscaled dimensions with model optimization | 🖼️ Resolution |
 | [📏 Width Height Selector](#-width-height-selector) | Preset-based dimension selection with visual swap | 🖼️ Resolution |
-| [🎲 Seed History](#-seed-history) | Advanced seed tracking with interactive history | 🎯 Advanced |
-| [⚙️ Sampler Combo](#️-sampler-combo) | Unified sampling configuration interface | ⚙️ Sampling |
+| [🎲 Seed History](#-seed-history) | Advanced seed tracking with interactive history | 🌱 Seeds |
+| [⚙️ Sampler Combo](#️-sampler-combo) | Unified sampling configuration interface | 🌀 Samplers |
 | [📦 Empty Latent Batch](#-empty-latent-batch) | Create empty latent batches with preset support | 📦 Latents |
 | [💾 Kiko Save Image](#-kiko-save-image) | Enhanced image saving with popup viewer | 💾 Images |
-| [📋 Display Text](#-display-text) | Smart text display with prompt detection | 📋 Text |
+| [📋 Display Text](#-display-text) | Smart text display with prompt detection | 👁️ Display |
 | [🤖 Gemini Prompt Engineer](#-gemini-prompt-engineer) | AI-powered image analysis and prompt generation | 🧠 Prompts |
-| [🔍 Display Any](#-display-any) | Universal debugging tool for any data type | 🔍 Debug |
+| [🔍 Display Any](#-display-any) | Universal debugging tool for any data type | 👁️ Display |
 | [🖼️ Image to Multiple Of](#️-image-to-multiple-of) | Adjust dimensions to multiples for compatibility | 🖼️ Resolution |
 
 ### 🧰 xyz-helpers Tools
@@ -845,7 +845,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## 📈 Stats
 
 - **Nodes**: 16 (10 core tools + 6 xyz-helpers)
-- **Categories**: 9 emoji-based categories for better organization
+- **Categories**: 8 emoji-based categories for better organization
 - **Format Support**: 3 (PNG, JPEG, WebP with advanced controls)
 - **Presets**: 26 curated resolution presets
 - **Interactive Features**: 8+ (swap buttons, history UI, popup viewers, parameter visualization)
