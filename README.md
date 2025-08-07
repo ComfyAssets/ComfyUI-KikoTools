@@ -249,6 +249,8 @@ Automated batch processing for multiple LoRA models from folders.
 - Evaluate strength variations
 - Batch process style transfers
 
+![LoRA Folder Batch Example](examples/workflows/xyz_helpers_lora_testing.png)
+
 #### 📊 Plot Parameters
 Visual analysis tool for understanding parameter relationships and effects.
 
@@ -510,6 +512,21 @@ Load Image → Image to Multiple Of → VAE Encode → KSampler
   "batch_optimized": true
 }
 ```
+</details>
+
+<details>
+<summary><b>LoRA Testing with xyz-helpers</b></summary>
+
+```json
+{
+  "workflow": "Scan LoRA folder → Apply strength ranges → Generate grid → Plot parameters",
+  "strength_range": "0.9...1.2+0.1",
+  "batch_mode": "combinatorial",
+  "features": ["automatic epoch sorting", "parameter visualization", "batch generation"]
+}
+```
+
+Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/xyz_helpers_lora_testing.json)
 </details>
 
 ## 📚 Documentation

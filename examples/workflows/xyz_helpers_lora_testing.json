@@ -1,159 +1,2430 @@
 {
-  "name": "LoRA Epoch Testing Workflow",
-  "description": "Test multiple LoRA epochs with different strengths using xyz_helpers",
+  "id": "f0daa306-3da5-413e-a84e-34a384485ed1",
+  "revision": 0,
+  "last_node_id": 54,
+  "last_link_id": 37,
   "nodes": [
     {
-      "id": "1",
-      "type": "LoRAFolderBatch",
-      "title": "Load LoRA Epochs",
-      "category": "ComfyAssets/🧰 xyz-helpers",
-      "inputs": {
-        "folder_path": "my_training_output",
-        "strength": "0.6, 0.8, 1.0",
-        "batch_mode": "combinatorial",
-        "include_pattern": "epoch_0[2-5]0",
-        "exclude_pattern": ""
+      "id": 1,
+      "type": "ProjectFilePathNode",
+      "pos": [
+        -1980,
+        -390
+      ],
+      "size": [
+        270,
+        154
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "djz-nodes",
+        "ver": "2.2.2",
+        "Node name for S&R": "ProjectFilePathNode"
       },
-      "outputs": {
-        "lora_params": "LORA_PARAMS",
-        "lora_list": "STRING",
-        "lora_count": "INT"
-      },
-      "pos": [100, 100]
+      "widgets_values": [
+        "kittybear",
+        "flux",
+        "images",
+        "kittybear",
+        "auto"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
     },
     {
-      "id": "2",
-      "type": "FluxSamplerParams",
-      "title": "FLUX Parameters",
-      "category": "ComfyAssets/🧰 xyz-helpers",
-      "inputs": {
-        "scheduler": "normal",
-        "steps": 20,
-        "guidance": 3.5,
-        "max_shift": 1.0,
-        "base_shift": 0.5,
-        "denoise": 1.0,
-        "batch_mode": "batch",
-        "lora_params": ["1", "lora_params"]
+      "id": 2,
+      "type": "SetNode",
+      "pos": [
+        -1900,
+        -370
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
       },
-      "outputs": {
-        "sampler_params": "SAMPLER_PARAMS"
+      "order": 29,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_filename",
+      "properties": {
+        "previousName": "filename"
       },
-      "pos": [400, 100]
+      "widgets_values": [
+        "filename"
+      ]
     },
     {
-      "id": "3",
-      "type": "TextEncodeSamplerParams",
-      "title": "Encode Prompt with Params",
-      "category": "ComfyAssets/🧰 xyz-helpers",
-      "inputs": {
-        "text": "a beautiful portrait in my trained style",
-        "negative_text": "ugly, blurry, distorted",
-        "clip": ["model", "clip"],
-        "sampler_params": ["2", "sampler_params"]
+      "id": 3,
+      "type": "SchedulerSelectHelper",
+      "pos": [
+        -1970,
+        60
+      ],
+      "size": [
+        270,
+        298
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "selected_schedulers",
+          "type": "STRING",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "a8ee5930ffa8095aa96e65244c96574d8be90c26",
+        "Node name for S&R": "SchedulerSelectHelper"
       },
-      "outputs": {
-        "positive": "CONDITIONING",
-        "negative": "CONDITIONING"
-      },
-      "pos": [700, 100]
+      "widgets_values": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
     },
     {
-      "id": "4",
+      "id": 4,
+      "type": "SetNode",
+      "pos": [
+        -1900,
+        80
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 31,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_schedulers",
+      "properties": {
+        "previousName": "schedulers"
+      },
+      "widgets_values": [
+        "schedulers"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "SamplerSelectHelper",
+      "pos": [
+        -1680,
+        60
+      ],
+      "size": [
+        333.4296875,
+        1450
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "selected_samplers",
+          "type": "STRING",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "a8ee5930ffa8095aa96e65244c96574d8be90c26",
+        "Node name for S&R": "SamplerSelectHelper"
+      },
+      "widgets_values": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 6,
+      "type": "SetNode",
+      "pos": [
+        -1580,
+        90
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 32,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_samplers",
+      "properties": {
+        "previousName": "samplers"
+      },
+      "widgets_values": [
+        "samplers"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "UNETLoader",
+      "pos": [
+        -1690,
+        -390
+      ],
+      "size": [
+        320,
+        82
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.49",
+        "Node name for S&R": "UNETLoader"
+      },
+      "widgets_values": [
+        "flux/flux1-krea-dev.safetensors",
+        "fp8_e4m3fn"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 8,
+      "type": "SetNode",
+      "pos": [
+        -1610,
+        -360
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 30,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_base_model",
+      "properties": {
+        "previousName": "base_model"
+      },
+      "widgets_values": [
+        "base_model"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 9,
+      "type": "DualCLIPLoader",
+      "pos": [
+        -1980,
+        -150
+      ],
+      "size": [
+        490,
+        140
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.49",
+        "Node name for S&R": "DualCLIPLoader"
+      },
+      "widgets_values": [
+        "flux/t5xxl_fp16.safetensors",
+        "flux/ViT-L-14-TEXT-detail-improved-hiT-GmP-HF.safetensors",
+        "flux",
+        "default"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 10,
+      "type": "SetNode",
+      "pos": [
+        -1810,
+        -130
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 25,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_base_clip",
+      "properties": {
+        "previousName": "base_clip"
+      },
+      "widgets_values": [
+        "base_clip"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 11,
+      "type": "Lora Loader (LoraManager)",
+      "pos": [
+        -1350,
+        -390
+      ],
+      "size": [
+        400,
+        352
+      ],
+      "flags": {},
+      "order": 23,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 7
+        },
+        {
+          "name": "clip",
+          "shape": 7,
+          "type": "CLIP",
+          "link": 8
+        },
+        {
+          "name": "lora_stack",
+          "shape": 7,
+          "type": "LORA_STACK",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            9
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            10
+          ]
+        },
+        {
+          "name": "trigger_words",
+          "type": "STRING",
+          "links": [
+            6
+          ]
+        },
+        {
+          "name": "loaded_loras",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-lora-manager",
+        "ver": "0.8.25",
+        "Node name for S&R": "Lora Loader (LoraManager)"
+      },
+      "widgets_values": [
+        "",
+        []
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 12,
+      "type": "TriggerWord Toggle (LoraManager)",
+      "pos": [
+        -940,
+        -390
+      ],
+      "size": [
+        318.5542907714844,
+        260
+      ],
+      "flags": {},
+      "order": 40,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "trigger_words",
+          "shape": 7,
+          "type": "string",
+          "link": 6
+        }
+      ],
+      "outputs": [
+        {
+          "name": "filtered_trigger_words",
+          "type": "STRING",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-lora-manager",
+        "ver": "0.8.25",
+        "Node name for S&R": "TriggerWord Toggle (LoraManager)"
+      },
+      "widgets_values": [
+        true,
+        true,
+        [],
+        ""
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 13,
+      "type": "GetNode",
+      "pos": [
+        -1270,
+        -310
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            7
+          ]
+        }
+      ],
+      "title": "Get_base_model",
+      "properties": {},
+      "widgets_values": [
+        "base_model"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 14,
+      "type": "GetNode",
+      "pos": [
+        -1270,
+        -310
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            8
+          ]
+        }
+      ],
+      "title": "Get_base_clip",
+      "properties": {},
+      "widgets_values": [
+        "base_clip"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 15,
+      "type": "SetNode",
+      "pos": [
+        -1270,
+        -310
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 38,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_lora_model",
+      "properties": {
+        "previousName": "lora_model"
+      },
+      "widgets_values": [
+        "lora_model"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 16,
+      "type": "SetNode",
+      "pos": [
+        -1270,
+        -310
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 39,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_lora_clip",
+      "properties": {
+        "previousName": "lora_clip"
+      },
+      "widgets_values": [
+        "lora_clip"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 17,
+      "type": "PromptManager",
+      "pos": [
+        -600,
+        -390
+      ],
+      "size": [
+        430,
+        480
+      ],
+      "flags": {},
+      "order": 28,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 31
+        },
+        {
+          "name": "prepend_text",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "prepend_text"
+          },
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            16
+          ]
+        },
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "promptmanager",
+        "ver": "091b9f0aff7bfb79df988f839c54c84f0cdffd7a",
+        "Node name for S&R": "PromptManager",
+        "resultTimeout": 5,
+        "showTestButton": false,
+        "webuiDisplayMode": "newtab"
+      },
+      "widgets_values": [
+        "A vibrant close-up portrait captures a joyful Asian woman with shoulder-length, dark, slightly voluminous hair that frames her face beautifully. She is looking directly at the viewer with bright, dark eyes that show subtle winged liner and a hint of light pink eyeshadow, expressing a genuine, wide smile that reveals perfectly straight, white teeth. Her lips have a glossy, natural rosy-brown tint, and her complexion is smooth with minimal makeup, showing delicate fine lines around her eyes that crinkle endearingly with her expression. She is wearing a simple, white crew-neck t-shirt, the soft cotton fabric visible around her neck and shoulders. The lighting is bright and even, casting minimal shadows, suggesting a diffused, artificial light source typical of an indoor setting. The background is softly blurred into a dark, abstract wash with faint hints of horizontal lines and muted primary colors like blue, yellow, and red, possibly indicating a modern public space. The overall mood of the image is exceedingly positive, friendly, and approachable, presented in a clean, high-resolution photorealistic style, likely a candid smartphone selfie with a shallow depth of field focusing entirely on her radiant face.",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "color": "#232",
+      "bgcolor": "#353",
+      "_userHasResized": true
+    },
+    {
+      "id": 18,
+      "type": "SetNode",
+      "pos": [
+        -890,
+        -340
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 47,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_filtered_trigger_words",
+      "properties": {
+        "previousName": "filtered_trigger_words"
+      },
+      "widgets_values": [
+        "filtered_trigger_words"
+      ]
+    },
+    {
+      "id": 19,
+      "type": "GetNode",
+      "pos": [
+        -490,
+        -50
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            12
+          ]
+        }
+      ],
+      "title": "Get_filtered_trigger_words",
+      "properties": {},
+      "widgets_values": [
+        "filtered_trigger_words"
+      ]
+    },
+    {
+      "id": 20,
       "type": "EmptyLatentBatch",
-      "title": "Create Latents",
-      "category": "ComfyAssets/📦 Latents",
-      "inputs": {
-        "preset": "1024×1024 (SDXL Square)",
-        "batch_size": 1
+      "pos": [
+        -1330,
+        20
+      ],
+      "size": [
+        380,
+        200
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "links": [
+            13
+          ]
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": [
+            14
+          ]
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": [
+            15
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "a8ee5930ffa8095aa96e65244c96574d8be90c26",
+        "Node name for S&R": "EmptyLatentBatch"
       },
-      "outputs": {
-        "latent": "LATENT"
-      },
-      "pos": [100, 300]
+      "widgets_values": [
+        "768×1280 - 3:5 (1.0MP) - FLUX",
+        768,
+        1280,
+        1
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
     },
     {
-      "id": "5",
-      "type": "KSampler",
-      "title": "Generate Images",
-      "inputs": {
-        "model": ["model", "model"],
-        "positive": ["3", "positive"],
-        "negative": ["3", "negative"],
-        "latent_image": ["4", "latent"],
-        "sampler_name": ["2", "sampler_name"],
-        "scheduler": ["2", "scheduler"],
-        "steps": ["2", "steps"],
-        "cfg": ["2", "guidance"],
-        "seed": 12345
+      "id": 21,
+      "type": "SetNode",
+      "pos": [
+        -1260,
+        70
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
       },
-      "outputs": {
-        "latent": "LATENT"
+      "order": 33,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_empty_latent",
+      "properties": {
+        "previousName": "empty_latent"
       },
-      "pos": [1000, 200]
+      "widgets_values": [
+        "empty_latent"
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
     },
     {
-      "id": "6",
+      "id": 22,
+      "type": "SetNode",
+      "pos": [
+        -1260,
+        70
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 34,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_latent_width",
+      "properties": {
+        "previousName": "latent_width"
+      },
+      "widgets_values": [
+        "latent_width"
+      ],
+      "color": "#1b4669",
+      "bgcolor": "#29699c"
+    },
+    {
+      "id": 23,
+      "type": "SetNode",
+      "pos": [
+        -1260,
+        70
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 35,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_latent_height",
+      "properties": {
+        "previousName": "latent_height"
+      },
+      "widgets_values": [
+        "latent_height"
+      ],
+      "color": "#1b4669",
+      "bgcolor": "#29699c"
+    },
+    {
+      "id": 24,
+      "type": "FluxSamplerParams",
+      "pos": [
+        -150,
+        -390
+      ],
+      "size": [
+        270,
+        716.9381103515625
+      ],
+      "flags": {},
+      "order": 36,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 18
+        },
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 17
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 22
+        },
+        {
+          "name": "loras",
+          "shape": 7,
+          "type": "LORA_PARAMS",
+          "link": 33
+        },
+        {
+          "name": "sampler",
+          "type": "STRING",
+          "widget": {
+            "name": "sampler"
+          },
+          "link": 20
+        },
+        {
+          "name": "scheduler",
+          "type": "STRING",
+          "widget": {
+            "name": "scheduler"
+          },
+          "link": 21
+        }
+      ],
+      "outputs": [
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "links": [
+            24
+          ]
+        },
+        {
+          "name": "params",
+          "type": "SAMPLER_PARAMS",
+          "links": [
+            30,
+            32
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "a8ee5930ffa8095aa96e65244c96574d8be90c26",
+        "Node name for S&R": "FluxSamplerParams"
+      },
+      "widgets_values": [
+        "?",
+        "euler",
+        "simple",
+        "35",
+        "3.5",
+        "",
+        "",
+        "1.0",
+        ""
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 25,
+      "type": "SetNode",
+      "pos": [
+        -440,
+        -320
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 42,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "link": 16
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_conditioning",
+      "properties": {
+        "previousName": "conditioning"
+      },
+      "widgets_values": [
+        "conditioning"
+      ],
+      "color": "#332922",
+      "bgcolor": "#593930"
+    },
+    {
+      "id": 26,
+      "type": "GetNode",
+      "pos": [
+        -100,
+        -300
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            17
+          ]
+        }
+      ],
+      "title": "Get_conditioning",
+      "properties": {},
+      "widgets_values": [
+        "conditioning"
+      ],
+      "color": "#332922",
+      "bgcolor": "#593930"
+    },
+    {
+      "id": 27,
+      "type": "GetNode",
+      "pos": [
+        -100,
+        -300
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            18
+          ]
+        }
+      ],
+      "title": "Get_lora_model",
+      "properties": {},
+      "widgets_values": [
+        "lora_model"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 28,
+      "type": "SeedHistory",
+      "pos": [
+        -930,
+        -80
+      ],
+      "size": [
+        300,
+        220
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "seed",
+          "type": "INT",
+          "links": [
+            19
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "a8ee5930ffa8095aa96e65244c96574d8be90c26",
+        "Node name for S&R": "SeedHistory"
+      },
+      "widgets_values": [
+        436720945649399,
+        "randomize",
+        ""
+      ],
+      "color": "#232",
+      "bgcolor": "#353",
+      "hasBeenResized": true,
+      "seedHistory": [
+        {
+          "seed": 436720945649399,
+          "timestamp": 1754568238623,
+          "dateString": "8/7/2025, 5:03:58 AM"
+        },
+        {
+          "seed": 1784585670558,
+          "timestamp": 1754567838550,
+          "dateString": "8/7/2025, 4:57:18 AM"
+        },
+        {
+          "seed": 1045935349735861,
+          "timestamp": 1754567308522,
+          "dateString": "8/7/2025, 4:48:28 AM"
+        },
+        {
+          "seed": 836189365867048,
+          "timestamp": 1754567292523,
+          "dateString": "8/7/2025, 4:48:12 AM"
+        },
+        {
+          "seed": 216728831087846,
+          "timestamp": 1754566765523,
+          "dateString": "8/7/2025, 4:39:25 AM"
+        },
+        {
+          "seed": 473158070569511,
+          "timestamp": 1754532767467,
+          "dateString": "8/6/2025, 7:12:47 PM"
+        },
+        {
+          "seed": 758406422955657,
+          "timestamp": 1754532732493,
+          "dateString": "8/6/2025, 7:12:12 PM"
+        },
+        {
+          "seed": 637255470694192,
+          "timestamp": 1754532693492,
+          "dateString": "8/6/2025, 7:11:33 PM"
+        },
+        {
+          "seed": 841232733859635,
+          "timestamp": 1754531937463,
+          "dateString": "8/6/2025, 6:58:57 PM"
+        },
+        {
+          "seed": 754385731315624,
+          "timestamp": 1754530160457,
+          "dateString": "8/6/2025, 6:29:20 PM"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "type": "SetNode",
+      "pos": [
+        -830,
+        -10
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 24,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "link": 19
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_seed",
+      "properties": {
+        "previousName": "seed"
+      },
+      "widgets_values": [
+        "seed"
+      ],
+      "color": "#1b4669",
+      "bgcolor": "#29699c"
+    },
+    {
+      "id": 31,
+      "type": "GetNode",
+      "pos": [
+        -100,
+        -300
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            20
+          ]
+        }
+      ],
+      "title": "Get_samplers",
+      "properties": {},
+      "widgets_values": [
+        "samplers"
+      ]
+    },
+    {
+      "id": 32,
+      "type": "GetNode",
+      "pos": [
+        -100,
+        -300
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            21
+          ]
+        }
+      ],
+      "title": "Get_schedulers",
+      "properties": {},
+      "widgets_values": [
+        "schedulers"
+      ]
+    },
+    {
+      "id": 33,
+      "type": "GetNode",
+      "pos": [
+        -100,
+        -300
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            22
+          ]
+        }
+      ],
+      "title": "Get_empty_latent",
+      "properties": {},
+      "widgets_values": [
+        "empty_latent"
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
+    },
+    {
+      "id": 34,
+      "type": "PlotParameters+",
+      "pos": [
+        140,
+        -390
+      ],
+      "size": [
+        270,
+        174
+      ],
+      "flags": {},
+      "order": 45,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 29
+        },
+        {
+          "name": "params",
+          "type": "SAMPLER_PARAMS",
+          "link": 32
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            36
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "a8ee5930ffa8095aa96e65244c96574d8be90c26",
+        "Node name for S&R": "PlotParameters+"
+      },
+      "widgets_values": [
+        "lora_strength",
+        "none",
+        0,
+        "false",
+        "true"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 35,
+      "type": "VAELoader",
+      "pos": [
+        -1690,
+        -260
+      ],
+      "size": [
+        320,
+        58
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            23
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.49",
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "ae.safetensors"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 36,
+      "type": "SetNode",
+      "pos": [
+        -1590,
+        -240
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 27,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "link": 23
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_vae",
+      "properties": {
+        "previousName": "vae"
+      },
+      "widgets_values": [
+        "vae"
+      ],
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 37,
       "type": "VAEDecode",
-      "title": "Decode Images",
-      "inputs": {
-        "samples": ["5", "latent"],
-        "vae": ["model", "vae"]
+      "pos": [
+        210,
+        -360
+      ],
+      "size": [
+        140,
+        46
+      ],
+      "flags": {
+        "collapsed": true
       },
-      "outputs": {
-        "image": "IMAGE"
+      "order": 26,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 25
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 26
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            27
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.49",
+        "Node name for S&R": "VAEDecode"
       },
-      "pos": [1300, 200]
+      "widgets_values": []
     },
     {
-      "id": "7",
-      "type": "PlotParameters",
-      "title": "Plot LoRA Strengths",
-      "category": "ComfyAssets/🧰 xyz-helpers",
-      "inputs": {
-        "sampler_params": ["2", "sampler_params"],
-        "plot_type": "scatter",
-        "x_axis": "lora_strength",
-        "y_axis": "epoch",
-        "title": "LoRA Epoch vs Strength Analysis"
+      "id": 38,
+      "type": "SetNode",
+      "pos": [
+        -100,
+        -370
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
       },
-      "outputs": {
-        "plot_image": "IMAGE"
+      "order": 43,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "link": 24
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_grid_latent",
+      "properties": {
+        "previousName": "grid_latent"
       },
-      "pos": [700, 400]
+      "widgets_values": [
+        "grid_latent"
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
     },
     {
-      "id": "8",
-      "type": "KikoSaveImage",
-      "title": "Save Results",
-      "category": "ComfyAssets/💾 Images",
-      "inputs": {
-        "images": ["6", "image"],
-        "filename_prefix": "lora_test",
-        "format": "PNG",
-        "popup": true
+      "id": 39,
+      "type": "GetNode",
+      "pos": [
+        210,
+        -340
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
       },
-      "pos": [1600, 200]
+      "order": 10,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            25
+          ]
+        }
+      ],
+      "title": "Get_grid_latent",
+      "properties": {},
+      "widgets_values": [
+        "grid_latent"
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
     },
     {
-      "id": "9",
+      "id": 40,
+      "type": "GetNode",
+      "pos": [
+        210,
+        -340
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 11,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            26
+          ]
+        }
+      ],
+      "title": "Get_vae",
+      "properties": {},
+      "widgets_values": [
+        "vae"
+      ],
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 41,
+      "type": "SetNode",
+      "pos": [
+        210,
+        -340
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 41,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "link": 27
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_grid_img",
+      "properties": {
+        "previousName": "grid_img"
+      },
+      "widgets_values": [
+        "grid_img"
+      ],
+      "color": "#2a363b",
+      "bgcolor": "#3f5159"
+    },
+    {
+      "id": 43,
+      "type": "GetNode",
+      "pos": [
+        210,
+        -340
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 13,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            29
+          ]
+        }
+      ],
+      "title": "Get_grid_img",
+      "properties": {},
+      "widgets_values": [
+        "grid_img"
+      ],
+      "color": "#2a363b",
+      "bgcolor": "#3f5159"
+    },
+    {
+      "id": 44,
+      "type": "SetNode",
+      "pos": [
+        -70,
+        -320
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 44,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "SAMPLER_PARAMS",
+          "type": "SAMPLER_PARAMS",
+          "link": 30
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "Set_grid_params",
+      "properties": {
+        "previousName": "grid_params"
+      },
+      "widgets_values": [
+        "grid_params"
+      ]
+    },
+    {
+      "id": 45,
+      "type": "GetNode",
+      "pos": [
+        -500,
+        -360
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 14,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            31
+          ]
+        }
+      ],
+      "title": "Get_lora_clip",
+      "properties": {},
+      "widgets_values": [
+        "lora_clip"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 47,
+      "type": "MarkdownNote",
+      "pos": [
+        -1310,
+        410
+      ],
+      "size": [
+        960,
+        820
+      ],
+      "flags": {},
+      "order": 21,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "# Range Notation for Stable Diffusion FLUX\n\nRange notation (or range expressions) is a concise way to define a sequence of numeric values. This is especially useful in Stable Diffusion FLUX to sweep parameters like seed, steps, guidance, etc.\n\n## Syntax Overview\n\nA range expression consists of:\n\n- A **start value**\n- An **end value**\n- An optional **step value**\n\n### Ellipsis Range Notation\n\nThe `...` (three dots) represent the range between a start and an end.\n\n### Step Range Notation\n\nAppending `+step` defines how much the value should increment at each step.\n\n---\n\n## Examples\n\n### Numeric Examples\n\n| Expression           | Meaning                        | Result                         |\n|----------------------|--------------------------------|--------------------------------|\n| `20...40`            | From 20 to 40 (default step)   | `20, 21, 22, ..., 40`          |\n| `20...40+5`          | From 20 to 40 in steps of 5    | `20, 25, 30, 35, 40`           |\n| `1.5...3.5+0.5`      | From 1.5 to 3.5 in steps of 0.5| `1.5, 2.0, 2.5, 3.0, 3.5`      |\n\n---\n\n## Stable Diffusion FLUX Examples\n\n### Parameter Ranges\n\n| Parameter   | Range Expression   | Explanation                           |\n|-------------|--------------------|---------------------------------------|\n| `seed`      | `42...46+1`        | Try seeds 42, 43, 44, 45, 46          |\n| `steps`     | `20...40+10`       | Generate with 20, 30, and 40 steps    |\n| `guidance`  | `3.5...5.5+0.5`    | Try CFG values 3.5 through 5.5        |\n| `max_shift` | `1.0...1.5+0.1`    | Explore subtle max shift variations   |\n| `base_shift`| `0.1...0.5+0.1`    | Adjust base shift in small increments |\n\n---\n\n## Summary Table\n\n| Format            | Description                    |\n|-------------------|--------------------------------|\n| `start...end`     | Range with default step (1)    |\n| `start...end+step`| Range with defined step        |\n\n---\n\nUse these expressions in your FLUX UI to perform parameter sweeps efficiently."
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 48,
+      "type": "LoRAFolderBatch",
+      "pos": [
+        -590,
+        130
+      ],
+      "size": [
+        390,
+        210
+      ],
+      "flags": {},
+      "order": 22,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "lora_params",
+          "type": "LORA_PARAMS",
+          "links": [
+            33,
+            34
+          ]
+        },
+        {
+          "name": "lora_list",
+          "type": "STRING",
+          "links": null
+        },
+        {
+          "name": "lora_count",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "a8ee5930ffa8095aa96e65244c96574d8be90c26",
+        "Node name for S&R": "LoRAFolderBatch"
+      },
+      "widgets_values": [
+        "/home/kiko/training/ai-models/lora/flux/kiko-v4",
+        "0.9...1.2+0.1",
+        "combinatorial",
+        "",
+        ""
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 51,
+      "type": "DisplayAny",
+      "pos": [
+        -540,
+        230
+      ],
+      "size": [
+        270,
+        262
+      ],
+      "flags": {
+        "allow_interaction": true,
+        "collapsed": true
+      },
+      "order": 37,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input",
+          "type": "*",
+          "link": 34
+        }
+      ],
+      "outputs": [
+        {
+          "name": "display_text",
+          "type": "STRING",
+          "links": [
+            35
+          ]
+        }
+      ],
+      "title": "DisplayAny: {",
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "a8ee5930ffa8095aa96e65244c96574d8be90c26",
+        "Node name for S&R": "DisplayAny"
+      },
+      "widgets_values": [
+        "raw value",
+        null
+      ]
+    },
+    {
+      "id": 52,
       "type": "DisplayText",
-      "title": "Show LoRA List",
-      "category": "ComfyAssets/📋 Text",
-      "inputs": {
-        "text": ["1", "lora_list"]
+      "pos": [
+        -320,
+        380
+      ],
+      "size": [
+        610,
+        1020
+      ],
+      "flags": {
+        "allow_interaction": true,
+        "collapsed": false
       },
-      "pos": [400, 400]
+      "order": 46,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 35
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "a8ee5930ffa8095aa96e65244c96574d8be90c26",
+        "Node name for S&R": "DisplayText"
+      },
+      "widgets_values": [
+        null
+      ]
+    },
+    {
+      "id": 53,
+      "type": "KikoSaveImage",
+      "pos": [
+        440,
+        -390
+      ],
+      "size": [
+        490,
+        1170
+      ],
+      "flags": {},
+      "order": 48,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 36
+        },
+        {
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": 37
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "kikotools",
+        "ver": "a8ee5930ffa8095aa96e65244c96574d8be90c26",
+        "Node name for S&R": "KikoSaveImage"
+      },
+      "widgets_values": [
+        "KikoSave",
+        "PNG",
+        90,
+        4,
+        false,
+        true
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 54,
+      "type": "GetNode",
+      "pos": [
+        490,
+        -370
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 20,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            37
+          ]
+        }
+      ],
+      "title": "Get_filename",
+      "properties": {},
+      "widgets_values": [
+        "filename"
+      ]
     }
   ],
-  "workflow_notes": {
-    "purpose": "Test multiple LoRA training epochs with different strength values",
-    "features": [
-      "Automatic LoRA folder scanning",
-      "Combinatorial strength testing",
-      "Parameter visualization",
-      "Batch processing support"
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "*"
     ],
-    "attribution": "xyz_helpers nodes adapted from comfyui-essentials-nodes"
-  }
+    [
+      2,
+      3,
+      0,
+      4,
+      0,
+      "*"
+    ],
+    [
+      3,
+      5,
+      0,
+      6,
+      0,
+      "*"
+    ],
+    [
+      4,
+      7,
+      0,
+      8,
+      0,
+      "*"
+    ],
+    [
+      5,
+      9,
+      0,
+      10,
+      0,
+      "*"
+    ],
+    [
+      6,
+      11,
+      2,
+      12,
+      0,
+      "string"
+    ],
+    [
+      7,
+      13,
+      0,
+      11,
+      0,
+      "MODEL"
+    ],
+    [
+      8,
+      14,
+      0,
+      11,
+      1,
+      "CLIP"
+    ],
+    [
+      9,
+      11,
+      0,
+      15,
+      0,
+      "*"
+    ],
+    [
+      10,
+      11,
+      1,
+      16,
+      0,
+      "*"
+    ],
+    [
+      11,
+      12,
+      0,
+      18,
+      0,
+      "*"
+    ],
+    [
+      12,
+      19,
+      0,
+      17,
+      1,
+      "STRING"
+    ],
+    [
+      13,
+      20,
+      0,
+      21,
+      0,
+      "*"
+    ],
+    [
+      14,
+      20,
+      1,
+      22,
+      0,
+      "*"
+    ],
+    [
+      15,
+      20,
+      2,
+      23,
+      0,
+      "*"
+    ],
+    [
+      16,
+      17,
+      0,
+      25,
+      0,
+      "*"
+    ],
+    [
+      17,
+      26,
+      0,
+      24,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      18,
+      27,
+      0,
+      24,
+      0,
+      "MODEL"
+    ],
+    [
+      19,
+      28,
+      0,
+      29,
+      0,
+      "*"
+    ],
+    [
+      20,
+      31,
+      0,
+      24,
+      4,
+      "STRING"
+    ],
+    [
+      21,
+      32,
+      0,
+      24,
+      5,
+      "STRING"
+    ],
+    [
+      22,
+      33,
+      0,
+      24,
+      2,
+      "LATENT"
+    ],
+    [
+      23,
+      35,
+      0,
+      36,
+      0,
+      "*"
+    ],
+    [
+      24,
+      24,
+      0,
+      38,
+      0,
+      "*"
+    ],
+    [
+      25,
+      39,
+      0,
+      37,
+      0,
+      "LATENT"
+    ],
+    [
+      26,
+      40,
+      0,
+      37,
+      1,
+      "VAE"
+    ],
+    [
+      27,
+      37,
+      0,
+      41,
+      0,
+      "*"
+    ],
+    [
+      29,
+      43,
+      0,
+      34,
+      0,
+      "IMAGE"
+    ],
+    [
+      30,
+      24,
+      1,
+      44,
+      0,
+      "*"
+    ],
+    [
+      31,
+      45,
+      0,
+      17,
+      0,
+      "CLIP"
+    ],
+    [
+      32,
+      24,
+      1,
+      34,
+      1,
+      "SAMPLER_PARAMS"
+    ],
+    [
+      33,
+      48,
+      0,
+      24,
+      3,
+      "LORA_PARAMS"
+    ],
+    [
+      34,
+      48,
+      0,
+      51,
+      0,
+      "*"
+    ],
+    [
+      35,
+      51,
+      0,
+      52,
+      0,
+      "STRING"
+    ],
+    [
+      36,
+      34,
+      0,
+      53,
+      0,
+      "IMAGE"
+    ],
+    [
+      37,
+      54,
+      0,
+      53,
+      1,
+      "STRING"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Make some grids.",
+      "bounding": [
+        -2250,
+        -570,
+        4410,
+        2150
+      ],
+      "color": "#ffffff",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.3452271214393129,
+      "offset": [
+        2080,
+        490
+      ]
+    },
+    "frontendVersion": "1.23.4",
+    "VHS_latentpreview": true,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
 }
