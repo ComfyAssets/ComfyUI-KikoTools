@@ -35,6 +35,7 @@ class ImageScaleDownByNode(ComfyAssetsBaseNode):
         }
 
     RETURN_TYPES = ("IMAGE",)
+    CATEGORY = "ComfyAssets/🖼️ Resolution"
     RETURN_NAMES = ("images",)
     FUNCTION = "scale_down"
 

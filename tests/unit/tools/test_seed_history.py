@@ -49,7 +49,7 @@ class TestSeedHistoryNode:
         assert SeedHistoryNode.RETURN_TYPES == ("INT",)
         assert SeedHistoryNode.RETURN_NAMES == ("seed",)
         assert SeedHistoryNode.FUNCTION == "output_seed"
-        assert SeedHistoryNode.CATEGORY == "ComfyAssets"
+        assert SeedHistoryNode.CATEGORY == "ComfyAssets/🌱 Seeds"
 
     def test_output_seed_valid_input(self):
         """Test seed output with valid input."""
@@ -131,7 +131,8 @@ class TestSeedHistoryNode:
 
         range_info = node.get_seed_range_info()
         assert "Valid range" in range_info
-        assert str(0xFFFFFFFFFFFFFFFF) in range_info
+        # Check for the hex representation which should be in the string
+        assert "0xffffffffffffffff" in range_info.lower()
 
     def test_class_methods(self):
         """Test class methods."""

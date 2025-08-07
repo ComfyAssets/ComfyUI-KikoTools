@@ -96,7 +96,7 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("LATENT", "INT", "INT")
     RETURN_NAMES = ("latent", "width", "height")
     FUNCTION = "create_empty_latent"
-    CATEGORY = "ComfyAssets"
+    CATEGORY = "ComfyAssets/📦 Latents"
 
     def create_empty_latent(
         self, preset: str, width: int, height: int, batch_size: int

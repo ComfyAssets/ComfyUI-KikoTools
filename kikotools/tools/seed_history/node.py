@@ -38,7 +38,7 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("INT",)
     RETURN_NAMES = ("seed",)
     FUNCTION = "output_seed"
-    CATEGORY = "ComfyAssets"
+    CATEGORY = "ComfyAssets/🌱 Seeds"
 
     def output_seed(self, seed: int) -> Tuple[int]:
         """

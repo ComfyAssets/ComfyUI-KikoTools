@@ -14,6 +14,14 @@ from .tools.image_scale_down_by import ImageScaleDownByNode
 from .tools.gemini_prompt import GeminiPromptNode
 from .tools.display_any import DisplayAnyNode
 from .tools.display_text import DisplayTextNode
+from .tools.xyz_helpers import (
+    SamplerSelectHelperNode,
+    SchedulerSelectHelperNode,
+    TextEncodeSamplerParamsNode,
+    FluxSamplerParamsNode,
+    PlotParametersNode,
+    LoRAFolderBatchNode,
+)
 
 # ComfyUI node registration mappings
 NODE_CLASS_MAPPINGS = {
@@ -29,6 +37,12 @@ NODE_CLASS_MAPPINGS = {
     "GeminiPrompt": GeminiPromptNode,
     "DisplayAny": DisplayAnyNode,
     "DisplayText": DisplayTextNode,
+    "SamplerSelectHelper": SamplerSelectHelperNode,
+    "SchedulerSelectHelper": SchedulerSelectHelperNode,
+    "TextEncodeSamplerParams": TextEncodeSamplerParamsNode,
+    "FluxSamplerParams": FluxSamplerParamsNode,
+    "PlotParameters+": PlotParametersNode,
+    "LoRAFolderBatch": LoRAFolderBatchNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -44,6 +58,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "GeminiPrompt": "Gemini Prompt Engineer",
     "DisplayAny": "Display Any",
     "DisplayText": "Display Text",
+    "SamplerSelectHelper": "Sampler Select Helper",
+    "SchedulerSelectHelper": "Scheduler Select Helper",
+    "TextEncodeSamplerParams": "Text Encode for Sampler Params",
+    "FluxSamplerParams": "Flux Sampler Parameters",
+    "PlotParameters+": "Plot Parameters",
+    "LoRAFolderBatch": "LoRA Folder Batch",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

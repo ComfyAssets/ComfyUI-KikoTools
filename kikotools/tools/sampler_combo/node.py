@@ -68,7 +68,7 @@ class SamplerComboNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("SAMPLER", SCHEDULERS, "INT", "FLOAT")
     RETURN_NAMES = ("sampler_name", "scheduler", "steps", "cfg")
     FUNCTION = "get_sampler_combo"
-    CATEGORY = "ComfyAssets"
+    CATEGORY = "ComfyAssets/🌀 Samplers"
 
     def get_sampler_combo(
         self, sampler_name: str, scheduler: str, steps: int, cfg: float

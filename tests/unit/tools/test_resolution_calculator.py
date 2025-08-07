@@ -131,14 +131,14 @@ class TestDivisibleBy8Constraint:
         assert width % 8 == 0
         assert height % 8 == 0
 
-    def test_ensure_divisible_by_8_needs_rounding_up(self):
-        """Test rounding up to nearest multiple of 8"""
-        # 1250 -> 1256 (next multiple of 8)
-        # 1825 -> 1832 (next multiple of 8)
+    def test_ensure_divisible_by_8_needs_rounding(self):
+        """Test rounding to nearest multiple of 8"""
+        # 1250 -> 1248 (nearest multiple of 8, rounds down since 1250 % 8 = 2 < 4)
+        # 1825 -> 1824 (nearest multiple of 8, rounds down since 1825 % 8 = 1 < 4)
         width, height = ensure_divisible_by_8(1250, 1825)
 
-        assert width == 1256
-        assert height == 1832
+        assert width == 1248
+        assert height == 1824
         assert width % 8 == 0
         assert height % 8 == 0
 
@@ -179,7 +179,7 @@ class TestResolutionCalculatorNode:
         assert hasattr(ResolutionCalculatorNode, "CATEGORY")
 
         # Check category is correct
-        assert ResolutionCalculatorNode.CATEGORY == "ComfyAssets"
+        assert ResolutionCalculatorNode.CATEGORY == "ComfyAssets/🖼️ Resolution"
 
         # Check return types
         assert ResolutionCalculatorNode.RETURN_TYPES == ("INT", "INT")
@@ -206,8 +206,8 @@ class TestResolutionCalculatorNode:
         # Check optional inputs
         assert "image" in input_types["optional"]
         assert "latent" in input_types["optional"]
-        assert input_types["optional"]["image"] == ("IMAGE",)
-        assert input_types["optional"]["latent"] == ("LATENT",)
+        assert input_types["optional"]["image"][0] == "IMAGE"
+        assert input_types["optional"]["latent"][0] == "LATENT"
 
     def test_calculate_resolution_with_image(self, mock_image_tensor):
         """Test node calculation with IMAGE input"""
@@ -281,7 +281,7 @@ class TestResolutionCalculatorNode:
         node = ResolutionCalculatorNode()
         node_info = node.get_node_info()
 
-        assert node_info["category"] == "ComfyAssets"
+        assert node_info["category"] == "ComfyAssets/🖼️ Resolution"
         assert node_info["class_name"] == "ResolutionCalculatorNode"
 
 

@@ -1,0 +1,159 @@
+{
+  "name": "LoRA Epoch Testing Workflow",
+  "description": "Test multiple LoRA epochs with different strengths using xyz_helpers",
+  "nodes": [
+    {
+      "id": "1",
+      "type": "LoRAFolderBatch",
+      "title": "Load LoRA Epochs",
+      "category": "ComfyAssets/🧰 xyz-helpers",
+      "inputs": {
+        "folder_path": "my_training_output",
+        "strength": "0.6, 0.8, 1.0",
+        "batch_mode": "combinatorial",
+        "include_pattern": "epoch_0[2-5]0",
+        "exclude_pattern": ""
+      },
+      "outputs": {
+        "lora_params": "LORA_PARAMS",
+        "lora_list": "STRING",
+        "lora_count": "INT"
+      },
+      "pos": [100, 100]
+    },
+    {
+      "id": "2",
+      "type": "FluxSamplerParams",
+      "title": "FLUX Parameters",
+      "category": "ComfyAssets/🧰 xyz-helpers",
+      "inputs": {
+        "scheduler": "normal",
+        "steps": 20,
+        "guidance": 3.5,
+        "max_shift": 1.0,
+        "base_shift": 0.5,
+        "denoise": 1.0,
+        "batch_mode": "batch",
+        "lora_params": ["1", "lora_params"]
+      },
+      "outputs": {
+        "sampler_params": "SAMPLER_PARAMS"
+      },
+      "pos": [400, 100]
+    },
+    {
+      "id": "3",
+      "type": "TextEncodeSamplerParams",
+      "title": "Encode Prompt with Params",
+      "category": "ComfyAssets/🧰 xyz-helpers",
+      "inputs": {
+        "text": "a beautiful portrait in my trained style",
+        "negative_text": "ugly, blurry, distorted",
+        "clip": ["model", "clip"],
+        "sampler_params": ["2", "sampler_params"]
+      },
+      "outputs": {
+        "positive": "CONDITIONING",
+        "negative": "CONDITIONING"
+      },
+      "pos": [700, 100]
+    },
+    {
+      "id": "4",
+      "type": "EmptyLatentBatch",
+      "title": "Create Latents",
+      "category": "ComfyAssets/📦 Latents",
+      "inputs": {
+        "preset": "1024×1024 (SDXL Square)",
+        "batch_size": 1
+      },
+      "outputs": {
+        "latent": "LATENT"
+      },
+      "pos": [100, 300]
+    },
+    {
+      "id": "5",
+      "type": "KSampler",
+      "title": "Generate Images",
+      "inputs": {
+        "model": ["model", "model"],
+        "positive": ["3", "positive"],
+        "negative": ["3", "negative"],
+        "latent_image": ["4", "latent"],
+        "sampler_name": ["2", "sampler_name"],
+        "scheduler": ["2", "scheduler"],
+        "steps": ["2", "steps"],
+        "cfg": ["2", "guidance"],
+        "seed": 12345
+      },
+      "outputs": {
+        "latent": "LATENT"
+      },
+      "pos": [1000, 200]
+    },
+    {
+      "id": "6",
+      "type": "VAEDecode",
+      "title": "Decode Images",
+      "inputs": {
+        "samples": ["5", "latent"],
+        "vae": ["model", "vae"]
+      },
+      "outputs": {
+        "image": "IMAGE"
+      },
+      "pos": [1300, 200]
+    },
+    {
+      "id": "7",
+      "type": "PlotParameters",
+      "title": "Plot LoRA Strengths",
+      "category": "ComfyAssets/🧰 xyz-helpers",
+      "inputs": {
+        "sampler_params": ["2", "sampler_params"],
+        "plot_type": "scatter",
+        "x_axis": "lora_strength",
+        "y_axis": "epoch",
+        "title": "LoRA Epoch vs Strength Analysis"
+      },
+      "outputs": {
+        "plot_image": "IMAGE"
+      },
+      "pos": [700, 400]
+    },
+    {
+      "id": "8",
+      "type": "KikoSaveImage",
+      "title": "Save Results",
+      "category": "ComfyAssets/💾 Images",
+      "inputs": {
+        "images": ["6", "image"],
+        "filename_prefix": "lora_test",
+        "format": "PNG",
+        "popup": true
+      },
+      "pos": [1600, 200]
+    },
+    {
+      "id": "9",
+      "type": "DisplayText",
+      "title": "Show LoRA List",
+      "category": "ComfyAssets/📋 Text",
+      "inputs": {
+        "text": ["1", "lora_list"]
+      },
+      "pos": [400, 400]
+    }
+  ],
+  "workflow_notes": {
+    "purpose": "Test multiple LoRA training epochs with different strength values",
+    "features": [
+      "Automatic LoRA folder scanning",
+      "Combinatorial strength testing",
+      "Parameter visualization",
+      "Batch processing support"
+    ],
+    "attribution": "xyz_helpers nodes adapted from comfyui-essentials-nodes"
+  }
+}

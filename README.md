@@ -16,16 +16,29 @@ ComfyUI-KikoTools provides carefully crafted, production-ready nodes grouped und
 
 | Tool | Description | Category |
 |------|-------------|----------|
-| [📐 Resolution Calculator](#-resolution-calculator) | Calculate upscaled dimensions with model optimization | Image Processing |
-| [📏 Width Height Selector](#-width-height-selector) | Preset-based dimension selection with visual swap | Dimension Control |
-| [🎲 Seed History](#-seed-history) | Advanced seed tracking with interactive history | Generation Control |
-| [⚙️ Sampler Combo](#️-sampler-combo) | Unified sampling configuration interface | Sampling |
-| [📦 Empty Latent Batch](#-empty-latent-batch) | Create empty latent batches with preset support | Latent Generation |
-| [💾 Kiko Save Image](#-kiko-save-image) | Enhanced image saving with popup viewer | File Management |
-| [📋 Display Text](#-display-text) | Smart text display with prompt detection | Text Display |
-| [🤖 Gemini Prompt Engineer](#-gemini-prompt-engineer) | AI-powered image analysis and prompt generation | AI Integration |
-| [🔍 Display Any](#-display-any) | Universal debugging tool for any data type | Debugging |
-| [🖼️ Image to Multiple Of](#️-image-to-multiple-of) | Adjust dimensions to multiples for compatibility | Image Processing |
+| [📐 Resolution Calculator](#-resolution-calculator) | Calculate upscaled dimensions with model optimization | 🖼️ Resolution |
+| [📏 Width Height Selector](#-width-height-selector) | Preset-based dimension selection with visual swap | 🖼️ Resolution |
+| [🎲 Seed History](#-seed-history) | Advanced seed tracking with interactive history | 🎯 Advanced |
+| [⚙️ Sampler Combo](#️-sampler-combo) | Unified sampling configuration interface | ⚙️ Sampling |
+| [📦 Empty Latent Batch](#-empty-latent-batch) | Create empty latent batches with preset support | 📦 Latents |
+| [💾 Kiko Save Image](#-kiko-save-image) | Enhanced image saving with popup viewer | 💾 Images |
+| [📋 Display Text](#-display-text) | Smart text display with prompt detection | 📋 Text |
+| [🤖 Gemini Prompt Engineer](#-gemini-prompt-engineer) | AI-powered image analysis and prompt generation | 🧠 Prompts |
+| [🔍 Display Any](#-display-any) | Universal debugging tool for any data type | 🔍 Debug |
+| [🖼️ Image to Multiple Of](#️-image-to-multiple-of) | Adjust dimensions to multiples for compatibility | 🖼️ Resolution |
+
+### 🧰 xyz-helpers Tools
+
+Advanced parameter management tools adapted from [comfyui-essentials-nodes](https://github.com/cubiq/ComfyUI_essentials) (now in maintenance mode):
+
+| Tool | Description | Category |
+|------|-------------|----------|
+| [🎛️ Flux Sampler Params](#️-flux-sampler-params) | FLUX-optimized parameter generator with batch support | 🧰 xyz-helpers |
+| [📁 LoRA Folder Batch](#-lora-folder-batch) | Batch process multiple LoRAs from folders | 🧰 xyz-helpers |
+| [📊 Plot Parameters](#-plot-parameters) | Visualize parameter effects with graphs | 🧰 xyz-helpers |
+| [🎯 Sampler Select Helper](#-sampler-select-helper) | Intelligent sampler selection with recommendations | 🧰 xyz-helpers |
+| [📅 Scheduler Select Helper](#-scheduler-select-helper) | Optimal scheduler selection for samplers | 🧰 xyz-helpers |
+| [✍️ Text Encode Sampler Params](#️-text-encode-sampler-params) | Combined text encoding and parameter management | 🧰 xyz-helpers |
 
 #### 📐 Resolution Calculator
 Calculate upscaled dimensions from image or latent inputs with precision.
@@ -204,6 +217,97 @@ Adjusts image dimensions to be multiples of a specified value for model compatib
 - Optimize for tiled processing requirements
 
 ![Image to Multiple Of Example](examples/workflows/image_to_multiple_of_example.png)
+
+#### 🎛️ Flux Sampler Params
+FLUX-optimized parameter generator with intelligent batch processing capabilities.
+
+- **FLUX-Specific Tuning**: Optimized guidance, shift values, and step counts for FLUX models
+- **Batch Parameter Testing**: Generate multiple parameter sets for comparative analysis
+- **LoRA Integration**: Seamlessly combine with LoRA Folder Batch for comprehensive testing
+- **Smart Defaults**: Pre-configured optimal settings based on extensive FLUX testing
+- **Range Syntax Support**: Use `start...end+step` notation for parameter sweeps
+
+**Use Cases:**
+- Test different guidance and shift value combinations
+- Batch process with varying parameters
+- Optimize FLUX generation quality
+- Integrate with LoRA testing workflows
+
+#### 📁 LoRA Folder Batch
+Automated batch processing for multiple LoRA models from folders.
+
+- **Automatic Scanning**: Discovers all .safetensors files in specified folders
+- **Natural Epoch Sorting**: Intelligently sorts training epochs (epoch_004, epoch_020, etc.)
+- **Pattern Filtering**: Include/exclude LoRAs using powerful regex patterns
+- **Flexible Strength Control**: Single, multiple, or range-based strength values
+- **Batch Modes**: Sequential or combinatorial strength application
+- **Epoch Detection**: Automatically extracts epoch numbers from filenames
+
+**Use Cases:**
+- Test all epochs from a training run
+- Compare different LoRA versions
+- Evaluate strength variations
+- Batch process style transfers
+
+#### 📊 Plot Parameters
+Visual analysis tool for understanding parameter relationships and effects.
+
+- **Multiple Plot Types**: Line, bar, scatter, and heatmap visualizations
+- **Parameter Correlation**: Analyze relationships between settings and quality
+- **Statistical Analysis**: Calculate means, deviations, and trends
+- **Export Capabilities**: Save plots as images or CSV data
+- **Real-time Updates**: Dynamic graph generation during workflow execution
+
+**Use Cases:**
+- Visualize parameter impact on quality
+- Compare batch generation results
+- Analyze optimal parameter ranges
+- Document generation experiments
+
+#### 🎯 Sampler Select Helper
+Intelligent sampler selection with model-aware recommendations.
+
+- **Model Detection**: Automatic identification of SDXL, SD1.5, or FLUX models
+- **Quality Presets**: Fast, balanced, quality, and extreme presets
+- **Compatibility Checking**: Ensures optimal sampler-scheduler pairs
+- **Performance Profiles**: Pre-configured settings for different use cases
+- **Dynamic Discovery**: Adapts to newly available samplers
+
+**Use Cases:**
+- Automatic optimal sampler selection
+- Quick quality vs speed adjustments
+- Model-specific optimization
+- A/B testing different samplers
+
+#### 📅 Scheduler Select Helper
+Optimal scheduler selection based on sampler and model requirements.
+
+- **Sampler-Aware**: Recommends best schedulers for each sampler
+- **Noise Schedule Visualization**: Preview and compare schedule curves
+- **Model Optimization**: Specific tuning for SDXL, SD1.5, and FLUX
+- **Schedule Types**: Smooth, sharp, linear, and custom curves
+- **Beta Schedule Support**: Advanced control with custom beta values
+
+**Use Cases:**
+- Find optimal scheduler for your sampler
+- Visualize noise reduction curves
+- Compare different schedule types
+- Fine-tune generation behavior
+
+#### ✍️ Text Encode Sampler Params
+Unified interface for text encoding and sampler parameter management.
+
+- **All-in-One Node**: Combine prompt encoding with sampling configuration
+- **Template System**: Pre-configured settings for portraits, landscapes, etc.
+- **Prompt Syntax Support**: Wildcards, emphasis, and alternation
+- **Batch Processing**: Handle multiple prompts efficiently
+- **Model-Aware Encoding**: Optimize for different text encoders
+
+**Use Cases:**
+- Streamline text-to-image workflows
+- Apply consistent settings across prompts
+- Quick template-based generation
+- Batch prompt processing
 
 ### 💾 Kiko Save Image Features
 
@@ -424,6 +528,12 @@ Load Image → Image to Multiple Of → VAE Encode → KSampler
 | **Gemini Prompt Engineer** | AI-powered image analysis with dynamic model refresh | ✅ Complete | [Docs](examples/documentation/gemini_prompt.md) |
 | **Display Any** | Universal debugging tool for any data type or tensor shapes | ✅ Complete | [Docs](examples/documentation/display_any.md) |
 | **Image to Multiple Of** | Adjust image dimensions to multiples for model compatibility | ✅ Complete | [Docs](examples/documentation/image_to_multiple_of.md) |
+| **Flux Sampler Params** | FLUX-optimized parameter generator with batch support | ✅ Complete | [Docs](examples/documentation/flux_sampler_params.md) |
+| **LoRA Folder Batch** | Batch process multiple LoRAs from folders | ✅ Complete | [Docs](examples/documentation/lora_folder_batch.md) |
+| **Plot Parameters** | Visualize parameter effects with graphs | ✅ Complete | [Docs](examples/documentation/plot_parameters.md) |
+| **Sampler Select Helper** | Intelligent sampler selection with recommendations | ✅ Complete | [Docs](examples/documentation/sampler_select_helper.md) |
+| **Scheduler Select Helper** | Optimal scheduler selection for samplers | ✅ Complete | [Docs](examples/documentation/scheduler_select_helper.md) |
+| **Text Encode Sampler Params** | Combined text encoding and parameter management | ✅ Complete | [Docs](examples/documentation/text_encode_sampler_params.md) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
@@ -717,15 +827,31 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 10 (Resolution Calculator, Width Height Selector, Seed History, Sampler Combo, Empty Latent Batch, Kiko Save Image, Display Text, Gemini Prompt Engineer, Display Any, Image to Multiple Of)
+- **Nodes**: 16 (10 core tools + 6 xyz-helpers)
+- **Categories**: 9 emoji-based categories for better organization
 - **Format Support**: 3 (PNG, JPEG, WebP with advanced controls)
 - **Presets**: 26 curated resolution presets
-- **Interactive Features**: 6 (Width/Height Swap Button, Seed History UI, Empty Latent Batch Swap Button, Kiko Save Image Popup Viewer, Display Text Split View, Gemini Model Refresh)
+- **Interactive Features**: 8+ (swap buttons, history UI, popup viewers, parameter visualization)
 - **AI Integration**: Gemini API with 40+ model support
-- **Test Coverage**: 100% (200+ comprehensive tests)
+- **Test Coverage**: 100% (300+ comprehensive tests)
 - **Python Version**: 3.8+
 - **ComfyUI Compatibility**: Latest
 - **Dependencies**: Minimal (PyTorch, NumPy, Pillow, google-generativeai for Gemini)
+
+## 🙏 Attribution
+
+### xyz-helpers Tools
+The xyz-helpers collection was adapted from [comfyui-essentials-nodes](https://github.com/cubiq/ComfyUI_essentials) by cubiq. The original project is in maintenance-only mode, and we've adopted these essential tools to ensure continued support and compatibility with modern ComfyUI workflows. We're grateful for cubiq's original work and contributions to the ComfyUI community.
+
+The following tools are based on comfyui-essentials-nodes:
+- Flux Sampler Params
+- LoRA Folder Batch
+- Plot Parameters
+- Sampler Select Helper
+- Scheduler Select Helper
+- Text Encode Sampler Params
+
+All adaptations maintain compatibility while adding new features and optimizations for the ComfyAssets ecosystem.
 
 ---
 

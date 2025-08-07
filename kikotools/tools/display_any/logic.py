@@ -48,6 +48,15 @@ def format_display_value(input_value: Any, mode: str = "raw value") -> str:
             return "No tensors found in input"
 
     # Default to raw value display
+    # Try to format as JSON for better readability
+    try:
+        import json
+
+        if isinstance(input_value, (dict, list)):
+            return json.dumps(input_value, indent=2)
+    except:
+        pass
+
     return str(input_value)
 
 
