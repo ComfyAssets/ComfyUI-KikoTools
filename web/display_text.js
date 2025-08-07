@@ -56,19 +56,29 @@ app.registerExtension({
                     posWidget.inputEl.style.opacity = 0.9;
                     posWidget.value = positiveText;
                     
-                    // Add copy button for positive prompt
-                    const posCopyBtn = document.createElement("button");
-                    posCopyBtn.textContent = "📋 Copy Positive";
-                    posCopyBtn.style.cssText = "margin: 5px; padding: 5px 10px; background: #4a4a4a; color: white; border: 1px solid #666; cursor: pointer; border-radius: 3px;";
-                    posCopyBtn.onclick = () => {
-                        navigator.clipboard.writeText(positiveText).then(() => {
-                            posCopyBtn.textContent = "✓ Copied!";
-                            setTimeout(() => {
+                    // Store reference for copy button
+                    posWidget._copyText = positiveText;
+                    posWidget._node = this;
+                    
+                    // Add copy button for positive prompt after DOM is ready
+                    if (posWidget.inputEl && posWidget.inputEl.parentNode) {
+                        requestAnimationFrame(() => {
+                            if (posWidget.inputEl && posWidget.inputEl.parentNode) {
+                                const posCopyBtn = document.createElement("button");
                                 posCopyBtn.textContent = "📋 Copy Positive";
-                            }, 1500);
+                                posCopyBtn.style.cssText = "margin: 5px; padding: 5px 10px; background: #4a4a4a; color: white; border: 1px solid #666; cursor: pointer; border-radius: 3px;";
+                                posCopyBtn.onclick = () => {
+                                    navigator.clipboard.writeText(posWidget._copyText).then(() => {
+                                        posCopyBtn.textContent = "✓ Copied!";
+                                        setTimeout(() => {
+                                            posCopyBtn.textContent = "📋 Copy Positive";
+                                        }, 1500);
+                                    });
+                                };
+                                posWidget.inputEl.parentNode.appendChild(posCopyBtn);
+                            }
                         });
-                    };
-                    posWidget.inputEl.parentNode.appendChild(posCopyBtn);
+                    }
                     
                     // Create header widget for negative prompt
                     const negHeader = ComfyWidgets["STRING"](this, "text_neg_header", ["STRING", { multiline: false }], app).widget;
@@ -85,19 +95,29 @@ app.registerExtension({
                     negWidget.inputEl.style.opacity = 0.9;
                     negWidget.value = negativeText;
                     
-                    // Add copy button for negative prompt
-                    const negCopyBtn = document.createElement("button");
-                    negCopyBtn.textContent = "📋 Copy Negative";
-                    negCopyBtn.style.cssText = "margin: 5px; padding: 5px 10px; background: #4a4a4a; color: white; border: 1px solid #666; cursor: pointer; border-radius: 3px;";
-                    negCopyBtn.onclick = () => {
-                        navigator.clipboard.writeText(negativeText).then(() => {
-                            negCopyBtn.textContent = "✓ Copied!";
-                            setTimeout(() => {
+                    // Store reference for copy button
+                    negWidget._copyText = negativeText;
+                    negWidget._node = this;
+                    
+                    // Add copy button for negative prompt after DOM is ready
+                    if (negWidget.inputEl && negWidget.inputEl.parentNode) {
+                        requestAnimationFrame(() => {
+                            if (negWidget.inputEl && negWidget.inputEl.parentNode) {
+                                const negCopyBtn = document.createElement("button");
                                 negCopyBtn.textContent = "📋 Copy Negative";
-                            }, 1500);
+                                negCopyBtn.style.cssText = "margin: 5px; padding: 5px 10px; background: #4a4a4a; color: white; border: 1px solid #666; cursor: pointer; border-radius: 3px;";
+                                negCopyBtn.onclick = () => {
+                                    navigator.clipboard.writeText(negWidget._copyText).then(() => {
+                                        negCopyBtn.textContent = "✓ Copied!";
+                                        setTimeout(() => {
+                                            negCopyBtn.textContent = "📋 Copy Negative";
+                                        }, 1500);
+                                    });
+                                };
+                                negWidget.inputEl.parentNode.appendChild(negCopyBtn);
+                            }
                         });
-                    };
-                    negWidget.inputEl.parentNode.appendChild(negCopyBtn);
+                    }
                     
                 } else {
                     // Single text display with ComfyUI's standard STRING widget
@@ -106,19 +126,29 @@ app.registerExtension({
                     w.inputEl.style.opacity = 0.9;
                     w.value = text;
                     
-                    // Add copy button
-                    const copyBtn = document.createElement("button");
-                    copyBtn.textContent = "📋 Copy";
-                    copyBtn.style.cssText = "margin: 5px; padding: 5px 10px; background: #4a4a4a; color: white; border: 1px solid #666; cursor: pointer; border-radius: 3px;";
-                    copyBtn.onclick = () => {
-                        navigator.clipboard.writeText(text).then(() => {
-                            copyBtn.textContent = "✓ Copied!";
-                            setTimeout(() => {
+                    // Store reference for copy button
+                    w._copyText = text;
+                    w._node = this;
+                    
+                    // Add copy button after DOM is ready
+                    if (w.inputEl && w.inputEl.parentNode) {
+                        requestAnimationFrame(() => {
+                            if (w.inputEl && w.inputEl.parentNode) {
+                                const copyBtn = document.createElement("button");
                                 copyBtn.textContent = "📋 Copy";
-                            }, 1500);
+                                copyBtn.style.cssText = "margin: 5px; padding: 5px 10px; background: #4a4a4a; color: white; border: 1px solid #666; cursor: pointer; border-radius: 3px;";
+                                copyBtn.onclick = () => {
+                                    navigator.clipboard.writeText(w._copyText).then(() => {
+                                        copyBtn.textContent = "✓ Copied!";
+                                        setTimeout(() => {
+                                            copyBtn.textContent = "📋 Copy";
+                                        }, 1500);
+                                    });
+                                };
+                                w.inputEl.parentNode.appendChild(copyBtn);
+                            }
                         });
-                    };
-                    w.inputEl.parentNode.appendChild(copyBtn);
+                    }
                 }
 
                 requestAnimationFrame(() => {
