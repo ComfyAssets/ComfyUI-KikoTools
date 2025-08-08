@@ -23,6 +23,7 @@ from .tools.xyz_helpers import (
     PlotParametersNode,
     LoRAFolderBatchNode,
 )
+from .tools.embedding_autocomplete import KikoEmbeddingAutocomplete
 
 # ComfyUI node registration mappings
 NODE_CLASS_MAPPINGS = {
@@ -45,6 +46,7 @@ NODE_CLASS_MAPPINGS = {
     "FluxSamplerParams": FluxSamplerParamsNode,
     "PlotParameters+": PlotParametersNode,
     "LoRAFolderBatch": LoRAFolderBatchNode,
+    "KikoEmbeddingAutocomplete": KikoEmbeddingAutocomplete,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -67,6 +69,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxSamplerParams": "Flux Sampler Parameters",
     "PlotParameters+": "Plot Parameters",
     "LoRAFolderBatch": "LoRA Folder Batch",
+    "KikoEmbeddingAutocomplete": "🫶 Embedding Autocomplete",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

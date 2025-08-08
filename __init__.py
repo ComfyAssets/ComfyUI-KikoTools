@@ -15,6 +15,38 @@ except ImportError:
 # Tell ComfyUI where to find our JavaScript extensions
 WEB_DIRECTORY = "./web"
 
+def setup_autocomplete_api():
+    """Setup API routes for embedding autocomplete."""
+    try:
+        from aiohttp import web
+        from server import PromptServer
+        from kikotools.tools.embedding_autocomplete.node import KikoEmbeddingAutocompleteAPI
+        
+        @PromptServer.instance.routes.get("/kikotools/autocomplete/suggestions")
+        async def get_suggestions(request):
+            """API endpoint for getting autocomplete suggestions."""
+            prefix = request.query.get("prefix", "")
+            max_results = int(request.query.get("max", 20))
+            include_embeddings = request.query.get("embeddings", "true").lower() == "true"
+            include_loras = request.query.get("loras", "true").lower() == "true"
+            case_sensitive = request.query.get("case_sensitive", "false").lower() == "true"
+            
+            suggestions = KikoEmbeddingAutocompleteAPI.get_suggestions(
+                prefix=prefix,
+                max_results=max_results,
+                include_embeddings=include_embeddings,
+                include_loras=include_loras,
+                case_sensitive=case_sensitive
+            )
+            
+            return web.json_response(suggestions)
+            
+    except ImportError:
+        pass  # Server not available when not in ComfyUI
+
+# Setup API if available
+setup_autocomplete_api()
+
 
 def get_version():
     """Parse version from pyproject.toml"""
