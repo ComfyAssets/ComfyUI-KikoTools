@@ -14,6 +14,7 @@ from .tools.image_scale_down_by import ImageScaleDownByNode
 from .tools.gemini_prompt import GeminiPromptNode
 from .tools.display_any import DisplayAnyNode
 from .tools.display_text import DisplayTextNode
+from .tools.kiko_film_grain import KikoFilmGrainNode
 from .tools.xyz_helpers import (
     SamplerSelectHelperNode,
     SchedulerSelectHelperNode,
@@ -37,6 +38,7 @@ NODE_CLASS_MAPPINGS = {
     "GeminiPrompt": GeminiPromptNode,
     "DisplayAny": DisplayAnyNode,
     "DisplayText": DisplayTextNode,
+    "KikoFilmGrain": KikoFilmGrainNode,
     "SamplerSelectHelper": SamplerSelectHelperNode,
     "SchedulerSelectHelper": SchedulerSelectHelperNode,
     "TextEncodeSamplerParams": TextEncodeSamplerParamsNode,
@@ -58,6 +60,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "GeminiPrompt": "Gemini Prompt Engineer",
     "DisplayAny": "Display Any",
     "DisplayText": "Display Text",
+    "KikoFilmGrain": "Kiko Film Grain",
     "SamplerSelectHelper": "Sampler Select Helper",
     "SchedulerSelectHelper": "Scheduler Select Helper",
     "TextEncodeSamplerParams": "Text Encode for Sampler Params",
