@@ -145,8 +145,10 @@ This autocomplete works in all prompt fields!"""
 
     def refresh_cache(self):
         """Refresh the cache of embeddings and LoRAs."""
+        print("[KikoEmbeddingAutocomplete] Refreshing cache...")
         self.embeddings_cache = self.get_embeddings()
         self.loras_cache = self.get_loras()
+        print(f"[KikoEmbeddingAutocomplete] Cached {len(self.embeddings_cache)} embeddings, {len(self.loras_cache)} LoRAs")
 
     def get_embeddings(self) -> List[Dict[str, Any]]:
         """Get list of available embeddings."""
@@ -154,7 +156,9 @@ This autocomplete works in all prompt fields!"""
 
         # Get embedding files from ComfyUI's folder system
         try:
+            print("[KikoEmbeddingAutocomplete] Getting embeddings list...")
             embedding_files = folder_paths.get_filename_list("embeddings")
+            print(f"[KikoEmbeddingAutocomplete] Found {len(embedding_files)} embedding files")
             for file in embedding_files:
                 name = os.path.splitext(file)[0]
                 embeddings.append(

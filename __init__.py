@@ -25,6 +25,8 @@ def setup_autocomplete_api():
         import os
         from kikotools.tools.embedding_autocomplete.node import KikoEmbeddingAutocompleteAPI
         
+        print("[KikoTools] Setting up autocomplete API endpoints...")
+        
         @PromptServer.instance.routes.get("/kikotools/autocomplete/suggestions")
         async def get_suggestions(request):
             """API endpoint for getting autocomplete suggestions."""
@@ -47,17 +49,22 @@ def setup_autocomplete_api():
         @PromptServer.instance.routes.get("/kikotools/autocomplete/loras")
         async def get_loras(request):
             """API endpoint for getting list of LoRAs."""
+            print("[KikoTools] LoRA endpoint called")
             try:
                 lora_files = folder_paths.get_filename_list("loras")
+                print(f"[KikoTools] Found {len(lora_files)} LoRA files")
                 # Return just the names without extensions
                 loras = [os.path.splitext(f)[0] for f in lora_files]
+                print(f"[KikoTools] Returning LoRAs: {loras[:5]}...")  # Show first 5
                 return web.json_response(loras)
             except Exception as e:
                 print(f"[KikoTools] Error getting LoRAs: {e}")
                 return web.json_response([])
+        
+        print("[KikoTools] Autocomplete API endpoints registered successfully")
             
-    except ImportError:
-        pass  # Server not available when not in ComfyUI
+    except ImportError as e:
+        print(f"[KikoTools] Could not setup autocomplete API: {e}")
 
 # Setup API if available
 setup_autocomplete_api()
