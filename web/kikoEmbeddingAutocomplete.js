@@ -55,18 +55,47 @@ class KikoEmbeddingAutocomplete {
             if (this.settings.showEmbeddings) {
                 console.log("[KikoAutocomplete] Fetching embeddings via api.getEmbeddings()...");
                 try {
-                    const embeddings = await api.getEmbeddings();
-                    console.log("[KikoAutocomplete] Raw embeddings response:", embeddings);
+                    const embeddingsResponse = await api.getEmbeddings();
+                    console.log("[KikoAutocomplete] Raw embeddings response:", embeddingsResponse);
                     
-                    // ComfyUI returns embeddings as an object with filenames as keys
-                    if (embeddings && typeof embeddings === 'object') {
-                        // Extract the keys (embedding names) from the object
-                        const embeddingNames = Object.keys(embeddings);
-                        console.log("[KikoAutocomplete] Found embedding names:", embeddingNames.slice(0, 5));
+                    let allEmbeddings = [];
+                    
+                    // Check if this is a paginated response
+                    if (embeddingsResponse && embeddingsResponse.items && Array.isArray(embeddingsResponse.items)) {
+                        // This is a paginated response - get all pages
+                        const totalPages = embeddingsResponse.total_pages || 1;
+                        console.log(`[KikoAutocomplete] Paginated response detected. Total pages: ${totalPages}, Total items: ${embeddingsResponse.total}`);
                         
-                        this.embeddings = embeddingNames.map(name => {
-                            // Remove file extension if present
-                            const cleanName = name.replace(/\.(pt|safetensors|ckpt|bin)$/i, '');
+                        // Add items from first page
+                        allEmbeddings = [...embeddingsResponse.items];
+                        
+                        // Fetch remaining pages if any
+                        if (totalPages > 1) {
+                            for (let page = 2; page <= totalPages; page++) {
+                                try {
+                                    console.log(`[KikoAutocomplete] Fetching page ${page}...`);
+                                    // Try to get specific page - this might not work, but let's try
+                                    const pageResponse = await fetch(`/embeddings?page=${page}`);
+                                    if (pageResponse.ok) {
+                                        const pageData = await pageResponse.json();
+                                        if (pageData.items) {
+                                            allEmbeddings.push(...pageData.items);
+                                        }
+                                    }
+                                } catch (err) {
+                                    console.warn(`[KikoAutocomplete] Could not fetch page ${page}:`, err);
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        console.log(`[KikoAutocomplete] Collected ${allEmbeddings.length} embeddings from paginated response`);
+                        
+                        // Process the embeddings
+                        this.embeddings = allEmbeddings.map(item => {
+                            // item might be a string or an object with name property
+                            const name = typeof item === 'string' ? item : (item.name || item);
+                            const cleanName = String(name).replace(/\.(pt|safetensors|ckpt|bin)$/i, '');
                             return {
                                 name: cleanName,
                                 type: "embedding",
@@ -74,10 +103,33 @@ class KikoEmbeddingAutocomplete {
                                 value: `embedding:${cleanName}`
                             };
                         });
+                    }
+                    // Check if it's a simple object with embedding names as keys (old format)
+                    else if (embeddingsResponse && typeof embeddingsResponse === 'object' && !Array.isArray(embeddingsResponse)) {
+                        // Try to extract embeddings from object keys
+                        const keys = Object.keys(embeddingsResponse);
+                        
+                        // If the object has standard pagination keys, it's not the embeddings object
+                        if (!keys.includes('items') && !keys.includes('total')) {
+                            console.log("[KikoAutocomplete] Object format detected, using keys as embedding names");
+                            this.embeddings = keys.map(name => {
+                                const cleanName = name.replace(/\.(pt|safetensors|ckpt|bin)$/i, '');
+                                return {
+                                    name: cleanName,
+                                    type: "embedding",
+                                    display: `embedding:${cleanName}`,
+                                    value: `embedding:${cleanName}`
+                                };
+                            });
+                        } else {
+                            console.warn("[KikoAutocomplete] Unexpected embeddings format");
+                            this.embeddings = [];
+                        }
                     } else {
-                        console.warn("[KikoAutocomplete] Unexpected embeddings response:", typeof embeddings);
+                        console.warn("[KikoAutocomplete] Unexpected embeddings response format:", typeof embeddingsResponse);
                         this.embeddings = [];
                     }
+                    
                     console.log(`[KikoAutocomplete] Processed ${this.embeddings.length} embeddings:`, this.embeddings.slice(0, 5));
                 } catch (e) {
                     console.error("[KikoAutocomplete] Error fetching embeddings:", e);
