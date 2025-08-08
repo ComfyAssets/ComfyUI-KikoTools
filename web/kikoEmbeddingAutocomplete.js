@@ -99,36 +99,36 @@ class KikoEmbeddingAutocomplete {
                         
                         // Process the embeddings
                         console.log("[KikoAutocomplete] Sample item structure:", allEmbeddings[0]);
-                        this.embeddings = allEmbeddings.map(item => {
+                        this.embeddings = allEmbeddings.map((item, index) => {
                             let name = "";
                             
                             // Extract name from different possible formats
                             if (typeof item === 'string') {
                                 name = item;
                             } else if (item && typeof item === 'object') {
-                                // Try different possible property names
-                                name = item.name || item.filename || item.title || item.id || item.embedding_name;
+                                // Based on the logs, items have file_name and model_name properties
+                                name = item.file_name || item.model_name || item.name || item.filename;
                                 
-                                // If still no name, check if item has a toString or other method
-                                if (!name && item.toString && item.toString() !== '[object Object]') {
-                                    name = item.toString();
-                                }
-                                
-                                // Log the first few items to understand structure
-                                if (allEmbeddings.indexOf(item) < 3) {
-                                    console.log("[KikoAutocomplete] Item properties:", Object.keys(item), "Values:", item);
+                                // Log first item to verify
+                                if (index === 0) {
+                                    console.log("[KikoAutocomplete] Using name from item:", name, "from properties:", Object.keys(item));
                                 }
                             }
                             
-                            // Clean up the name
-                            const cleanName = String(name).replace(/\.(pt|safetensors|ckpt|bin)$/i, '');
-                            return {
-                                name: cleanName,
-                                type: "embedding",
-                                display: `embedding:${cleanName}`,
-                                value: `embedding:${cleanName}`
-                            };
-                        });
+                            // Clean up the name - remove file extensions if present
+                            const cleanName = String(name || "").replace(/\.(pt|safetensors|ckpt|bin)$/i, '');
+                            
+                            // Only include if we have a valid name
+                            if (cleanName && cleanName !== "undefined") {
+                                return {
+                                    name: cleanName,
+                                    type: "embedding",
+                                    display: `embedding:${cleanName}`,
+                                    value: `embedding:${cleanName}`
+                                };
+                            }
+                            return null;
+                        }).filter(item => item !== null); // Remove any null entries
                     }
                     // Check if it's a simple object with embedding names as keys (old format)
                     else if (embeddingsResponse && typeof embeddingsResponse === 'object' && !Array.isArray(embeddingsResponse)) {
