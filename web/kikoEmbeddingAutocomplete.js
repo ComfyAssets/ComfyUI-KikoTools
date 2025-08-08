@@ -98,9 +98,29 @@ class KikoEmbeddingAutocomplete {
                         console.log(`[KikoAutocomplete] Collected ${allEmbeddings.length} embeddings from paginated response`);
                         
                         // Process the embeddings
+                        console.log("[KikoAutocomplete] Sample item structure:", allEmbeddings[0]);
                         this.embeddings = allEmbeddings.map(item => {
-                            // item might be a string or an object with name property
-                            const name = typeof item === 'string' ? item : (item.name || item);
+                            let name = "";
+                            
+                            // Extract name from different possible formats
+                            if (typeof item === 'string') {
+                                name = item;
+                            } else if (item && typeof item === 'object') {
+                                // Try different possible property names
+                                name = item.name || item.filename || item.title || item.id || item.embedding_name;
+                                
+                                // If still no name, check if item has a toString or other method
+                                if (!name && item.toString && item.toString() !== '[object Object]') {
+                                    name = item.toString();
+                                }
+                                
+                                // Log the first few items to understand structure
+                                if (allEmbeddings.indexOf(item) < 3) {
+                                    console.log("[KikoAutocomplete] Item properties:", Object.keys(item), "Values:", item);
+                                }
+                            }
+                            
+                            // Clean up the name
                             const cleanName = String(name).replace(/\.(pt|safetensors|ckpt|bin)$/i, '');
                             return {
                                 name: cleanName,
