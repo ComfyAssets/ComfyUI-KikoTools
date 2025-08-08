@@ -334,8 +334,8 @@ class KikoEmbeddingAutocomplete {
             let insertText = "";
             let replaceLength = currentPrefix.length;
             
-            // Check if we're completing an embedding
-            if (textBefore.match(/embedding:([a-zA-Z0-9_-]*)$/)) {
+            // Check if we're completing an embedding (singular or plural)
+            if (textBefore.match(/embeddings?:([a-zA-Z0-9_-]*)$/)) {
                 insertText = suggestion.name;  // Just the name, not the full "embedding:name"
             }
             // Check if we're completing a lora
@@ -376,8 +376,8 @@ class KikoEmbeddingAutocomplete {
                 console.log("[KikoAutocomplete] findPrefix - textBefore:", textBefore);
             }
             
-            // Check for embedding: trigger
-            const embeddingMatch = textBefore.match(/embedding:([a-zA-Z0-9_-]*)$/);
+            // Check for embedding: or embeddings: trigger (both singular and plural)
+            const embeddingMatch = textBefore.match(/embeddings?:([a-zA-Z0-9_-]*)$/);
             if (embeddingMatch) {
                 currentPrefix = embeddingMatch[1].toLowerCase();
                 prefixStart = cursor - embeddingMatch[1].length;
