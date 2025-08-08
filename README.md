@@ -22,6 +22,7 @@ ComfyUI-KikoTools provides carefully crafted, production-ready nodes grouped und
 | [⚙️ Sampler Combo](#️-sampler-combo) | Unified sampling configuration interface | 🌀 Samplers |
 | [📦 Empty Latent Batch](#-empty-latent-batch) | Create empty latent batches with preset support | 📦 Latents |
 | [💾 Kiko Save Image](#-kiko-save-image) | Enhanced image saving with popup viewer | 💾 Images |
+| [🎞️ Kiko Film Grain](#️-kiko-film-grain) | Realistic film grain effect with customizable parameters | 🖼️ Images |
 | [📋 Display Text](#-display-text) | Smart text display with prompt detection | 👁️ Display |
 | [🤖 Gemini Prompt Engineer](#-gemini-prompt-engineer) | AI-powered image analysis and prompt generation | 🧠 Prompts |
 | [🔍 Display Any](#-display-any) | Universal debugging tool for any data type | 👁️ Display |
@@ -137,6 +138,27 @@ Enhanced image saving with format selection, quality control, and floating popup
 - **Popup Toggle**: Enable/disable popup viewer per save operation
 
 ![Kiko Save Image Example](examples/workflows/kiko_save_image_example.png)
+
+#### 🎞️ Kiko Film Grain
+Apply realistic film grain effects to images, simulating analog film photography aesthetics.
+
+- **Pure PyTorch Implementation**: GPU-optimized operations without OpenCV dependencies
+- **Customizable Grain Size**: Scale factor from 0.25 to 2.0 for fine to coarse grain
+- **Adjustable Intensity**: Strength control from subtle to pronounced grain (0.0-10.0)
+- **Color Saturation Control**: From monochrome to oversaturated grain (0.0-2.0)
+- **Film-Like Toe Curve**: Shadow lifting for authentic film look (-0.2 to 0.5)
+- **Channel-Specific Weighting**: Realistic grain distribution (3x blue, 2x red channel)
+- **Screen Blend Mode**: Preserves highlights better than standard multiply blending
+- **Alpha Channel Preservation**: Maintains transparency in RGBA images
+- **Batch Processing Support**: Efficient processing of multiple images
+- **Deterministic Seeds**: Reproducible grain patterns for consistent results
+
+**Use Cases:**
+- Add vintage film aesthetic to digital images
+- Simulate high ISO film stock
+- Create authentic analog photography looks
+- Add texture to overly clean digital renders
+- Match grain between composited elements
 
 #### 📋 Display Text
 Advanced text display node with intelligent formatting and enhanced user interaction.
