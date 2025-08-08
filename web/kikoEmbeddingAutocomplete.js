@@ -1,4 +1,5 @@
 import { app } from "../../scripts/app.js";
+import { api } from "../../scripts/api.js";
 import { ComfyWidgets } from "../../scripts/widgets.js";
 
 // KikoEmbeddingAutocomplete - Provides autocomplete for embeddings and LoRAs in text widgets
@@ -45,33 +46,38 @@ class KikoEmbeddingAutocomplete {
     
     async fetchResources() {
         try {
-            // Fetch embeddings
+            // Fetch embeddings using ComfyUI's API
             if (this.settings.showEmbeddings) {
-                const embResponse = await fetch("/embeddings");
-                if (embResponse.ok) {
-                    const data = await embResponse.json();
-                    this.embeddings = Object.keys(data || {}).map(name => ({
-                        name: name,
-                        type: "embedding",
-                        display: `embedding:${name}`
-                    }));
-                }
+                const embeddings = await api.getEmbeddings();
+                this.embeddings = embeddings.map(name => ({
+                    name: name,
+                    type: "embedding",
+                    display: `embedding:${name}`,
+                    value: `embedding:${name}`
+                }));
+                console.log(`[KikoTools] Loaded ${this.embeddings.length} embeddings`);
             }
             
-            // Fetch LoRAs
+            // Fetch LoRAs using our custom endpoint
             if (this.settings.showLoras) {
-                const loraResponse = await fetch("/models/loras");
-                if (loraResponse.ok) {
-                    const data = await loraResponse.json();
-                    this.loras = (data || []).map(name => ({
-                        name: name,
-                        type: "lora",
-                        display: `<lora:${name}:1.0>`
-                    }));
+                try {
+                    const response = await fetch("/kikotools/autocomplete/loras");
+                    if (response.ok) {
+                        const loras = await response.json();
+                        this.loras = loras.map(name => ({
+                            name: name,
+                            type: "lora",
+                            display: `<lora:${name}:1.0>`,
+                            value: `<lora:${name}:1.0>`
+                        }));
+                        console.log(`[KikoTools] Loaded ${this.loras.length} LoRAs`);
+                    }
+                } catch (e) {
+                    console.log("[KikoTools] Could not load LoRAs, endpoint may not be available");
                 }
             }
             
-            console.log(`[KikoTools] Loaded ${this.embeddings.length} embeddings and ${this.loras.length} LoRAs`);
+            console.log(`[KikoTools] Total: ${this.embeddings.length} embeddings and ${this.loras.length} LoRAs`);
         } catch (error) {
             console.error("[KikoTools] Error fetching resources:", error);
         }
@@ -173,11 +179,38 @@ class KikoEmbeddingAutocomplete {
         
         const insertSuggestion = (suggestion) => {
             const text = textarea.value;
-            const before = text.substring(0, prefixStart);
-            const after = text.substring(textarea.selectionStart);
+            const cursor = textarea.selectionStart;
+            const textBefore = text.substring(0, cursor);
             
-            textarea.value = before + suggestion.display + after;
-            textarea.selectionStart = textarea.selectionEnd = prefixStart + suggestion.display.length;
+            // Determine what to insert based on context
+            let insertText = "";
+            let replaceLength = currentPrefix.length;
+            
+            // Check if we're completing an embedding
+            if (textBefore.match(/embedding:([a-zA-Z0-9_-]*)$/)) {
+                insertText = suggestion.name;  // Just the name, not the full "embedding:name"
+            }
+            // Check if we're completing a lora
+            else if (textBefore.match(/<lora:([a-zA-Z0-9_-]*)$/)) {
+                insertText = suggestion.name + ":1.0>";  // Complete the lora syntax
+            }
+            // General insertion
+            else {
+                insertText = suggestion.value || suggestion.display;
+                // For general insertion, replace the whole word
+                let wordStart = cursor - currentPrefix.length;
+                while (wordStart > 0 && /[a-zA-Z0-9_-]/.test(text[wordStart - 1])) {
+                    wordStart--;
+                }
+                prefixStart = wordStart;
+                replaceLength = cursor - wordStart;
+            }
+            
+            const before = text.substring(0, prefixStart);
+            const after = text.substring(prefixStart + replaceLength);
+            
+            textarea.value = before + insertText + after;
+            textarea.selectionStart = textarea.selectionEnd = prefixStart + insertText.length;
             
             hideSuggestions();
             
@@ -189,42 +222,89 @@ class KikoEmbeddingAutocomplete {
         const findPrefix = () => {
             const text = textarea.value;
             const cursor = textarea.selectionStart;
+            const textBefore = text.substring(0, cursor);
             
-            // Look for embedding or lora prefix
+            // Check for embedding: trigger
+            const embeddingMatch = textBefore.match(/embedding:([a-zA-Z0-9_-]*)$/);
+            if (embeddingMatch) {
+                currentPrefix = embeddingMatch[1].toLowerCase();
+                prefixStart = cursor - embeddingMatch[1].length;
+                return "embedding";
+            }
+            
+            // Check for <lora: trigger
+            const loraMatch = textBefore.match(/<lora:([a-zA-Z0-9_-]*)$/);
+            if (loraMatch) {
+                currentPrefix = loraMatch[1].toLowerCase();
+                prefixStart = cursor - loraMatch[1].length;
+                return "lora";
+            }
+            
+            // Check for general word to match (after minimum chars)
             let start = cursor - 1;
-            while (start >= 0 && text[start] !== " " && text[start] !== "\n" && text[start] !== ",") {
+            while (start >= 0 && /[a-zA-Z0-9_-]/.test(text[start])) {
                 start--;
             }
             start++;
             
-            const prefix = text.substring(start, cursor).toLowerCase();
+            const prefix = text.substring(start, cursor);
             
-            // Check if we should show suggestions
+            // Check if we should show suggestions for general matching
             if (prefix.length >= this.settings.triggerChars) {
-                currentPrefix = prefix;
+                currentPrefix = prefix.toLowerCase();
                 prefixStart = start;
-                return true;
+                return "general";
             }
             
             return false;
         };
         
-        const getSuggestions = (prefix) => {
+        const getSuggestions = (prefix, type) => {
             const suggestions = [];
             
-            if (this.settings.showEmbeddings) {
+            // If type is embedding, only show embeddings
+            if (type === "embedding" && this.settings.showEmbeddings) {
                 suggestions.push(...this.embeddings.filter(e => 
-                    e.name.toLowerCase().includes(prefix) || 
-                    e.display.toLowerCase().includes(prefix)
+                    prefix === "" || e.name.toLowerCase().includes(prefix)
                 ));
+            }
+            // If type is lora, only show loras
+            else if (type === "lora" && this.settings.showLoras) {
+                suggestions.push(...this.loras.filter(l => 
+                    prefix === "" || l.name.toLowerCase().includes(prefix)
+                ));
+            }
+            // For general matching, show both
+            else if (type === "general") {
+                if (this.settings.showEmbeddings) {
+                    suggestions.push(...this.embeddings.filter(e => 
+                        e.name.toLowerCase().includes(prefix)
+                    ));
+                }
+                
+                if (this.settings.showLoras) {
+                    suggestions.push(...this.loras.filter(l => 
+                        l.name.toLowerCase().includes(prefix)
+                    ));
+                }
             }
             
-            if (this.settings.showLoras) {
-                suggestions.push(...this.loras.filter(l => 
-                    l.name.toLowerCase().includes(prefix) || 
-                    l.display.toLowerCase().includes(prefix)
-                ));
-            }
+            // Sort suggestions - prioritize exact matches and starts-with matches
+            suggestions.sort((a, b) => {
+                const aName = a.name.toLowerCase();
+                const bName = b.name.toLowerCase();
+                
+                // Exact match
+                if (aName === prefix) return -1;
+                if (bName === prefix) return 1;
+                
+                // Starts with
+                if (aName.startsWith(prefix) && !bName.startsWith(prefix)) return -1;
+                if (!aName.startsWith(prefix) && bName.startsWith(prefix)) return 1;
+                
+                // Alphabetical
+                return aName.localeCompare(bName);
+            });
             
             return suggestions.slice(0, this.settings.maxSuggestions);
         };
@@ -236,8 +316,9 @@ class KikoEmbeddingAutocomplete {
                 return;
             }
             
-            if (findPrefix()) {
-                currentSuggestions = getSuggestions(currentPrefix);
+            const triggerType = findPrefix();
+            if (triggerType) {
+                currentSuggestions = getSuggestions(currentPrefix, triggerType);
                 
                 if (currentSuggestions.length > 0) {
                     // Get cursor position for suggestion placement
