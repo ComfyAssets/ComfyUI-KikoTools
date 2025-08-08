@@ -12,7 +12,7 @@ import folder_paths
 class KikoEmbeddingAutocomplete:
     """Node that provides embedding autocomplete functionality."""
 
-    DISPLAY_NAME = "Embedding Autocomplete"
+    DISPLAY_NAME = "🫶 Embedding Autocomplete (Test Panel)"
     CATEGORY = "ComfyAssets"
 
     # Settings definition for the settings registry
@@ -54,37 +54,94 @@ class KikoEmbeddingAutocomplete:
     @classmethod
     def INPUT_TYPES(cls):
         """Define input types for the node."""
+        hints = """🫶 Embedding Autocomplete Test Panel
+        
+Try these triggers in the text field below:
+• Type 'embedding:' to list all embeddings
+• Type '<lora:' to list all LoRAs  
+• Start typing any name to filter results
+• Use Tab or Enter to select, Escape to cancel
+• Arrow keys to navigate suggestions
+
+This autocomplete works in all prompt fields!"""
+        
         return {
-            "required": {},
-            "optional": {
-                "refresh": ("BOOLEAN", {"default": False}),
+            "required": {
+                "test_input": ("STRING", {
+                    "multiline": True,
+                    "default": hints,
+                    "placeholder": "Type here to test autocomplete..."
+                }),
             },
+            "optional": {
+                "refresh": ("BOOLEAN", {"default": False, "label_on": "Refresh Lists", "label_off": "Use Cache"}),
+            },
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+            }
         }
 
-    RETURN_TYPES = ("DICT",)
-    RETURN_NAMES = ("autocomplete_data",)
-    FUNCTION = "get_autocomplete_data"
+    RETURN_TYPES = ("STRING", "INT", "INT")
+    RETURN_NAMES = ("test_output", "embeddings_count", "loras_count")
+    FUNCTION = "process_autocomplete"
+    OUTPUT_NODE = True
+    
+    @classmethod
+    def VALIDATE_INPUTS(cls, **kwargs):
+        return True
 
     def __init__(self):
         self.embeddings_cache = None
         self.loras_cache = None
 
-    def get_autocomplete_data(self, refresh=False):
-        """Get autocomplete data for embeddings and LoRAs.
+    def process_autocomplete(self, test_input, refresh=False, unique_id=None):
+        """Process and display autocomplete information.
 
-        This node doesn't process data in the traditional sense - it provides
-        autocomplete data to the frontend JavaScript component.
+        This node serves as both a test panel and information display
+        for the embedding autocomplete functionality.
         """
         if refresh or self.embeddings_cache is None:
             self.refresh_cache()
 
-        return (
-            {
-                "embeddings": self.embeddings_cache,
-                "loras": self.loras_cache,
-                "timestamp": os.path.getmtime(folder_paths.base_path),
-            },
-        )
+        # Count available resources
+        embeddings_count = len(self.embeddings_cache)
+        loras_count = len(self.loras_cache)
+        
+        # Generate informative output
+        output_lines = [
+            f"🫶 Embedding Autocomplete Status",
+            f"═" * 40,
+            f"📦 Embeddings found: {embeddings_count}",
+            f"🎨 LoRAs found: {loras_count}",
+            f"",
+            f"✅ Autocomplete is {'enabled' if self.embeddings_cache or self.loras_cache else 'ready (no resources found)'}",
+            f"",
+            f"Your test input:",
+            f"─" * 40,
+            test_input,
+            f"─" * 40,
+            f"",
+            f"💡 Tips:",
+            f"• This node enables autocomplete in ALL prompt fields",
+            f"• Settings available in ComfyUI Settings menu",
+            f"• Look for 🫶 Embedding Autocomplete options"
+        ]
+        
+        if embeddings_count > 0:
+            output_lines.append(f"")
+            output_lines.append(f"Sample embeddings (first 5):")
+            for emb in self.embeddings_cache[:5]:
+                output_lines.append(f"  • {emb['name']}")
+                
+        if loras_count > 0:
+            output_lines.append(f"")
+            output_lines.append(f"Sample LoRAs (first 5):")
+            for lora in self.loras_cache[:5]:
+                output_lines.append(f"  • {lora['name']}")
+        
+        output_text = "\n".join(output_lines)
+        
+        return (output_text, embeddings_count, loras_count)
 
     def refresh_cache(self):
         """Refresh the cache of embeddings and LoRAs."""

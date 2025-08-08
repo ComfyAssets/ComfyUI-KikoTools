@@ -14,7 +14,7 @@ def test_import():
     """Test that the module can be imported."""
     from kikotools.tools.embedding_autocomplete import KikoEmbeddingAutocomplete
     assert KikoEmbeddingAutocomplete is not None
-    assert KikoEmbeddingAutocomplete.DISPLAY_NAME == "Embedding Autocomplete"
+    assert KikoEmbeddingAutocomplete.DISPLAY_NAME == "🫶 Embedding Autocomplete (Test Panel)"
     assert KikoEmbeddingAutocomplete.CATEGORY == "ComfyAssets"
 
 
@@ -44,6 +44,7 @@ def test_input_types():
     input_types = KikoEmbeddingAutocomplete.INPUT_TYPES()
     assert "required" in input_types
     assert "optional" in input_types
+    assert "test_input" in input_types["required"]
     assert "refresh" in input_types["optional"]
 
 
