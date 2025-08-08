@@ -58,29 +58,41 @@ class KikoEmbeddingAutocomplete {
                     const embeddings = await api.getEmbeddings();
                     console.log("[KikoAutocomplete] Raw embeddings response:", embeddings);
                     
-                    if (Array.isArray(embeddings)) {
-                        this.embeddings = embeddings.map(name => ({
-                            name: name,
-                            type: "embedding",
-                            display: `embedding:${name}`,
-                            value: `embedding:${name}`
-                        }));
+                    // ComfyUI returns embeddings as an object with filenames as keys
+                    if (embeddings && typeof embeddings === 'object') {
+                        // Extract the keys (embedding names) from the object
+                        const embeddingNames = Object.keys(embeddings);
+                        console.log("[KikoAutocomplete] Found embedding names:", embeddingNames.slice(0, 5));
+                        
+                        this.embeddings = embeddingNames.map(name => {
+                            // Remove file extension if present
+                            const cleanName = name.replace(/\.(pt|safetensors|ckpt|bin)$/i, '');
+                            return {
+                                name: cleanName,
+                                type: "embedding",
+                                display: `embedding:${cleanName}`,
+                                value: `embedding:${cleanName}`
+                            };
+                        });
                     } else {
-                        console.warn("[KikoAutocomplete] Embeddings response is not an array:", typeof embeddings);
+                        console.warn("[KikoAutocomplete] Unexpected embeddings response:", typeof embeddings);
                         this.embeddings = [];
                     }
                     console.log(`[KikoAutocomplete] Processed ${this.embeddings.length} embeddings:`, this.embeddings.slice(0, 5));
                 } catch (e) {
                     console.error("[KikoAutocomplete] Error fetching embeddings:", e);
+                    this.embeddings = [];
                 }
             }
             
-            // Fetch LoRAs using our custom endpoint
+            // Fetch LoRAs - try multiple methods
             if (this.settings.showLoras) {
-                console.log("[KikoAutocomplete] Fetching LoRAs from /kikotools/autocomplete/loras...");
+                console.log("[KikoAutocomplete] Fetching LoRAs...");
+                
+                // Method 1: Try our custom endpoint
                 try {
                     const response = await fetch("/kikotools/autocomplete/loras");
-                    console.log("[KikoAutocomplete] LoRA response status:", response.status);
+                    console.log("[KikoAutocomplete] Custom LoRA endpoint status:", response.status);
                     if (response.ok) {
                         const loras = await response.json();
                         console.log("[KikoAutocomplete] Raw LoRAs response:", loras);
@@ -90,10 +102,38 @@ class KikoEmbeddingAutocomplete {
                             display: `<lora:${name}:1.0>`,
                             value: `<lora:${name}:1.0>`
                         }));
-                        console.log(`[KikoAutocomplete] Processed ${this.loras.length} LoRAs:`, this.loras.slice(0, 5));
+                        console.log(`[KikoAutocomplete] Processed ${this.loras.length} LoRAs from custom endpoint`);
+                    } else {
+                        throw new Error("Custom endpoint not available");
                     }
                 } catch (e) {
-                    console.error("[KikoAutocomplete] Error fetching LoRAs:", e);
+                    console.log("[KikoAutocomplete] Custom endpoint failed, trying alternative method...");
+                    
+                    // Method 2: Try using the object list API
+                    try {
+                        const response = await fetch("/object_info");
+                        if (response.ok) {
+                            const objectInfo = await response.json();
+                            // Look for LoraLoader node to get available loras
+                            if (objectInfo.LoraLoader?.input?.required?.lora_name?.[0]) {
+                                const loraNames = objectInfo.LoraLoader.input.required.lora_name[0];
+                                console.log("[KikoAutocomplete] Found LoRAs from object_info:", loraNames.slice(0, 5));
+                                this.loras = loraNames.map(name => {
+                                    const cleanName = name.replace(/\.(pt|safetensors|ckpt|bin)$/i, '');
+                                    return {
+                                        name: cleanName,
+                                        type: "lora",
+                                        display: `<lora:${cleanName}:1.0>`,
+                                        value: `<lora:${cleanName}:1.0>`
+                                    };
+                                });
+                                console.log(`[KikoAutocomplete] Processed ${this.loras.length} LoRAs from object_info`);
+                            }
+                        }
+                    } catch (e2) {
+                        console.error("[KikoAutocomplete] Could not fetch LoRAs:", e2);
+                        this.loras = [];
+                    }
                 }
             }
             
@@ -518,15 +558,23 @@ app.registerExtension({
         
         // Also attach to existing multiline widgets
         console.log("[KikoAutocomplete] Looking for existing widgets to attach to...");
-        app.graph._nodes.forEach(node => {
-            if (node.widgets) {
-                node.widgets.forEach(widget => {
-                    if (widget.type === "customtext" && widget.inputEl && widget.inputEl.tagName === "TEXTAREA") {
-                        console.log("[KikoAutocomplete] Found existing textarea widget on node:", node.title);
-                        window.kikoAutocomplete.attachToWidget(widget, node);
-                    }
-                });
-            }
-        });
+        setTimeout(() => {
+            app.graph._nodes.forEach(node => {
+                if (node.widgets) {
+                    node.widgets.forEach(widget => {
+                        // Check for text widgets with textareas
+                        if (widget.type === "customtext" && widget.inputEl && widget.inputEl.tagName === "TEXTAREA") {
+                            console.log("[KikoAutocomplete] Found existing textarea widget on node:", node.title, "widget:", widget.name);
+                            window.kikoAutocomplete.attachToWidget(widget, node);
+                        }
+                        // Also check for widgets that might be text inputs but not customtext
+                        else if (widget.inputEl && widget.inputEl.tagName === "TEXTAREA" && !window.kikoAutocomplete.activeWidgets.has(widget)) {
+                            console.log("[KikoAutocomplete] Found textarea widget (non-customtext) on node:", node.title, "widget:", widget.name);
+                            window.kikoAutocomplete.attachToWidget(widget, node);
+                        }
+                    });
+                }
+            });
+        }, 1000); // Wait a bit for all widgets to be created
     }
 });
