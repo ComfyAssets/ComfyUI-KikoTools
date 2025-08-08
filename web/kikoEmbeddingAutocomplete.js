@@ -68,22 +68,28 @@ class KikoEmbeddingAutocomplete {
                         
                         // Add items from first page
                         allEmbeddings = [...embeddingsResponse.items];
+                        console.log(`[KikoAutocomplete] First page items sample:`, allEmbeddings.slice(0, 3));
                         
                         // Fetch remaining pages if any
                         if (totalPages > 1) {
+                            // Check if api.getEmbeddings accepts page parameter
                             for (let page = 2; page <= totalPages; page++) {
                                 try {
                                     console.log(`[KikoAutocomplete] Fetching page ${page}...`);
-                                    // Try to get specific page - this might not work, but let's try
-                                    const pageResponse = await fetch(`/embeddings?page=${page}`);
-                                    if (pageResponse.ok) {
-                                        const pageData = await pageResponse.json();
-                                        if (pageData.items) {
-                                            allEmbeddings.push(...pageData.items);
-                                        }
+                                    
+                                    // Try using the api method with page parameter
+                                    const pageData = await api.getEmbeddings(page);
+                                    if (pageData && pageData.items) {
+                                        allEmbeddings.push(...pageData.items);
+                                        console.log(`[KikoAutocomplete] Page ${page} loaded: ${pageData.items.length} items`);
+                                    } else {
+                                        console.warn(`[KikoAutocomplete] Page ${page} has no items`);
+                                        break;
                                     }
                                 } catch (err) {
                                     console.warn(`[KikoAutocomplete] Could not fetch page ${page}:`, err);
+                                    // If pagination doesn't work, just use what we have
+                                    console.log("[KikoAutocomplete] Pagination not supported, using first page only");
                                     break;
                                 }
                             }
