@@ -317,9 +317,9 @@ Unified interface for text encoding and sampler parameter management.
 **Intelligent autocomplete for embeddings, LoRAs, and custom tags in text prompts.**
 
 <div align="center">
-  <img src="ac-emb.png" width="30%" alt="Embedding Autocomplete" />
-  <img src="ac-lora.png" width="30%" alt="LoRA Autocomplete" />
-  <img src="ac-tag.png" width="30%" alt="Tag Autocomplete" />
+  <img src="https://github.com/ComfyAssets/ComfyUI-KikoTools/blob/main/examples/ac-emb.png?raw=true" width="30%" alt="Embedding Autocomplete" />
+  <img src="https://github.com/ComfyAssets/ComfyUI-KikoTools/blob/main/examples/ac-lora.png?raw=true" width="30%" alt="LoRA Autocomplete" />
+  <img src="https://github.com/ComfyAssets/ComfyUI-KikoTools/blob/main/examples/ac-tag.png?raw=true" width="30%" alt="Tag Autocomplete" />
 </div>
 
 This feature is an enhanced fork of the autocomplete functionality from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) by pythongosssss. We've modernized the codebase, fixed existing bugs, and added robust security features.
