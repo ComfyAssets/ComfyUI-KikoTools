@@ -26,7 +26,9 @@ ComfyUI-KikoTools provides carefully crafted, production-ready nodes grouped und
 | [🤖 Gemini Prompt Engineer](#-gemini-prompt-engineer) | AI-powered image analysis and prompt generation | 🧠 Prompts |
 | [🔍 Display Any](#-display-any) | Universal debugging tool for any data type | 👁️ Display |
 | [🖼️ Image to Multiple Of](#️-image-to-multiple-of) | Adjust dimensions to multiples for compatibility | 🖼️ Resolution |
-| [🔤 Embedding Autocomplete](#-embedding-autocomplete) | Smart autocomplete for embeddings, LoRAs, and tags | ✍️ Text |
+| [📉 Image Scale Down By](#-image-scale-down-by) | Scale images down by a factor with quality preservation | 🖼️ Resolution |
+| [🎬 Kiko Film Grain](#-kiko-film-grain) | Add realistic film grain effects to images | 💾 Images |
+| [🔤 Embedding Autocomplete](#-embedding-autocomplete) | Smart autocomplete for embeddings, LoRAs, and tags | 🔧 Utils |
 
 ### 🧰 xyz-helpers Tools
 
@@ -218,6 +220,41 @@ Adjusts image dimensions to be multiples of a specified value for model compatib
 - Optimize for tiled processing requirements
 
 ![Image to Multiple Of Example](examples/workflows/image_to_multiple_of_example.png)
+
+#### 📉 Image Scale Down By
+Efficiently scale images down by a specified factor with quality preservation.
+
+- **Proportional Scaling**: Reduces both width and height by the same factor
+- **Quality Preservation**: Uses bilinear interpolation with antialiasing
+- **Batch Support**: Process multiple images simultaneously
+- **Memory Efficient**: Optimized for large image batches
+- **Flexible Factor**: Scale from 0.01x to 1.0x with 0.01 precision
+
+**Use Cases:**
+- Create thumbnails or preview images
+- Reduce memory usage for large workflows
+- Generate image pyramids for multi-scale processing
+- Quick downsampling for performance optimization
+- Prepare images for web display or transmission
+
+#### 🎬 Kiko Film Grain
+Add realistic analog film grain effects to generated images.
+
+- **Realistic Grain Simulation**: Mimics actual film photography characteristics
+- **Grain Size Control**: Fine to coarse grain patterns (0.25x to 2.0x)
+- **Intensity Adjustment**: Variable strength from subtle to pronounced (0-10)
+- **Color Saturation**: Monochrome to full color grain (0-2)
+- **Shadow Lifting (Toe)**: Film-like shadow response curves
+- **Red Multiplier**: Adjust red channel independently for vintage looks
+- **Alpha Preservation**: Maintains transparency when present
+- **ITU-R BT.709 Color Space**: Professional color handling
+
+**Use Cases:**
+- Add vintage film aesthetic to AI-generated images
+- Create cinematic looks with authentic grain patterns
+- Simulate different film stocks (35mm, 16mm, etc.)
+- Add texture to overly smooth AI renders
+- Match grain from reference photography
 
 #### 🎛️ Flux Sampler Params
 FLUX-optimized parameter generator with intelligent batch processing capabilities.
@@ -585,6 +622,8 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Gemini Prompt Engineer** | AI-powered image analysis with dynamic model refresh | ✅ Complete | [Docs](examples/documentation/gemini_prompt.md) |
 | **Display Any** | Universal debugging tool for any data type or tensor shapes | ✅ Complete | [Docs](examples/documentation/display_any.md) |
 | **Image to Multiple Of** | Adjust image dimensions to multiples for model compatibility | ✅ Complete | [Docs](examples/documentation/image_to_multiple_of.md) |
+| **Image Scale Down By** | Efficiently scale images down by a specified factor | ✅ Complete | [Docs](examples/documentation/image_scale_down_by.md) |
+| **Kiko Film Grain** | Add realistic analog film grain effects to images | ✅ Complete | [Docs](examples/documentation/kiko_film_grain.md) |
 | **Flux Sampler Params** | FLUX-optimized parameter generator with batch support | ✅ Complete | [Docs](examples/documentation/flux_sampler_params.md) |
 | **LoRA Folder Batch** | Batch process multiple LoRAs from folders | ✅ Complete | [Docs](examples/documentation/lora_folder_batch.md) |
 | **Plot Parameters** | Visualize parameter effects with graphs | ✅ Complete | [Docs](examples/documentation/plot_parameters.md) |
@@ -884,8 +923,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 16 (10 core tools + 6 xyz-helpers)
-- **Categories**: 8 emoji-based categories for better organization
+- **Nodes**: 20 (13 core tools + 6 xyz-helpers + 1 settings node)
+- **Categories**: 9 emoji-based categories for better organization
 - **Format Support**: 3 (PNG, JPEG, WebP with advanced controls)
 - **Presets**: 26 curated resolution presets
 - **Interactive Features**: 8+ (swap buttons, history UI, popup viewers, parameter visualization)
