@@ -3,9 +3,16 @@ pytest configuration and fixtures for ComfyUI-KikoTools testing
 Provides mock ComfyUI environments and test data
 """
 
+import sys
 import pytest
 import torch
 from unittest.mock import MagicMock
+
+# Mock folder_paths module before any imports that might use it
+sys.modules["folder_paths"] = MagicMock()
+sys.modules["folder_paths"].get_filename_list = MagicMock(return_value=[])
+sys.modules["folder_paths"].get_folder_paths = MagicMock(return_value=["/mock/path"])
+sys.modules["folder_paths"].base_path = "/mock/base"
 
 
 @pytest.fixture

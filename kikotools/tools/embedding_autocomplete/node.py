@@ -4,15 +4,14 @@ Provides autocomplete functionality for embeddings and LoRAs in text inputs.
 """
 
 import os
-import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 import folder_paths
 
 
 class KikoEmbeddingAutocomplete:
     """Node that provides embedding autocomplete functionality."""
 
-    DISPLAY_NAME = "🫶 Embedding Autocomplete (Test Panel)"
+    DISPLAY_NAME = "🫶 Embedding Autocomplete Settings"
     CATEGORY = "ComfyAssets"
 
     # Settings definition for the settings registry
@@ -20,72 +19,67 @@ class KikoEmbeddingAutocomplete:
         "enabled": {
             "type": "boolean",
             "default": True,
-            "description": "Enable embedding autocomplete",
-        },
-        "trigger_chars": {
-            "type": "combo",
-            "default": 2,
-            "options": [1, 2, 3, 4],
-            "description": "Number of characters before showing suggestions",
-        },
-        "max_suggestions": {
-            "type": "combo",
-            "default": 20,
-            "options": [10, 20, 30, 50],
-            "description": "Maximum number of suggestions to show",
+            "description": "Enable autocomplete",
         },
         "show_embeddings": {
             "type": "boolean",
             "default": True,
-            "description": "Show embeddings in suggestions",
+            "description": "Show embeddings in autocomplete",
         },
         "show_loras": {
             "type": "boolean",
             "default": True,
-            "description": "Show LoRAs in suggestions",
+            "description": "Show LoRAs in autocomplete",
         },
-        "case_sensitive": {
+        "embedding_trigger": {
+            "type": "text",
+            "default": "embedding:",
+            "description": "Trigger text for embeddings (e.g., 'embedding:', 'emb:', or custom)",
+        },
+        "lora_trigger": {
+            "type": "text",
+            "default": "<lora:",
+            "description": "Trigger text for LoRAs (e.g., '<lora:', 'lora:', or custom)",
+        },
+        "quick_trigger": {
+            "type": "text",
+            "default": "em",
+            "description": "Quick trigger to show embeddings (e.g., 'em', 'emb', or disabled with '')",
+        },
+        "min_chars": {
+            "type": "combo",
+            "default": 2,
+            "options": [1, 2, 3, 4, 5],
+            "description": "Minimum characters before showing suggestions",
+        },
+        "max_suggestions": {
+            "type": "combo",
+            "default": 20,
+            "options": [5, 10, 15, 20, 30, 50, 100],
+            "description": "Maximum number of suggestions to display",
+        },
+        "sort_by_directory": {
             "type": "boolean",
-            "default": False,
-            "description": "Case sensitive matching",
+            "default": True,
+            "description": "Group suggestions by directory",
         },
     }
 
     @classmethod
     def INPUT_TYPES(cls):
         """Define input types for the node."""
-        hints = """🫶 Embedding Autocomplete Test Panel
-        
-Try these triggers in the text field below:
-• Type 'embedding:' to list all embeddings
-• Type '<lora:' to list all LoRAs  
-• Start typing any name to filter results
-• Use Tab or Enter to select, Escape to cancel
-• Arrow keys to navigate suggestions
-
-This autocomplete works in all prompt fields!"""
-        
         return {
-            "required": {
-                "test_input": ("STRING", {
-                    "multiline": True,
-                    "default": hints,
-                    "placeholder": "Type here to test autocomplete..."
-                }),
-            },
-            "optional": {
-                "refresh": ("BOOLEAN", {"default": False, "label_on": "Refresh Lists", "label_off": "Use Cache"}),
-            },
+            "required": {},
             "hidden": {
                 "unique_id": "UNIQUE_ID",
-            }
+            },
         }
 
-    RETURN_TYPES = ("STRING", "INT", "INT")
-    RETURN_NAMES = ("test_output", "embeddings_count", "loras_count")
-    FUNCTION = "process_autocomplete"
+    RETURN_TYPES = ()
+    RETURN_NAMES = ()
+    FUNCTION = "update_settings"
     OUTPUT_NODE = True
-    
+
     @classmethod
     def VALIDATE_INPUTS(cls, **kwargs):
         return True
@@ -94,61 +88,24 @@ This autocomplete works in all prompt fields!"""
         self.embeddings_cache = None
         self.loras_cache = None
 
-    def process_autocomplete(self, test_input, refresh=False, unique_id=None):
-        """Process and display autocomplete information.
+    def update_settings(self, unique_id=None):
+        """Update settings display.
 
-        This node serves as both a test panel and information display
-        for the embedding autocomplete functionality.
+        This node serves as a settings indicator.
+        Actual settings are configured in ComfyUI Settings menu.
         """
-        if refresh or self.embeddings_cache is None:
-            self.refresh_cache()
-
-        # Count available resources
-        embeddings_count = len(self.embeddings_cache)
-        loras_count = len(self.loras_cache)
-        
-        # Generate informative output
-        output_lines = [
-            f"🫶 Embedding Autocomplete Status",
-            f"═" * 40,
-            f"📦 Embeddings found: {embeddings_count}",
-            f"🎨 LoRAs found: {loras_count}",
-            f"",
-            f"✅ Autocomplete is {'enabled' if self.embeddings_cache or self.loras_cache else 'ready (no resources found)'}",
-            f"",
-            f"Your test input:",
-            f"─" * 40,
-            test_input,
-            f"─" * 40,
-            f"",
-            f"💡 Tips:",
-            f"• This node enables autocomplete in ALL prompt fields",
-            f"• Settings available in ComfyUI Settings menu",
-            f"• Look for 🫶 Embedding Autocomplete options"
-        ]
-        
-        if embeddings_count > 0:
-            output_lines.append(f"")
-            output_lines.append(f"Sample embeddings (first 5):")
-            for emb in self.embeddings_cache[:5]:
-                output_lines.append(f"  • {emb['name']}")
-                
-        if loras_count > 0:
-            output_lines.append(f"")
-            output_lines.append(f"Sample LoRAs (first 5):")
-            for lora in self.loras_cache[:5]:
-                output_lines.append(f"  • {lora['name']}")
-        
-        output_text = "\n".join(output_lines)
-        
-        return (output_text, embeddings_count, loras_count)
+        # This node doesn't actually process anything
+        # It's just a visual indicator that autocomplete is available
+        return ()
 
     def refresh_cache(self):
         """Refresh the cache of embeddings and LoRAs."""
         print("[KikoEmbeddingAutocomplete] Refreshing cache...")
         self.embeddings_cache = self.get_embeddings()
         self.loras_cache = self.get_loras()
-        print(f"[KikoEmbeddingAutocomplete] Cached {len(self.embeddings_cache)} embeddings, {len(self.loras_cache)} LoRAs")
+        print(
+            f"[KikoEmbeddingAutocomplete] Cached {len(self.embeddings_cache)} embeddings, {len(self.loras_cache)} LoRAs"
+        )
 
     def get_embeddings(self) -> List[Dict[str, Any]]:
         """Get list of available embeddings."""
@@ -158,7 +115,9 @@ This autocomplete works in all prompt fields!"""
         try:
             print("[KikoEmbeddingAutocomplete] Getting embeddings list...")
             embedding_files = folder_paths.get_filename_list("embeddings")
-            print(f"[KikoEmbeddingAutocomplete] Found {len(embedding_files)} embedding files")
+            print(
+                f"[KikoEmbeddingAutocomplete] Found {len(embedding_files)} embedding files"
+            )
             for file in embedding_files:
                 name = os.path.splitext(file)[0]
                 embeddings.append(
@@ -212,7 +171,7 @@ This autocomplete works in all prompt fields!"""
 
             # Return combined modification time
             return os.path.getmtime(embeddings_path) + os.path.getmtime(loras_path)
-        except:
+        except Exception:
             return 0
 
 

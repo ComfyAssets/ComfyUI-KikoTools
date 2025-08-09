@@ -16,10 +16,14 @@ from .tools.resolution_calculator import ResolutionCalculatorNode
 from .tools.sampler_combo import SamplerComboCompactNode, SamplerComboNode
 from .tools.seed_history import SeedHistoryNode
 from .tools.width_height_selector import WidthHeightSelectorNode
-from .tools.xyz_helpers import (FluxSamplerParamsNode, LoRAFolderBatchNode,
-                                PlotParametersNode, SamplerSelectHelperNode,
-                                SchedulerSelectHelperNode,
-                                TextEncodeSamplerParamsNode)
+from .tools.xyz_helpers import (
+    FluxSamplerParamsNode,
+    LoRAFolderBatchNode,
+    PlotParametersNode,
+    SamplerSelectHelperNode,
+    SchedulerSelectHelperNode,
+    TextEncodeSamplerParamsNode,
+)
 
 # ComfyUI node registration mappings
 NODE_CLASS_MAPPINGS = {
@@ -65,7 +69,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxSamplerParams": "Flux Sampler Parameters",
     "PlotParameters+": "Plot Parameters",
     "LoRAFolderBatch": "LoRA Folder Batch",
-    "KikoEmbeddingAutocomplete": "🫶 Embedding Autocomplete (Test Panel)",
+    "KikoEmbeddingAutocomplete": "🫶 Embedding Autocomplete Configuration",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
