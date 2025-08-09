@@ -10,8 +10,7 @@ def test_import():
 
     assert KikoEmbeddingAutocomplete is not None
     assert (
-        KikoEmbeddingAutocomplete.DISPLAY_NAME
-        == "🫶 Embedding Autocomplete Settings"
+        KikoEmbeddingAutocomplete.DISPLAY_NAME == "🫶 Embedding Autocomplete Settings"
     )
     assert KikoEmbeddingAutocomplete.CATEGORY == "ComfyAssets"
 
