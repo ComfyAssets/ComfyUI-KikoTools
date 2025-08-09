@@ -30,7 +30,7 @@ class SchedulerSelectHelperNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("selected_schedulers",)
     FUNCTION = "select_schedulers"
-    CATEGORY = "ComfyAssets/🧰 xyz-helpers"
+    CATEGORY = "🫶 ComfyAssets/🧰 xyz-helpers"
 
     def select_schedulers(self, **scheduler_flags) -> Tuple[str]:
         """

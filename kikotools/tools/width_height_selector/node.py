@@ -85,7 +85,7 @@ class WidthHeightSelectorNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("INT", "INT")
     RETURN_NAMES = ("width", "height")
     FUNCTION = "get_dimensions"
-    CATEGORY = "ComfyAssets/🖼️ Resolution"
+    CATEGORY = "🫶 ComfyAssets/🖼️ Resolution"
 
     def get_dimensions(self, preset: str, width: int, height: int) -> Tuple[int, int]:
         """

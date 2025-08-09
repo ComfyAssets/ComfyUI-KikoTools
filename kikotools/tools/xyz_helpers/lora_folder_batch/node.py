@@ -80,7 +80,7 @@ class LoRAFolderBatchNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("LORA_PARAMS", "STRING", "INT")
     RETURN_NAMES = ("lora_params", "lora_list", "lora_count")
     FUNCTION = "batch_loras"
-    CATEGORY = "ComfyAssets/🧰 xyz-helpers"
+    CATEGORY = "🫶 ComfyAssets/🧰 xyz-helpers"
 
     def batch_loras(
         self,

@@ -17,7 +17,7 @@ class KikoEmbeddingAutocomplete:
     """Node that provides embedding autocomplete functionality."""
 
     DISPLAY_NAME = "🫶 Embedding Autocomplete Settings"
-    CATEGORY = "ComfyAssets"
+    CATEGORY = "🫶 ComfyAssets"
 
     # Settings definition for the settings registry
     SETTINGS = {

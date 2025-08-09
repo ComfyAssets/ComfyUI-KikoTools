@@ -19,7 +19,7 @@ class DisplayTextNode(ComfyAssetsBaseNode):
     RETURN_NAMES = ("text",)
     OUTPUT_NODE = True
     FUNCTION = "display_text"
-    CATEGORY = "ComfyAssets/👁️ Display"
+    CATEGORY = "🫶 ComfyAssets/👁️ Display"
 
     DESCRIPTION = """
 Displays text in the UI with a copy-to-clipboard feature.

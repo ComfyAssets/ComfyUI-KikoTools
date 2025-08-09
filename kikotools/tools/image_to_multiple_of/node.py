@@ -36,7 +36,7 @@ class ImageToMultipleOfNode(ComfyAssetsBaseNode):
         }
 
     RETURN_TYPES = ("IMAGE",)
-    CATEGORY = "ComfyAssets/🖼️ Resolution"
+    CATEGORY = "🫶 ComfyAssets/🖼️ Resolution"
     RETURN_NAMES = ("image",)
     FUNCTION = "process"
 

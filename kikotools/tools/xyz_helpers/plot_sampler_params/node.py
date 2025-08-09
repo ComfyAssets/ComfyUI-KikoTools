@@ -113,7 +113,7 @@ class PlotParametersNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("image",)
     FUNCTION = "plot_parameters"
-    CATEGORY = "ComfyAssets/🧰 xyz-helpers"
+    CATEGORY = "🫶 ComfyAssets/🧰 xyz-helpers"
 
     def plot_parameters(
         self,

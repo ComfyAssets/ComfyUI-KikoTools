@@ -30,7 +30,7 @@ class SamplerSelectHelperNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("selected_samplers",)
     FUNCTION = "select_samplers"
-    CATEGORY = "ComfyAssets/🧰 xyz-helpers"
+    CATEGORY = "🫶 ComfyAssets/🧰 xyz-helpers"
 
     def select_samplers(self, **sampler_flags) -> Tuple[str]:
         """

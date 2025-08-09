@@ -51,7 +51,7 @@ class GeminiPromptNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("STRING", "STRING")
     RETURN_NAMES = ("prompt", "negative_prompt")
     FUNCTION = "generate_prompt"
-    CATEGORY = "ComfyAssets/🧠 Prompts"
+    CATEGORY = "🫶 ComfyAssets/🧠 Prompts"
 
     DESCRIPTION = """
 Analyzes images using Google's Gemini AI to generate optimized prompts.

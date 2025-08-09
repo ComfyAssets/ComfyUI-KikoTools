@@ -85,7 +85,7 @@ class KikoFilmGrainNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("image",)
     FUNCTION = "apply_grain"
-    CATEGORY = "ComfyAssets/image"
+    CATEGORY = "🫶 ComfyAssets/💾 Images"
     DESCRIPTION = "Apply realistic film grain effect with customizable parameters"
 
     def apply_grain(

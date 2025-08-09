@@ -125,7 +125,7 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("LATENT", "SAMPLER_PARAMS")
     RETURN_NAMES = ("latent", "params")
     FUNCTION = "process_batch"
-    CATEGORY = "ComfyAssets/🧰 xyz-helpers"
+    CATEGORY = "🫶 ComfyAssets/🧰 xyz-helpers"
 
     def process_batch(
         self,

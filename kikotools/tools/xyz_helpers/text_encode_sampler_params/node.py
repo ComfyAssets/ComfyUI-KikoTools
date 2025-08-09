@@ -40,7 +40,7 @@ class TextEncodeSamplerParamsNode(ComfyAssetsBaseNode):
     RETURN_TYPES = ("CONDITIONING",)
     RETURN_NAMES = ("conditioning",)
     FUNCTION = "encode_prompts"
-    CATEGORY = "ComfyAssets/🧰 xyz-helpers"
+    CATEGORY = "🫶 ComfyAssets/🧰 xyz-helpers"
 
     def encode_prompts(self, text: str, clip: Any) -> Tuple[Any]:
         """

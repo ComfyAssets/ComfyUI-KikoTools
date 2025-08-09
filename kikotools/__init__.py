@@ -16,14 +16,10 @@ from .tools.resolution_calculator import ResolutionCalculatorNode
 from .tools.sampler_combo import SamplerComboCompactNode, SamplerComboNode
 from .tools.seed_history import SeedHistoryNode
 from .tools.width_height_selector import WidthHeightSelectorNode
-from .tools.xyz_helpers import (
-    FluxSamplerParamsNode,
-    LoRAFolderBatchNode,
-    PlotParametersNode,
-    SamplerSelectHelperNode,
-    SchedulerSelectHelperNode,
-    TextEncodeSamplerParamsNode,
-)
+from .tools.xyz_helpers import (FluxSamplerParamsNode, LoRAFolderBatchNode,
+                                PlotParametersNode, SamplerSelectHelperNode,
+                                SchedulerSelectHelperNode,
+                                TextEncodeSamplerParamsNode)
 
 # ComfyUI node registration mappings
 NODE_CLASS_MAPPINGS = {
@@ -46,7 +42,8 @@ NODE_CLASS_MAPPINGS = {
     "FluxSamplerParams": FluxSamplerParamsNode,
     "PlotParameters+": PlotParametersNode,
     "LoRAFolderBatch": LoRAFolderBatchNode,
-    "KikoEmbeddingAutocomplete": KikoEmbeddingAutocomplete,
+    # Note: KikoEmbeddingAutocomplete is not registered as a node
+    # It's a settings-only feature accessed through ComfyUI settings menu
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -62,14 +59,14 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "GeminiPrompt": "Gemini Prompt Engineer",
     "DisplayAny": "Display Any",
     "DisplayText": "Display Text",
-    "KikoFilmGrain": "Kiko Film Grain",
+    "KikoFilmGrain": "Film Grain",
     "SamplerSelectHelper": "Sampler Select Helper",
     "SchedulerSelectHelper": "Scheduler Select Helper",
     "TextEncodeSamplerParams": "Text Encode for Sampler Params",
     "FluxSamplerParams": "Flux Sampler Parameters",
     "PlotParameters+": "Plot Parameters",
     "LoRAFolderBatch": "LoRA Folder Batch",
-    "KikoEmbeddingAutocomplete": "🫶 Embedding Autocomplete Configuration",
+    # KikoEmbeddingAutocomplete removed - settings only, not a node
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

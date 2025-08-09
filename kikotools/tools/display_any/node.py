@@ -38,7 +38,7 @@ class DisplayAnyNode(ComfyAssetsBaseNode):
         return True
 
     RETURN_TYPES = ("STRING",)
-    CATEGORY = "ComfyAssets/👁️ Display"
+    CATEGORY = "🫶 ComfyAssets/👁️ Display"
     RETURN_NAMES = ("display_text",)
     FUNCTION = "display"
     OUTPUT_NODE = True  # This node displays output in the UI

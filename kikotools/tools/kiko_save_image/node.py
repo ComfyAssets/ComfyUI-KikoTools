@@ -95,7 +95,7 @@ class KikoSaveImageNode(ComfyAssetsBaseNode):
         }
 
     RETURN_TYPES = ()
-    CATEGORY = "ComfyAssets/💾 Images"
+    CATEGORY = "🫶 ComfyAssets/💾 Images"
     FUNCTION = "save_images"
     OUTPUT_NODE = True
 
