@@ -3,11 +3,12 @@
 import sys
 from unittest.mock import MagicMock
 
-# Mock ComfyUI's folder_paths module
-sys.modules["folder_paths"] = MagicMock()
-sys.modules["folder_paths"].get_filename_list = MagicMock(return_value=[])
-sys.modules["folder_paths"].get_folder_paths = MagicMock(return_value=["/mock/path"])
-sys.modules["folder_paths"].base_path = "/mock/base"
+# Mock ComfyUI's folder_paths module BEFORE any imports
+folder_paths_mock = MagicMock()
+folder_paths_mock.get_filename_list = MagicMock(return_value=[])
+folder_paths_mock.get_folder_paths = MagicMock(return_value=["/mock/path"])
+folder_paths_mock.base_path = "/mock/base"
+sys.modules["folder_paths"] = folder_paths_mock
 
 
 def test_import():
