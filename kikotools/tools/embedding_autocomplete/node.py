@@ -5,7 +5,12 @@ Provides autocomplete functionality for embeddings and LoRAs in text inputs.
 
 import os
 from typing import Dict, List, Any
-import folder_paths
+
+try:
+    import folder_paths
+except ImportError:
+    # For testing outside ComfyUI environment
+    folder_paths = None
 
 
 class KikoEmbeddingAutocomplete:
@@ -114,6 +119,8 @@ class KikoEmbeddingAutocomplete:
         # Get embedding files from ComfyUI's folder system
         try:
             print("[KikoEmbeddingAutocomplete] Getting embeddings list...")
+            if folder_paths is None:
+                return embeddings
             embedding_files = folder_paths.get_filename_list("embeddings")
             print(
                 f"[KikoEmbeddingAutocomplete] Found {len(embedding_files)} embedding files"
@@ -140,6 +147,8 @@ class KikoEmbeddingAutocomplete:
 
         # Get LoRA files from ComfyUI's folder system
         try:
+            if folder_paths is None:
+                return loras
             lora_files = folder_paths.get_filename_list("loras")
             for file in lora_files:
                 name = os.path.splitext(file)[0]
@@ -166,6 +175,8 @@ class KikoEmbeddingAutocomplete:
 
         # Check if embeddings/loras folders have changed
         try:
+            if folder_paths is None:
+                return 0
             embeddings_path = folder_paths.get_folder_paths("embeddings")[0]
             loras_path = folder_paths.get_folder_paths("loras")[0]
 
@@ -206,7 +217,10 @@ class KikoEmbeddingAutocompleteAPI:
         # Get embeddings
         if include_embeddings:
             try:
-                embedding_files = folder_paths.get_filename_list("embeddings")
+                if folder_paths is None:
+                    embedding_files = []
+                else:
+                    embedding_files = folder_paths.get_filename_list("embeddings")
                 for file in embedding_files:
                     name = os.path.splitext(file)[0]
                     match_name = name if case_sensitive else name.lower()
@@ -238,7 +252,10 @@ class KikoEmbeddingAutocompleteAPI:
         # Get LoRAs
         if include_loras:
             try:
-                lora_files = folder_paths.get_filename_list("loras")
+                if folder_paths is None:
+                    lora_files = []
+                else:
+                    lora_files = folder_paths.get_filename_list("loras")
                 for file in lora_files:
                     name = os.path.splitext(file)[0]
                     match_name = name if case_sensitive else name.lower()

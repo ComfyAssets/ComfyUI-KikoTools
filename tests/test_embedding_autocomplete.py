@@ -1,14 +1,7 @@
 """Basic tests for KikoEmbeddingAutocomplete."""
 
 import sys
-from unittest.mock import MagicMock
-
-# Mock ComfyUI's folder_paths module BEFORE any imports
-folder_paths_mock = MagicMock()
-folder_paths_mock.get_filename_list = MagicMock(return_value=[])
-folder_paths_mock.get_folder_paths = MagicMock(return_value=["/mock/path"])
-folder_paths_mock.base_path = "/mock/base"
-sys.modules["folder_paths"] = folder_paths_mock
+from unittest.mock import MagicMock, patch
 
 
 def test_import():
@@ -58,34 +51,38 @@ def test_input_types():
 
 def test_api_suggestions():
     """Test the API suggestions method."""
-    from kikotools.tools.embedding_autocomplete.node import KikoEmbeddingAutocompleteAPI
+    from kikotools.tools.embedding_autocomplete.node import (
+        KikoEmbeddingAutocompleteAPI,
+        folder_paths,
+    )
 
-    # Mock folder_paths to return some test files
-    sys.modules["folder_paths"].get_filename_list = MagicMock(
-        side_effect=lambda x: (
-            ["test1.pt", "test2.safetensors"]
-            if x == "embeddings"
-            else ["lora1.pt", "lora2.safetensors"]
+    # Mock folder_paths if it exists (will be None in tests)
+    with patch("kikotools.tools.embedding_autocomplete.node.folder_paths") as mock_fp:
+        mock_fp.get_filename_list = MagicMock(
+            side_effect=lambda x: (
+                ["test1.pt", "test2.safetensors"]
+                if x == "embeddings"
+                else ["lora1.pt", "lora2.safetensors"]
+            )
         )
-    )
 
-    # Test with embeddings
-    suggestions = KikoEmbeddingAutocompleteAPI.get_suggestions(
-        prefix="test", include_embeddings=True, include_loras=False
-    )
+        # Test with embeddings
+        suggestions = KikoEmbeddingAutocompleteAPI.get_suggestions(
+            prefix="test", include_embeddings=True, include_loras=False
+        )
 
-    assert len(suggestions) == 2
-    assert suggestions[0]["type"] == "embedding"
-    assert suggestions[0]["name"] == "test1"
+        assert len(suggestions) == 2
+        assert suggestions[0]["type"] == "embedding"
+        assert suggestions[0]["name"] == "test1"
 
-    # Test with LoRAs
-    suggestions = KikoEmbeddingAutocompleteAPI.get_suggestions(
-        prefix="lora", include_embeddings=False, include_loras=True
-    )
+        # Test with LoRAs
+        suggestions = KikoEmbeddingAutocompleteAPI.get_suggestions(
+            prefix="lora", include_embeddings=False, include_loras=True
+        )
 
-    assert len(suggestions) == 2
-    assert suggestions[0]["type"] == "lora"
-    assert "<lora:" in suggestions[0]["value"]
+        assert len(suggestions) == 2
+        assert suggestions[0]["type"] == "lora"
+        assert "<lora:" in suggestions[0]["value"]
 
 
 if __name__ == "__main__":
