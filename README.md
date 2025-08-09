@@ -26,6 +26,7 @@ ComfyUI-KikoTools provides carefully crafted, production-ready nodes grouped und
 | [🤖 Gemini Prompt Engineer](#-gemini-prompt-engineer) | AI-powered image analysis and prompt generation | 🧠 Prompts |
 | [🔍 Display Any](#-display-any) | Universal debugging tool for any data type | 👁️ Display |
 | [🖼️ Image to Multiple Of](#️-image-to-multiple-of) | Adjust dimensions to multiples for compatibility | 🖼️ Resolution |
+| [🔤 Embedding Autocomplete](#-embedding-autocomplete) | Smart autocomplete for embeddings, LoRAs, and tags | ✍️ Text |
 
 ### 🧰 xyz-helpers Tools
 
@@ -310,6 +311,45 @@ Unified interface for text encoding and sampler parameter management.
 - Apply consistent settings across prompts
 - Quick template-based generation
 - Batch prompt processing
+
+### 🔤 Embedding Autocomplete
+
+**Intelligent autocomplete for embeddings, LoRAs, and custom tags in text prompts.**
+
+<div align="center">
+  <img src="ac-emb.png" width="30%" alt="Embedding Autocomplete" />
+  <img src="ac-lora.png" width="30%" alt="LoRA Autocomplete" />
+  <img src="ac-tag.png" width="30%" alt="Tag Autocomplete" />
+</div>
+
+This feature is an enhanced fork of the autocomplete functionality from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) by pythongosssss. We've modernized the codebase, fixed existing bugs, and added robust security features.
+
+**Key Features:**
+- **Smart Triggers**: Type `embedding:` for embeddings, `<lora:` for LoRAs, or just start typing for tags
+- **Custom Word Lists**: Load tag databases (like Danbooru tags) from any URL
+- **Security First**: Comprehensive input validation prevents code injection and XSS attacks
+- **Flexible Settings**: Customize triggers, auto-insert commas, replace underscores, and more
+- **Performance Optimized**: Handles 100,000+ tags smoothly with frequency-based sorting
+- **Visual Polish**: Clean UI with proper scrolling, keyboard navigation, and type indicators
+
+**Settings Include:**
+- Enable/disable autocomplete for embeddings, LoRAs, and custom tags
+- Configurable trigger phrases (e.g., `emb:`, `lora:`, custom shortcuts)
+- Auto-insert comma after completion
+- Replace underscores with spaces in tags
+- Choose insertion keys (Tab, Enter, or both)
+- Load custom word lists from URLs with security validation
+
+**Security Features:**
+- Validates all loaded content to prevent script injection
+- Blocks dangerous patterns (eval, innerHTML, script tags, etc.)
+- Safe character whitelist for tags
+- File size limits to prevent memory exhaustion
+- Clear error messages for rejected content
+
+**Credits:**
+- Original autocomplete concept by [pythongosssss](https://github.com/pythongosssss/ComfyUI-Custom-Scripts)
+- Enhanced and modernized by KikoTools team
 
 ### 💾 Kiko Save Image Features
 
