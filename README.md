@@ -8,7 +8,14 @@
 
 > A modular collection of essential custom ComfyUI nodes missing from the standard release.
 
-ComfyUI-KikoTools provides carefully crafted, production-ready nodes grouped under the **"ComfyAssets"** category. Each tool is designed with clean interfaces, comprehensive testing, and optimized performance for SDXL and FLUX workflows.
+ComfyUI-KikoTools provides carefully crafted, production-ready nodes under the "ComfyAssets" category.
+Each tool is built with clean interfaces, thorough testing, and optimized performance for SDXL and FLUX workflows.
+
+This project started out of frustration with keeping ComfyUI up to date and waiting for dozens of custom nodes to update—most of which I didn’t even use. After taking a hard look at my workflow, I realized I only needed one or two features from these nodes, many of which were abandoned or stuck in maintenance mode.
+
+I tried forking, patching, and submitting merge requests, but eventually decided to create my own curated collection of tools—fully supported and maintained by me. That’s how Kiko’s Tools was born.
+
+I’m sharing them here with the community, and I hope you find them as useful as I do.
 
 ## 🚀 Features
 
