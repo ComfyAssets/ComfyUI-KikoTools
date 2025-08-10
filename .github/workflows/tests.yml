@@ -168,7 +168,7 @@ jobs:
           assert node.RETURN_TYPES[2] == 'INT'
           assert node.RETURN_TYPES[3] == 'FLOAT'
           assert node.RETURN_NAMES == ('sampler_name', 'scheduler', 'steps', 'cfg')
-          assert node.CATEGORY == 'ComfyAssets/🌀 Samplers'
+          assert node.CATEGORY == '🫶 ComfyAssets/🌀 Samplers'
           print('✓ Sampler Combo return types tests passed')
 
           # Test sampler combo functionality
@@ -217,7 +217,7 @@ jobs:
           # Test return types
           assert node.RETURN_TYPES == ('INT',)
           assert node.RETURN_NAMES == ('seed',)
-          assert node.CATEGORY == 'ComfyAssets/🌱 Seeds'
+          assert node.CATEGORY == '🫶 ComfyAssets/🌱 Seeds'
           print('✓ Seed History return types tests passed')
 
           # Test seed output functionality
