@@ -11,6 +11,7 @@ from .tools.gemini_prompt import GeminiPromptNode
 from .tools.image_scale_down_by import ImageScaleDownByNode
 from .tools.image_to_multiple_of import ImageToMultipleOfNode
 from .tools.kiko_film_grain import KikoFilmGrainNode
+from .tools.kiko_purge_vram import KikoPurgeVRAM
 from .tools.kiko_save_image import KikoSaveImageNode
 from .tools.resolution_calculator import ResolutionCalculatorNode
 from .tools.sampler_combo import SamplerComboCompactNode, SamplerComboNode
@@ -36,6 +37,7 @@ NODE_CLASS_MAPPINGS = {
     "DisplayAny": DisplayAnyNode,
     "DisplayText": DisplayTextNode,
     "KikoFilmGrain": KikoFilmGrainNode,
+    "KikoPurgeVRAM": KikoPurgeVRAM,
     "SamplerSelectHelper": SamplerSelectHelperNode,
     "SchedulerSelectHelper": SchedulerSelectHelperNode,
     "TextEncodeSamplerParams": TextEncodeSamplerParamsNode,
@@ -60,6 +62,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DisplayAny": "Display Any",
     "DisplayText": "Display Text",
     "KikoFilmGrain": "Film Grain",
+    "KikoPurgeVRAM": "Kiko Purge VRAM",
     "SamplerSelectHelper": "Sampler Select Helper",
     "SchedulerSelectHelper": "Scheduler Select Helper",
     "TextEncodeSamplerParams": "Text Encode for Sampler Params",

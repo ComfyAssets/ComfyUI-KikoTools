@@ -36,6 +36,7 @@ I’m sharing them here with the community, and I hope you find them as useful a
 | [📉 Image Scale Down By](#-image-scale-down-by) | Scale images down by a factor with quality preservation | 🖼️ Resolution |
 | [🎬 Film Grain](#-film-grain) | Add realistic film grain effects to images | 💾 Images |
 | [🔤 Embedding Autocomplete](#-embedding-autocomplete) | Smart autocomplete for embeddings, LoRAs, and tags | 🔧 Utils |
+| [🧹 Kiko Purge VRAM](#-kiko-purge-vram) | Intelligent VRAM management with detailed reporting | 🛠️ Utils |
 
 ### 🧰 xyz-helpers Tools
 
@@ -394,6 +395,46 @@ This feature is an enhanced fork of the autocomplete functionality from [ComfyUI
 **Credits:**
 - Original autocomplete concept by [pythongosssss](https://github.com/pythongosssss/ComfyUI-Custom-Scripts)
 - Enhanced and modernized by KikoTools team
+
+### 🧹 Kiko Purge VRAM
+**Intelligent GPU memory management with threshold-based triggering and detailed reporting.**
+
+**Key Features:**
+- **4 Purge Modes**: 
+  - `soft`: Basic garbage collection and cache clearing
+  - `aggressive`: Multiple GC passes with full CUDA cache clearing
+  - `models_only`: Unload all models and clear model cache
+  - `cache_only`: Clear CUDA cache without garbage collection
+- **Smart Thresholds**: Only purge when memory usage exceeds specified MB limit
+- **Detailed Reporting**: Shows before/after memory usage, freed MB, and timing
+- **Passthrough Design**: Acts as workflow checkpoint without disrupting data flow
+- **CPU Fallback**: Gracefully handles non-CUDA environments
+
+**Use Cases:**
+- Free memory between heavy processing stages
+- Prevent OOM errors in complex workflows
+- Debug memory usage patterns
+- Optimize multi-model workflows
+- Clean up after batch processing
+
+**Parameters:**
+- **anything**: Any input (passed through unchanged)
+- **mode**: Purge strategy selection
+- **report_memory**: Generate detailed memory statistics
+- **memory_threshold_mb**: Only purge if usage exceeds (0 = always purge)
+
+**Example Output:**
+```
+Memory usage (5000.0 MB) exceeds threshold (4000 MB)
+
+Memory Purge Report
+-------------------
+Mode: soft
+Memory Freed: 2500.0 MB
+Before: 5000.0 MB used (62.5%)
+After: 2500.0 MB used (31.3%)
+Time: 150.0ms
+```
 
 ### 💾 Kiko Save Image Features
 
