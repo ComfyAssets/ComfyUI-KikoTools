@@ -17,10 +17,14 @@ from .tools.resolution_calculator import ResolutionCalculatorNode
 from .tools.sampler_combo import SamplerComboCompactNode, SamplerComboNode
 from .tools.seed_history import SeedHistoryNode
 from .tools.width_height_selector import WidthHeightSelectorNode
-from .tools.xyz_helpers import (FluxSamplerParamsNode, LoRAFolderBatchNode,
-                                PlotParametersNode, SamplerSelectHelperNode,
-                                SchedulerSelectHelperNode,
-                                TextEncodeSamplerParamsNode)
+from .tools.xyz_helpers import (
+    FluxSamplerParamsNode,
+    LoRAFolderBatchNode,
+    PlotParametersNode,
+    SamplerSelectHelperNode,
+    SchedulerSelectHelperNode,
+    TextEncodeSamplerParamsNode,
+)
 
 # ComfyUI node registration mappings
 NODE_CLASS_MAPPINGS = {
