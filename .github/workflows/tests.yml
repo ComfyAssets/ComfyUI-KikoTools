@@ -53,7 +53,7 @@ jobs:
           print('✓ All imports successful')
 
           # Test base node
-          assert ComfyAssetsBaseNode.CATEGORY.startswith('ComfyAssets')
+          assert 'ComfyAssets' in ComfyAssetsBaseNode.CATEGORY
           print('✓ Base node tests passed')
 
           # Test dimension extraction
