@@ -58,13 +58,6 @@ app.registerExtension({
                     }
                 };
                 this.addCustomWidget(copyWidget);
-                
-                // Update node title with condensed info
-                const firstLine = text ? text.split('\n')[0] : '';
-                const condensed = firstLine.length > 50 
-                    ? firstLine.substring(0, 50) + "..." 
-                    : firstLine;
-                this.title = `DisplayAny: ${condensed}`;
 
                 requestAnimationFrame(() => {
                     const sz = this.computeSize();

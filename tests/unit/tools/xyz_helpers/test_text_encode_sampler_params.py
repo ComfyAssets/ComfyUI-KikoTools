@@ -138,7 +138,7 @@ class TestTextEncodeSamplerParamsNode:
 
     def test_node_properties(self):
         """Test node properties."""
-        assert TextEncodeSamplerParamsNode.CATEGORY == "ComfyAssets/🧰 xyz-helpers"
+        assert TextEncodeSamplerParamsNode.CATEGORY == "🫶 ComfyAssets/🧰 xyz-helpers"
         assert TextEncodeSamplerParamsNode.FUNCTION == "encode_prompts"
         assert TextEncodeSamplerParamsNode.RETURN_TYPES == ("CONDITIONING",)
         assert TextEncodeSamplerParamsNode.RETURN_NAMES == ("conditioning",)

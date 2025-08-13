@@ -329,7 +329,7 @@ class TestKikoSaveImageNode:
         assert KikoSaveImageNode.RETURN_TYPES == ()
         assert KikoSaveImageNode.FUNCTION == "save_images"
         assert KikoSaveImageNode.OUTPUT_NODE is True
-        assert KikoSaveImageNode.CATEGORY == "ComfyAssets/💾 Images"
+        assert KikoSaveImageNode.CATEGORY == "🫶 ComfyAssets/💾 Images"
 
     @patch("kikotools.tools.kiko_save_image.node.process_image_batch")
     def test_save_images_success(self, mock_process):
@@ -436,7 +436,7 @@ class TestKikoSaveImageNode:
         info = self.node.get_node_info()
 
         assert info["class_name"] == "KikoSaveImageNode"
-        assert info["category"] == "ComfyAssets/💾 Images"
+        assert info["category"] == "🫶 ComfyAssets/💾 Images"
         assert info["function"] == "save_images"
 
 

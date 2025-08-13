@@ -4,14 +4,20 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 # Mock comfy modules
+mock_mm = MagicMock()
 sys.modules["comfy"] = MagicMock()
-sys.modules["comfy.model_management"] = MagicMock()
+sys.modules["comfy.model_management"] = mock_mm
 
 from kikotools.tools.kiko_purge_vram.logic import (
     purge_memory,
     get_memory_stats,
     format_memory_report,
 )
+
+# Ensure mm is available in the logic module after import
+import kikotools.tools.kiko_purge_vram.logic as logic_module
+
+logic_module.mm = mock_mm
 
 
 class TestMemoryStats:
@@ -94,13 +100,9 @@ class TestMemoryPurge:
             assert freed_mb == 2500
 
     @patch("kikotools.tools.kiko_purge_vram.logic.COMFY_AVAILABLE", True)
-    @patch("kikotools.tools.kiko_purge_vram.logic.mm.unload_all_models")
-    @patch("kikotools.tools.kiko_purge_vram.logic.mm.soft_empty_cache")
     @patch("torch.cuda.is_available")
     @patch("gc.collect")
-    def test_purge_memory_models_only(
-        self, mock_gc, mock_cuda, mock_soft_empty, mock_unload
-    ):
+    def test_purge_memory_models_only(self, mock_gc, mock_cuda):
         mock_cuda.return_value = True
 
         with patch(
@@ -113,8 +115,8 @@ class TestMemoryPurge:
 
             freed_mb = purge_memory(mode="models_only", unload_models=True)
 
-            mock_unload.assert_called_once()
-            mock_soft_empty.assert_called_once()
+            mock_mm.unload_all_models.assert_called_once()
+            mock_mm.soft_empty_cache.assert_called_once()
             mock_gc.assert_called()
             assert freed_mb == 5000
 

@@ -12,7 +12,7 @@ def test_import():
     assert (
         KikoEmbeddingAutocomplete.DISPLAY_NAME == "🫶 Embedding Autocomplete Settings"
     )
-    assert KikoEmbeddingAutocomplete.CATEGORY == "ComfyAssets"
+    assert KikoEmbeddingAutocomplete.CATEGORY == "🫶 ComfyAssets"
 
 
 def test_settings_defined():

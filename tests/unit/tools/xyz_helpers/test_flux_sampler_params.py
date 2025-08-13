@@ -182,7 +182,7 @@ class TestFluxSamplerParamsNode:
 
     def test_node_properties(self):
         """Test node properties."""
-        assert FluxSamplerParamsNode.CATEGORY == "ComfyAssets/🧰 xyz-helpers"
+        assert FluxSamplerParamsNode.CATEGORY == "🫶 ComfyAssets/🧰 xyz-helpers"
         assert FluxSamplerParamsNode.FUNCTION == "process_batch"
         assert FluxSamplerParamsNode.RETURN_TYPES == ("LATENT", "SAMPLER_PARAMS")
         assert FluxSamplerParamsNode.RETURN_NAMES == ("latent", "params")

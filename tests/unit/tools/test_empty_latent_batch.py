@@ -134,7 +134,7 @@ class TestEmptyLatentBatchNode:
         assert EmptyLatentBatchNode.RETURN_TYPES == ("LATENT", "INT", "INT")
         assert EmptyLatentBatchNode.RETURN_NAMES == ("latent", "width", "height")
         assert EmptyLatentBatchNode.FUNCTION == "create_empty_latent"
-        assert EmptyLatentBatchNode.CATEGORY == "ComfyAssets/📦 Latents"
+        assert EmptyLatentBatchNode.CATEGORY == "🫶 ComfyAssets/📦 Latents"
 
     def test_create_empty_latent_basic(self):
         """Test basic empty latent creation through node."""

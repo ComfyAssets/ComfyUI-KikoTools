@@ -85,7 +85,7 @@ class TestSamplerSelectHelperNode:
 
     def test_node_properties(self):
         """Test node properties."""
-        assert SamplerSelectHelperNode.CATEGORY == "ComfyAssets/🧰 xyz-helpers"
+        assert SamplerSelectHelperNode.CATEGORY == "🫶 ComfyAssets/🧰 xyz-helpers"
         assert SamplerSelectHelperNode.FUNCTION == "select_samplers"
         assert SamplerSelectHelperNode.RETURN_TYPES == ("STRING",)
         assert SamplerSelectHelperNode.RETURN_NAMES == ("selected_samplers",)

@@ -26,7 +26,7 @@ class TestGeminiPromptNode:
 
     def test_node_properties(self):
         """Test node has correct properties."""
-        assert GeminiPromptNode.CATEGORY == "ComfyAssets/🧠 Prompts"
+        assert GeminiPromptNode.CATEGORY == "🫶 ComfyAssets/🧠 Prompts"
         assert GeminiPromptNode.FUNCTION == "generate_prompt"
         assert GeminiPromptNode.RETURN_TYPES == ("STRING", "STRING")
         assert GeminiPromptNode.RETURN_NAMES == ("prompt", "negative_prompt")

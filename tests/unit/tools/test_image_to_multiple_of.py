@@ -118,7 +118,7 @@ class TestImageToMultipleOfNode:
         assert ImageToMultipleOfNode.RETURN_TYPES == ("IMAGE",)
         assert ImageToMultipleOfNode.RETURN_NAMES == ("image",)
         assert ImageToMultipleOfNode.FUNCTION == "process"
-        assert ImageToMultipleOfNode.CATEGORY == "ComfyAssets/🖼️ Resolution"
+        assert ImageToMultipleOfNode.CATEGORY == "🫶 ComfyAssets/🖼️ Resolution"
 
     def test_node_process_center_crop(self):
         """Test node processing with center crop."""

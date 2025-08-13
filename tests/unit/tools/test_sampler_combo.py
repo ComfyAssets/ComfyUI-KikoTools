@@ -186,7 +186,7 @@ class TestSamplerComboNode:
             "cfg",
         )
         assert SamplerComboNode.FUNCTION == "get_sampler_combo"
-        assert SamplerComboNode.CATEGORY == "ComfyAssets/🌀 Samplers"
+        assert SamplerComboNode.CATEGORY == "🫶 ComfyAssets/🌀 Samplers"
 
     def test_get_sampler_combo_valid_inputs(self):
         """Test get_sampler_combo with valid inputs."""

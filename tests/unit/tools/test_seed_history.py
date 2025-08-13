@@ -49,7 +49,7 @@ class TestSeedHistoryNode:
         assert SeedHistoryNode.RETURN_TYPES == ("INT",)
         assert SeedHistoryNode.RETURN_NAMES == ("seed",)
         assert SeedHistoryNode.FUNCTION == "output_seed"
-        assert SeedHistoryNode.CATEGORY == "ComfyAssets/🌱 Seeds"
+        assert SeedHistoryNode.CATEGORY == "🫶 ComfyAssets/🌱 Seeds"
 
     def test_output_seed_valid_input(self):
         """Test seed output with valid input."""
