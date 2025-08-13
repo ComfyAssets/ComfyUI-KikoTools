@@ -16,6 +16,7 @@ from kikotools.tools.kiko_purge_vram.logic import (
 
 # Ensure mm is available in the logic module after import
 import kikotools.tools.kiko_purge_vram.logic as logic_module
+
 logic_module.mm = mock_mm
 
 
@@ -101,9 +102,7 @@ class TestMemoryPurge:
     @patch("kikotools.tools.kiko_purge_vram.logic.COMFY_AVAILABLE", True)
     @patch("torch.cuda.is_available")
     @patch("gc.collect")
-    def test_purge_memory_models_only(
-        self, mock_gc, mock_cuda
-    ):
+    def test_purge_memory_models_only(self, mock_gc, mock_cuda):
         mock_cuda.return_value = True
 
         with patch(
