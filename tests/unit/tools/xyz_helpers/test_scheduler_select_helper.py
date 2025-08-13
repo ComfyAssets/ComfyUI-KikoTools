@@ -99,7 +99,7 @@ class TestSchedulerSelectHelperNode:
 
     def test_node_properties(self):
         """Test node properties."""
-        assert SchedulerSelectHelperNode.CATEGORY == "ComfyAssets/🧰 xyz-helpers"
+        assert SchedulerSelectHelperNode.CATEGORY == "🫶 ComfyAssets/🧰 xyz-helpers"
         assert SchedulerSelectHelperNode.FUNCTION == "select_schedulers"
         assert SchedulerSelectHelperNode.RETURN_TYPES == ("STRING",)
         assert SchedulerSelectHelperNode.RETURN_NAMES == ("selected_schedulers",)

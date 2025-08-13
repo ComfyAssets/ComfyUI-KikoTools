@@ -40,7 +40,7 @@ class TestDisplayAnyNode:
 
     def test_node_properties(self):
         """Test node has correct properties."""
-        assert DisplayAnyNode.CATEGORY == "ComfyAssets/👁️ Display"
+        assert DisplayAnyNode.CATEGORY == "🫶 ComfyAssets/👁️ Display"
         assert DisplayAnyNode.FUNCTION == "display"
         assert DisplayAnyNode.RETURN_TYPES == ("STRING",)
         assert DisplayAnyNode.RETURN_NAMES == ("display_text",)

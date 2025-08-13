@@ -183,7 +183,7 @@ class TestLoRAFolderBatchNode:
 
     def test_node_properties(self):
         """Test node properties."""
-        assert LoRAFolderBatchNode.CATEGORY == "ComfyAssets/🧰 xyz-helpers"
+        assert LoRAFolderBatchNode.CATEGORY == "🫶 ComfyAssets/🧰 xyz-helpers"
         assert LoRAFolderBatchNode.FUNCTION == "batch_loras"
         assert LoRAFolderBatchNode.RETURN_TYPES == ("LORA_PARAMS", "STRING", "INT")
         assert LoRAFolderBatchNode.RETURN_NAMES == (

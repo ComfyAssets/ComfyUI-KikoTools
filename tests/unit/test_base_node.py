@@ -14,7 +14,7 @@ class TestComfyAssetsBaseNode:
 
     def test_category_is_comfy_assets(self):
         """Test that CATEGORY is set to ComfyAssets"""
-        assert ComfyAssetsBaseNode.CATEGORY == "ComfyAssets"
+        assert ComfyAssetsBaseNode.CATEGORY == "🫶 ComfyAssets"
 
     def test_validate_inputs_default_implementation(self):
         """Test default validate_inputs does nothing"""
@@ -69,7 +69,7 @@ class TestComfyAssetsBaseNode:
 
         assert isinstance(info, dict)
         assert info["class_name"] == "ComfyAssetsBaseNode"
-        assert info["category"] == "ComfyAssets"
+        assert info["category"] == "🫶 ComfyAssets"
         assert info["function"] == "Unknown"  # Base class doesn't have FUNCTION
         assert info["return_types"] == ()
         assert info["return_names"] == ()
@@ -91,14 +91,14 @@ class TestConcreteNodeInheritance:
 
     def test_concrete_node_inherits_category(self):
         """Test concrete node inherits ComfyAssets category"""
-        assert MockConcreteNode.CATEGORY == "ComfyAssets"
+        assert MockConcreteNode.CATEGORY == "🫶 ComfyAssets"
 
     def test_concrete_node_get_info_includes_specific_attributes(self):
         """Test concrete node info includes its specific attributes"""
         info = MockConcreteNode.get_node_info()
 
         assert info["class_name"] == "MockConcreteNode"
-        assert info["category"] == "ComfyAssets"
+        assert info["category"] == "🫶 ComfyAssets"
         assert info["function"] == "mock_function"
         assert info["return_types"] == ("STRING", "INT")
         assert info["return_names"] == ("text", "number")

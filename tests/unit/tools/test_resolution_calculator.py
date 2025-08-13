@@ -179,7 +179,7 @@ class TestResolutionCalculatorNode:
         assert hasattr(ResolutionCalculatorNode, "CATEGORY")
 
         # Check category is correct
-        assert ResolutionCalculatorNode.CATEGORY == "ComfyAssets/🖼️ Resolution"
+        assert ResolutionCalculatorNode.CATEGORY == "🫶 ComfyAssets/🖼️ Resolution"
 
         # Check return types
         assert ResolutionCalculatorNode.RETURN_TYPES == ("INT", "INT")
@@ -281,7 +281,7 @@ class TestResolutionCalculatorNode:
         node = ResolutionCalculatorNode()
         node_info = node.get_node_info()
 
-        assert node_info["category"] == "ComfyAssets/🖼️ Resolution"
+        assert node_info["category"] == "🫶 ComfyAssets/🖼️ Resolution"
         assert node_info["class_name"] == "ResolutionCalculatorNode"
 
 

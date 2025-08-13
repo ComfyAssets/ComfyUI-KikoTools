@@ -145,7 +145,7 @@ class TestImageScaleDownByNode:
 
     def test_category_is_comfyassets(self):
         """Test that the node is in the ComfyAssets category."""
-        assert ImageScaleDownByNode.CATEGORY == "ComfyAssets/🖼️ Resolution"
+        assert ImageScaleDownByNode.CATEGORY == "🫶 ComfyAssets/🖼️ Resolution"
 
     def test_scale_down_with_batch(self, node):
         """Test scaling down with batch of images."""

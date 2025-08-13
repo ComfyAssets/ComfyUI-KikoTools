@@ -37,7 +37,7 @@ class TestWidthHeightSelectorNode:
         assert self.node.RETURN_TYPES == ("INT", "INT")
         assert self.node.RETURN_NAMES == ("width", "height")
         assert self.node.FUNCTION == "get_dimensions"
-        assert self.node.CATEGORY == "ComfyAssets/🖼️ Resolution"
+        assert self.node.CATEGORY == "🫶 ComfyAssets/🖼️ Resolution"
 
     def test_custom_dimensions(self):
         """Test custom dimensions."""

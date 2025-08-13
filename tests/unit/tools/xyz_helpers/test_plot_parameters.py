@@ -227,7 +227,7 @@ class TestPlotParametersNode:
 
     def test_node_properties(self):
         """Test node properties."""
-        assert PlotParametersNode.CATEGORY == "ComfyAssets/🧰 xyz-helpers"
+        assert PlotParametersNode.CATEGORY == "🫶 ComfyAssets/🧰 xyz-helpers"
         assert PlotParametersNode.FUNCTION == "plot_parameters"
         assert PlotParametersNode.RETURN_TYPES == ("IMAGE",)
         assert PlotParametersNode.RETURN_NAMES == ("image",)
