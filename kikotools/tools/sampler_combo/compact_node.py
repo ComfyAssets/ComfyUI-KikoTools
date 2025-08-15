@@ -53,7 +53,6 @@ class SamplerComboCompactNode(ComfyAssetsBaseNode):
                         "min": 1.0,
                         "max": 15.0,
                         "step": 0.5,
-                        "display": "slider",
                         "tooltip": "CFG",
                     },
                 ),
