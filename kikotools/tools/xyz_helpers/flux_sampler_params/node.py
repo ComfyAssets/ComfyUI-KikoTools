@@ -352,6 +352,12 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
                                 < len(lora_strength[lora_file_idx])
                                 else 0
                             )
+                            # Add batch info if available
+                            if "batch_info" in loras:
+                                param_record["lora_batch"] = (
+                                    f"Batch {loras['batch_info']['index'] + 1}/"
+                                    f"{loras['batch_info']['total']}"
+                                )
 
                         out_params.append(param_record)
 
