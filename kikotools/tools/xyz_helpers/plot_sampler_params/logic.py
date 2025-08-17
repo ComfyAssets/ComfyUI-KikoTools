@@ -203,7 +203,11 @@ def format_parameter_text(param: Dict, mode: str = "full") -> str:
         # Optional LoRA line
         if "lora" in param and param["lora"]:
             lora_name = param["lora"][:32] if len(param["lora"]) > 32 else param["lora"]
-            lines.append(f"LoRA: {lora_name}, str: {param.get('lora_strength', 'N/A')}")
+            lora_line = f"LoRA: {lora_name}, str: {param.get('lora_strength', 'N/A')}"
+            # Add batch info if available
+            if "lora_batch" in param:
+                lora_line += f" [{param['lora_batch']}]"
+            lines.append(lora_line)
 
         return "\n".join(lines)
 

@@ -13,6 +13,7 @@ This node is based on work from [comfyui-essentials-nodes](https://github.com/cu
 - **Flexible Strength Control**: Single, multiple, or range-based strength values
 - **Batch Modes**: Sequential or combinatorial strength application
 - **Epoch Detection**: Automatically extracts epoch numbers from filenames
+- **Auto-Batching**: Automatically splits large LoRA collections into manageable chunks to prevent UI disconnection
 
 ## Node Properties
 - **Category**: `ComfyAssets/🧰 xyz-helpers`
@@ -33,6 +34,11 @@ This node is based on work from [comfyui-essentials-nodes](https://github.com/cu
 |-----------|------|---------|-------------|
 | `include_pattern` | STRING | "" | Regex pattern to include files |
 | `exclude_pattern` | STRING | "" | Regex pattern to exclude files |
+| `max_loras` | INT | 50 | Maximum LoRAs to process (when auto_batch disabled) |
+| `sort_order` | DROPDOWN | natural | Sorting method [natural, alphabetical, newest, oldest] |
+| `auto_batch` | DROPDOWN | disabled | Enable auto-batching for large collections [disabled, enabled] |
+| `batch_size` | INT | 25 | Number of LoRAs per batch when auto-batching |
+| `batch_index` | INT | 0 | Which batch to output (0-based) when auto-batching |
 
 ### Strength Format Options
 - **Single**: `"1.0"` - Apply same strength to all LoRAs
@@ -72,6 +78,16 @@ LoRAFolderBatch → Processing Pipeline
     strength: "0.8...1.2+0.1"
 ```
 
+### Auto-Batch Large Collections
+```
+LoRAFolderBatch → FluxSamplerParams → KSampler
+    folder_path: "massive_lora_collection"  # 100+ files
+    strength: "1.0"
+    auto_batch: enabled
+    batch_size: 25
+    batch_index: 0  # Change to 1, 2, 3... for subsequent batches
+```
+
 ## Batch Modes Explained
 
 ### Sequential Mode
@@ -85,6 +101,41 @@ Each LoRA is tested with ALL strength values:
 - LoRA1 → [0.5, 0.75, 1.0]
 - LoRA2 → [0.5, 0.75, 1.0]
 - LoRA3 → [0.5, 0.75, 1.0]
+
+## Auto-Batching for Large Collections
+
+### Overview
+When testing large numbers of LoRAs (e.g., 75+ files), ComfyUI can experience UI disconnections or memory issues. Auto-batching solves this by automatically splitting your LoRA collection into smaller, manageable chunks.
+
+### How It Works
+1. **Enable Auto-Batching**: Set `auto_batch` to "enabled"
+2. **Set Batch Size**: Configure `batch_size` (default: 25, range: 5-100)
+3. **Select Batch**: Use `batch_index` to choose which batch to process
+
+### Example: Testing 75 LoRAs
+With 75 LoRAs and batch_size=25, the system creates 3 batches:
+- **Batch 0**: LoRAs 1-25 (set batch_index=0)
+- **Batch 1**: LoRAs 26-50 (set batch_index=1)
+- **Batch 2**: LoRAs 51-75 (set batch_index=2)
+
+Run your workflow 3 times, changing only the `batch_index` each time.
+
+### Visual Feedback
+When auto-batching is enabled, the `lora_list` output includes batch information:
+```
+=== Batch 1/3 (LoRAs 1-25) ===
+
+style-epoch-001
+style-epoch-002
+...
+```
+
+### Best Practices for Auto-Batching
+1. **Start with Default**: Use batch_size=25 for most scenarios
+2. **Adjust for Memory**: Decrease batch_size if you still experience issues
+3. **Combinatorial Mode**: Be extra careful - 25 LoRAs × 3 strengths = 75 combinations
+4. **Save Between Batches**: Save your results after each batch to avoid data loss
+5. **Use Plot Parameters**: The batch info appears in plot visualizations for easy tracking
 
 ## File Naming Patterns
 
@@ -207,6 +258,7 @@ batch_mode: sequential
 - **1.0.1**: Added natural sorting for epochs
 - **1.0.2**: Enhanced pattern filtering
 - **1.0.3**: Improved batch modes and strength parsing
+- **1.0.4**: Added auto-batching for large LoRA collections
 
 ## Credits
 Original implementation by cubiq in [comfyui-essentials-nodes](https://github.com/cubiq/ComfyUI_essentials). Adapted and maintained by the ComfyAssets team.

@@ -1,15 +1,14 @@
 """LoRA Folder Batch node for ComfyUI."""
 
-from typing import Tuple, Any, Dict, List
-import os
+from typing import Tuple, Any, Dict
 import logging
 from ....base.base_node import ComfyAssetsBaseNode
 from .logic import (
-    get_lora_folders,
     scan_folder_for_loras,
     filter_loras_by_pattern,
     parse_strength_string,
     create_lora_params,
+    create_lora_params_batched,
     get_lora_info,
     validate_folder_path,
 )
@@ -74,6 +73,47 @@ class LoRAFolderBatchNode(ComfyAssetsBaseNode):
                         "tooltip": "Regex pattern to exclude files (e.g., 'test|backup')",
                     },
                 ),
+                "max_loras": (
+                    "INT",
+                    {
+                        "default": 50,
+                        "min": 1,
+                        "max": 500,
+                        "tooltip": "Maximum number of LoRAs to process (to prevent UI disconnection)",
+                    },
+                ),
+                "auto_batch": (
+                    ["disabled", "enabled"],
+                    {
+                        "default": "disabled",
+                        "tooltip": "Auto-batch large sets into chunks of 25 LoRAs",
+                    },
+                ),
+                "batch_size": (
+                    "INT",
+                    {
+                        "default": 25,
+                        "min": 5,
+                        "max": 100,
+                        "tooltip": "Number of LoRAs per batch when auto-batching",
+                    },
+                ),
+                "batch_index": (
+                    "INT",
+                    {
+                        "default": 0,
+                        "min": 0,
+                        "max": 100,
+                        "tooltip": "Which batch to output (0-based index)",
+                    },
+                ),
+                "sort_order": (
+                    ["natural", "alphabetical", "newest", "oldest"],
+                    {
+                        "default": "natural",
+                        "tooltip": "How to sort the LoRA files",
+                    },
+                ),
             },
         }
 
@@ -82,13 +122,18 @@ class LoRAFolderBatchNode(ComfyAssetsBaseNode):
     FUNCTION = "batch_loras"
     CATEGORY = "🫶 ComfyAssets/🧰 xyz-helpers"
 
-    def batch_loras(
+    def batch_loras(  # noqa: C901
         self,
         folder_path: str,
         strength: str,
         batch_mode: str,
         include_pattern: str = "",
         exclude_pattern: str = "",
+        max_loras: int = 50,
+        sort_order: str = "natural",
+        auto_batch: str = "disabled",
+        batch_size: int = 25,
+        batch_index: int = 0,
     ) -> Tuple[Dict[str, Any], str, int]:
         """
         Batch process LoRAs from a folder.
@@ -137,37 +182,98 @@ class LoRAFolderBatchNode(ComfyAssetsBaseNode):
                 self.log_info("No LoRAs left after filtering")
                 return ({"loras": [], "strengths": []}, "", 0)
 
+            # Apply sorting based on sort_order
+            if sort_order != "natural":
+                from .logic import sort_lora_files
+
+                lora_files = sort_lora_files(lora_files, sort_order)
+
+            # Only limit if NOT auto-batching
+            if auto_batch == "disabled" and len(lora_files) > max_loras:
+                self.log_info(
+                    f"⚠️ Limiting to {max_loras} LoRAs (found {len(lora_files)}). "
+                    f"Enable auto_batch or increase max_loras to process more."
+                )
+                lora_files = lora_files[:max_loras]
+
             # Parse strength values
             strengths = parse_strength_string(strength)
             self.log_info(f"Using strength values: {strengths}")
 
-            # Create LORA_PARAMS
-            lora_params = create_lora_params(lora_files, strengths, batch_mode)
+            # Create LORA_PARAMS with auto-batching if enabled
+            if auto_batch == "enabled" and len(lora_files) > batch_size:
+                all_batches = create_lora_params_batched(
+                    lora_files, strengths, batch_mode, batch_size
+                )
 
-            # Create info string
+                # Check if batch_index is valid
+                if batch_index >= len(all_batches):
+                    self.log_info(
+                        f"⚠️ Batch index {batch_index} out of range. "
+                        f"Only {len(all_batches)} batches available. Using batch 0."
+                    )
+                    batch_index = 0
+
+                lora_params = all_batches[batch_index]
+
+                # Update lora_files to only include current batch for list display
+                batch_start = lora_params["batch_info"]["start_idx"]
+                batch_end = lora_params["batch_info"]["end_idx"]
+                lora_files_for_display = lora_files[batch_start:batch_end]
+            else:
+                # Regular single batch mode
+                lora_params = create_lora_params(lora_files, strengths, batch_mode)
+                lora_files_for_display = lora_files
+
+            # Create info string for current batch only
             lora_list = []
-            for lora_file in lora_files:
+            for lora_file in lora_files_for_display:
                 info = get_lora_info(lora_file)
                 if info["epoch"] is not None:
                     lora_list.append(f"{info['name']} (epoch {info['epoch']})")
                 else:
                     lora_list.append(info["name"])
 
-            lora_list_str = "\n".join(lora_list)
-
-            # Calculate total combinations
-            if batch_mode == "combinatorial":
-                total_combos = len(lora_files) * len(strengths)
+            # Add batch info to the list string if auto-batching
+            if auto_batch == "enabled" and "batch_info" in lora_params:
+                batch_header = (
+                    f"=== Batch {batch_index + 1}/{lora_params['batch_info']['total']} "
+                    f"(LoRAs {lora_params['batch_info']['start_idx'] + 1}-"
+                    f"{lora_params['batch_info']['end_idx']}) ===\n\n"
+                )
+                lora_list_str = batch_header + "\n".join(lora_list)
             else:
-                total_combos = len(lora_files)
+                lora_list_str = "\n".join(lora_list)
 
-            self.log_info(
-                f"Created batch with {len(lora_files)} LoRAs, "
-                f"{len(strengths)} strength values, "
-                f"{total_combos} total combinations"
-            )
+            # Calculate total combinations for current batch
+            current_batch_loras = len(lora_files_for_display)
+            if batch_mode == "combinatorial":
+                total_combos = current_batch_loras * len(strengths)
+            else:
+                total_combos = current_batch_loras
 
-            return (lora_params, lora_list_str, len(lora_files))
+            # Warn if generating many combinations
+            if total_combos > 100:
+                self.log_info(
+                    f"⚠️ WARNING: Generating {total_combos} combinations! "
+                    f"This may cause UI disconnection. Consider reducing max_loras or strength values."
+                )
+
+            if auto_batch == "enabled" and "batch_info" in lora_params:
+                self.log_info(
+                    f"Output batch {batch_index + 1}/{lora_params['batch_info']['total']} "
+                    f"with {current_batch_loras} LoRAs, "
+                    f"{len(strengths)} strength values, "
+                    f"{total_combos} total combinations"
+                )
+            else:
+                self.log_info(
+                    f"Created batch with {current_batch_loras} LoRAs, "
+                    f"{len(strengths)} strength values, "
+                    f"{total_combos} total combinations"
+                )
+
+            return (lora_params, lora_list_str, current_batch_loras)
 
         except Exception as e:
             self.handle_error(f"Error creating LoRA batch: {str(e)}", e)
