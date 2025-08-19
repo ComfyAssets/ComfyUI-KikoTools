@@ -202,8 +202,25 @@ def format_parameter_text(param: Dict, mode: str = "full") -> str:
 
         # Optional LoRA line
         if "lora" in param and param["lora"]:
-            lora_name = param["lora"][:32] if len(param["lora"]) > 32 else param["lora"]
-            lora_line = f"LoRA: {lora_name}, str: {param.get('lora_strength', 'N/A')}"
+            lora_path = param["lora"]
+            # Extract just the filename and immediate parent directory for better readability
+            import os
+
+            path_parts = lora_path.replace("\\", "/").split("/")
+            if len(path_parts) > 2:
+                # Show parent directory and filename
+                lora_display = f"{path_parts[-2]}/{path_parts[-1]}"
+            else:
+                # Use full path if it's short
+                lora_display = lora_path
+
+            # Remove file extension for cleaner display
+            if lora_display.endswith(".safetensors"):
+                lora_display = lora_display[:-12]
+
+            lora_line = (
+                f"LoRA: {lora_display}, str: {param.get('lora_strength', 'N/A')}"
+            )
             # Add batch info if available
             if "lora_batch" in param:
                 lora_line += f" [{param['lora_batch']}]"
