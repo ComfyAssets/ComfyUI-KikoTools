@@ -1,6 +1,6 @@
 """Logic for DisplayAny node - displays any input value or tensor shape."""
 
-from typing import Any, List, Union
+from typing import Any, List
 
 
 def get_tensor_shapes(input_value: Any) -> List[List[int]]:
@@ -54,7 +54,7 @@ def format_display_value(input_value: Any, mode: str = "raw value") -> str:
 
         if isinstance(input_value, (dict, list)):
             return json.dumps(input_value, indent=2)
-    except:
+    except (TypeError, ValueError):
         pass
 
     return str(input_value)

@@ -4,8 +4,7 @@ This module provides the central registration system for all KikoTools nodes.
 """
 
 import importlib
-import os
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any
 from pathlib import Path
 
 
@@ -74,7 +73,7 @@ class ToolRegistry:
                             attr.SETTINGS,
                         )
 
-        except ImportError as e:
+        except ImportError:
             # Tool might not have a node.py file yet
             pass
 

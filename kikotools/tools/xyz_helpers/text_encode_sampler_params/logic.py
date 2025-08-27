@@ -1,6 +1,6 @@
 """Logic module for Text Encode Sampler Params node."""
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import re
 import logging
 
@@ -69,9 +69,9 @@ def encode_prompts(prompts: List[str], clip_encoder) -> List[Any]:
             try:
                 conditioning = encoder.encode(clip_encoder, prompt)[0]
                 encoded.append(conditioning)
-                logger.debug(f"Encoded prompt {i+1}/{len(prompts)}")
+                logger.debug(f"Encoded prompt {i + 1}/{len(prompts)}")
             except Exception as e:
-                logger.error(f"Failed to encode prompt {i+1}: {e}")
+                logger.error(f"Failed to encode prompt {i + 1}: {e}")
                 encoded.append(None)
 
         encoded = [e for e in encoded if e is not None]

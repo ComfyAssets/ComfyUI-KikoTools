@@ -1,6 +1,5 @@
 """State management for batch prompts using file persistence."""
 
-import os
 import json
 import tempfile
 from pathlib import Path
@@ -22,7 +21,7 @@ class StateManager:
             try:
                 with open(self.state_file, "r") as f:
                     return json.load(f)
-            except:
+            except (json.JSONDecodeError, IOError):
                 pass
         return {}
 

@@ -41,8 +41,6 @@ class SimpleBatchPromptsNode(ComfyAssetsBaseNode):
 
     def get_next_prompt(self, prompt_file: str) -> Tuple[str, str, int]:
         """Get the next prompt in sequence."""
-        global GLOBAL_COUNTER
-
         # Resolve file path
         if not os.path.isabs(prompt_file):
             try:
@@ -50,7 +48,7 @@ class SimpleBatchPromptsNode(ComfyAssetsBaseNode):
 
                 input_dir = folder_paths.get_input_directory()
                 full_path = os.path.join(input_dir, prompt_file)
-            except:
+            except ImportError:
                 full_path = os.path.abspath(prompt_file)
         else:
             full_path = prompt_file
