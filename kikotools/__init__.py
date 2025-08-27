@@ -3,6 +3,7 @@ KikoTools package initialization and node registry
 Handles automatic discovery and registration of all ComfyAssets tools
 """
 
+from .tools.batch_prompts import BatchPromptsNode
 from .tools.display_any import DisplayAnyNode
 from .tools.display_text import DisplayTextNode
 from .tools.embedding_autocomplete import KikoEmbeddingAutocomplete
@@ -13,6 +14,7 @@ from .tools.image_to_multiple_of import ImageToMultipleOfNode
 from .tools.kiko_film_grain import KikoFilmGrainNode
 from .tools.kiko_purge_vram import KikoPurgeVRAM
 from .tools.kiko_save_image import KikoSaveImageNode
+from .tools.local_image_loader import LocalImageLoaderNode
 from .tools.resolution_calculator import ResolutionCalculatorNode
 from .tools.sampler_combo import SamplerComboCompactNode, SamplerComboNode
 from .tools.seed_history import SeedHistoryNode
@@ -28,6 +30,7 @@ from .tools.xyz_helpers import (
 
 # ComfyUI node registration mappings
 NODE_CLASS_MAPPINGS = {
+    "BatchPrompts": BatchPromptsNode,
     "ResolutionCalculator": ResolutionCalculatorNode,
     "WidthHeightSelector": WidthHeightSelectorNode,
     "SeedHistory": SeedHistoryNode,
@@ -42,6 +45,7 @@ NODE_CLASS_MAPPINGS = {
     "DisplayText": DisplayTextNode,
     "KikoFilmGrain": KikoFilmGrainNode,
     "KikoPurgeVRAM": KikoPurgeVRAM,
+    "KikoLocalImageLoader": LocalImageLoaderNode,
     "SamplerSelectHelper": SamplerSelectHelperNode,
     "SchedulerSelectHelper": SchedulerSelectHelperNode,
     "TextEncodeSamplerParams": TextEncodeSamplerParamsNode,
@@ -53,6 +57,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "BatchPrompts": "Batch Prompts",
     "ResolutionCalculator": "Resolution Calculator",
     "WidthHeightSelector": "Width Height Selector",
     "SeedHistory": "Seed History",
@@ -67,6 +72,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DisplayText": "Display Text",
     "KikoFilmGrain": "Film Grain",
     "KikoPurgeVRAM": "Kiko Purge VRAM",
+    "KikoLocalImageLoader": "Local Image Loader",
     "SamplerSelectHelper": "Sampler Select Helper",
     "SchedulerSelectHelper": "Scheduler Select Helper",
     "TextEncodeSamplerParams": "Text Encode for Sampler Params",

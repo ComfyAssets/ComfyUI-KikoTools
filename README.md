@@ -37,6 +37,7 @@ I’m sharing them here with the community, and I hope you find them as useful a
 | [🎬 Film Grain](#-film-grain) | Add realistic film grain effects to images | 💾 Images |
 | [🔤 Embedding Autocomplete](#-embedding-autocomplete) | Smart autocomplete for embeddings, LoRAs, and tags | 🔧 Utils |
 | [🧹 Kiko Purge VRAM](#-kiko-purge-vram) | Intelligent VRAM management with detailed reporting | 🛠️ Utils |
+| [📂 Local Image Loader](#-local-image-loader) | Visual gallery browser for local media files | 💾 Images |
 
 ### 🧰 xyz-helpers Tools
 
@@ -356,6 +357,26 @@ Unified interface for text encoding and sampler parameter management.
 - Apply consistent settings across prompts
 - Quick template-based generation
 - Batch prompt processing
+
+#### 📂 Local Image Loader
+Visual gallery browser for loading local images, videos, and audio files directly into ComfyUI workflows.
+
+- **Visual Gallery Interface**: Browse files with thumbnail previews in a masonry layout
+- **Multi-Media Support**: Load images (JPG, PNG, GIF, WebP), videos (MP4, WebM, MOV), and audio files (MP3, WAV, OGG, FLAC)
+- **Quick Navigation**: Navigate folders with breadcrumb path and parent directory button
+- **Responsive Layout**: Automatically adjusts thumbnail grid to available space
+- **Metadata Extraction**: Reads embedded prompt and workflow data from generated images
+- **Saved Paths**: Remember frequently used directories for quick access
+- **Double-Click Preview**: Open full-size media in new browser tab
+- **Smart Sorting**: Sort by name, date, or file size in ascending or descending order
+- **Pagination Support**: Efficiently browse large directories with page controls
+
+**Use Cases:**
+- Load reference images from local folders for img2img workflows
+- Browse and select from collections of generated images
+- Quickly access frequently used asset directories
+- Extract prompts and settings from previously generated images
+- Preview media files before loading into workflow
 
 ### 🔤 Embedding Autocomplete
 
