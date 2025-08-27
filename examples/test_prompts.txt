@@ -1,0 +1,14 @@
+A beautiful sunset over the ocean, golden hour lighting, professional photography, vibrant colors, high detail
+Negative: blurry, dark, low quality, distorted, oversaturated
+---
+Majestic mountain landscape with snow-capped peaks, dramatic clouds, alpine scenery, crystal clear air, epic composition
+Negative: foggy, flat lighting, boring composition, low contrast
+---
+Futuristic cityscape at night, neon lights, cyberpunk aesthetic, rain-slicked streets, atmospheric, blade runner style
+Negative: daylight, rural, old fashioned, low tech, empty streets
+---
+Enchanted forest with magical glowing mushrooms, fairy lights, mystical atmosphere, ancient trees, fantasy art style
+Negative: desert, urban, modern, realistic, mundane
+---
+Space station orbiting Earth, detailed mechanical structures, astronauts performing spacewalk, realistic sci-fi, NASA photography
+Negative: fantasy, medieval, underwater, cartoon style
