@@ -93,7 +93,7 @@ app.registerExtension({
                 : Object.values(graphcanvas.selected_nodes);
 
             nodes.forEach(n => {
-                if (colorValue) {
+                if (colorValue && colorValue !== "" && colorValue.startsWith("#")) {
                     if (n.constructor === LiteGraph.LGraphGroup) {
                         // For groups, only set the main color
                         if (colorType === 'full' || colorType === 'bg') {
@@ -167,9 +167,8 @@ app.registerExtension({
                                             if (!pickerFull) {
                                                 pickerFull = createPicker('full');
                                             }
-                                            activeNode = null;
-                                            pickerFull.value = node.bgcolor || "#000000";
                                             activeNode = node;
+                                            pickerFull.value = node.bgcolor || "#000000";
                                             pickerFull.click();
                                         };
                                     },
@@ -198,9 +197,8 @@ app.registerExtension({
                                             if (!pickerTitle) {
                                                 pickerTitle = createPicker('title');
                                             }
-                                            activeNode = null;
-                                            pickerTitle.value = node.color || "#000000";
                                             activeNode = node;
+                                            pickerTitle.value = node.color || "#000000";
                                             pickerTitle.click();
                                         };
                                     },
@@ -229,9 +227,8 @@ app.registerExtension({
                                             if (!pickerBG) {
                                                 pickerBG = createPicker('bg');
                                             }
-                                            activeNode = null;
-                                            pickerBG.value = node.bgcolor || "#000000";
                                             activeNode = node;
+                                            pickerBG.value = node.bgcolor || "#000000";
                                             pickerBG.click();
                                         };
                                     },
