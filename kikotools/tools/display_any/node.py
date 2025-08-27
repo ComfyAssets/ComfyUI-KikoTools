@@ -1,6 +1,6 @@
 """DisplayAny node for ComfyUI - displays any input value or tensor information."""
 
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 from ...base import ComfyAssetsBaseNode
 from .logic import format_display_value, validate_display_mode

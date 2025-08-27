@@ -38,7 +38,6 @@ from .logic import (
     filter_changing_params,
     format_parameter_text,
     wrap_prompt_text,
-    calculate_text_dimensions,
     calculate_grid_dimensions,
     validate_plot_parameters,
 )
@@ -178,7 +177,7 @@ class PlotParametersNode(ComfyAssetsBaseNode):
 
             try:
                 font = ImageFont.truetype(font_path, font_size)
-            except:
+            except (IOError, OSError):
                 logger.warning(f"Could not load font from {font_path}, using default")
                 font = ImageFont.load_default()
 

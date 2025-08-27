@@ -118,7 +118,7 @@ class SettingsRegistry:
             js_lines.append(f"        // {tool_settings.display_name} settings")
 
             for setting in tool_settings.settings:
-                js_lines.append(f"        app.ui.settings.addSetting({{")
+                js_lines.append("        app.ui.settings.addSetting({")
                 js_lines.append(f'            id: "{setting.id}",')
                 js_lines.append(f'            name: "{setting.name}",')
                 js_lines.append(
@@ -130,16 +130,16 @@ class SettingsRegistry:
                     js_lines.append(f'            tooltip: "{setting.description}",')
 
                 if setting.type == "combo" and setting.options:
-                    js_lines.append(f"            options: (value) => {{")
+                    js_lines.append("            options: (value) => {")
                     js_lines.append(
                         f"                const options = {json.dumps(setting.options)};"
                     )
-                    js_lines.append(f"                return options.map(opt => ({{")
-                    js_lines.append(f"                    value: opt,")
-                    js_lines.append(f"                    text: String(opt),")
-                    js_lines.append(f"                    selected: opt === value")
-                    js_lines.append(f"                }}));")
-                    js_lines.append(f"            }},")
+                    js_lines.append("                return options.map(opt => ({")
+                    js_lines.append("                    value: opt,")
+                    js_lines.append("                    text: String(opt),")
+                    js_lines.append("                    selected: opt === value")
+                    js_lines.append("                }));")
+                    js_lines.append("            }},")
 
                 if setting.type == "number":
                     if setting.min_value is not None:
@@ -150,11 +150,11 @@ class SettingsRegistry:
                         js_lines.append(f"            step: {setting.step},")
 
                 if setting.on_change:
-                    js_lines.append(f"            onChange(value) {{")
+                    js_lines.append("            onChange(value) {")
                     js_lines.append(f"                {setting.on_change}")
-                    js_lines.append(f"            }}")
+                    js_lines.append("            }")
 
-                js_lines.append(f"        }});")
+                js_lines.append("        }});")
                 js_lines.append("")
 
         js_lines.extend(["    }", "});", ""])

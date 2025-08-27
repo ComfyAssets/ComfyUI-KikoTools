@@ -1,10 +1,9 @@
 """Logic module for Plot Parameters node."""
 
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Tuple
 import math
 import textwrap
 import logging
-import torch
 
 logger = logging.getLogger(__name__)
 
@@ -204,8 +203,6 @@ def format_parameter_text(param: Dict, mode: str = "full") -> str:
         if "lora" in param and param["lora"]:
             lora_path = param["lora"]
             # Extract just the filename and immediate parent directory for better readability
-            import os
-
             path_parts = lora_path.replace("\\", "/").split("/")
             if len(path_parts) > 2:
                 # Show parent directory and filename

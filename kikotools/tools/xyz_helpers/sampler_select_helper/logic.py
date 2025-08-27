@@ -1,6 +1,6 @@
 """Logic module for Sampler Select Helper node."""
 
-from typing import List, Dict, Any
+from typing import List, Dict
 import logging
 
 logger = logging.getLogger(__name__)
