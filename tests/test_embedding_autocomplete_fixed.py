@@ -28,7 +28,9 @@ class TestMemoryManagement:
         # Mock autocomplete instance
         autocomplete = Mock()
         autocomplete.activeWidgets = weakref.WeakSet()
-        autocomplete.widgetCleanupMap = weakref.WeakKeyDictionary()  # Python equivalent of WeakMap
+        autocomplete.widgetCleanupMap = (
+            weakref.WeakKeyDictionary()
+        )  # Python equivalent of WeakMap
 
         # Simulate attaching widget
         autocomplete.activeWidgets.add(widget)
@@ -60,10 +62,16 @@ class TestMemoryManagement:
         autocomplete.suggestionContainer = mock_container
 
         # Simulate cleanup
-        autocomplete.cleanup = Mock(side_effect=lambda: (
-            mock_container.parentNode.removeChild(mock_container) if mock_container.parentNode else None,
-            setattr(autocomplete, 'suggestionContainer', None)
-        ))
+        autocomplete.cleanup = Mock(
+            side_effect=lambda: (
+                (
+                    mock_container.parentNode.removeChild(mock_container)
+                    if mock_container.parentNode
+                    else None
+                ),
+                setattr(autocomplete, "suggestionContainer", None),
+            )
+        )
 
         autocomplete.cleanup()
 
@@ -92,10 +100,10 @@ class TestMemoryManagement:
 
         # Simulate attaching autocomplete
         handlers = {
-            'input': Mock(),
-            'keydown': Mock(),
-            'blur': Mock(),
-            'scroll': Mock()
+            "input": Mock(),
+            "keydown": Mock(),
+            "blur": Mock(),
+            "scroll": Mock(),
         }
 
         for event_type, handler in handlers.items():
@@ -108,7 +116,10 @@ class TestMemoryManagement:
         # All listeners should be removed
         assert textarea.removeEventListener.call_count == 4
         for event_type in handlers.keys():
-            assert any(call[0][0] == event_type for call in textarea.removeEventListener.call_args_list)
+            assert any(
+                call[0][0] == event_type
+                for call in textarea.removeEventListener.call_args_list
+            )
 
     def test_pending_fetch_cleanup(self):
         """Test that pending fetch requests are aborted on cleanup."""
@@ -227,8 +238,7 @@ class TestResourceFetching:
         threads = []
         for i in range(10):
             thread = threading.Thread(
-                target=update_embeddings,
-                args=([f"embedding_{i}"],)
+                target=update_embeddings, args=([f"embedding_{i}"],)
             )
             threads.append(thread)
             thread.start()
@@ -460,13 +470,13 @@ class TestIntegration:
         def attach_widgets(nodes):
             for node in nodes:
                 for widget in node.widgets:
-                    if hasattr(widget.inputEl, 'tagName'):
+                    if hasattr(widget.inputEl, "tagName"):
                         active_widgets.append(widget)
 
         def clear_graph():
             # Cleanup all widgets
             for widget in active_widgets:
-                if hasattr(widget, 'onRemoved') and widget.onRemoved:
+                if hasattr(widget, "onRemoved") and widget.onRemoved:
                     widget.onRemoved()
             active_widgets.clear()
 
@@ -489,17 +499,17 @@ class TestIntegration:
 
         def track_listener(event_type, handler):
             nonlocal cleanup_handler
-            if event_type == 'beforeunload':
+            if event_type == "beforeunload":
                 cleanup_handler = handler
 
         mock_window.addEventListener.side_effect = track_listener
 
         # Simulate autocomplete setup with window listener
-        mock_window.addEventListener('beforeunload', lambda: None)
+        mock_window.addEventListener("beforeunload", lambda: None)
 
         # Verify listener was added
         assert mock_window.addEventListener.called
-        assert mock_window.addEventListener.call_args[0][0] == 'beforeunload'
+        assert mock_window.addEventListener.call_args[0][0] == "beforeunload"
 
         # Simulate cleanup being called
         if cleanup_handler:
