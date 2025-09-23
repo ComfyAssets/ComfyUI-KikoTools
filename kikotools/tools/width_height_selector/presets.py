@@ -283,6 +283,97 @@ PRESET_METADATA: Dict[str, PresetMetadata] = {
         "Banner",
         "Vertical banner 1:3 - extreme tall banner",
     ),
+    # Qwen Presets
+    "1328×1328": PresetMetadata(
+        1328,
+        1328,
+        "1:1",
+        1.0,
+        1.76,
+        "Qwen",
+        "Square",
+        "Qwen square 1:1 - optimized square",
+    ),
+    "1664×928": PresetMetadata(
+        1664,
+        928,
+        "16:9",
+        1.793,
+        1.54,
+        "Qwen",
+        "Landscape",
+        "Qwen landscape 16:9 - widescreen format",
+    ),
+    "928×1664": PresetMetadata(
+        928,
+        1664,
+        "9:16",
+        0.558,
+        1.54,
+        "Qwen",
+        "Portrait",
+        "Qwen portrait 9:16 - vertical format",
+    ),
+    "1472×1104": PresetMetadata(
+        1472,
+        1104,
+        "4:3",
+        1.333,
+        1.62,
+        "Qwen",
+        "Landscape",
+        "Qwen landscape 4:3 - classic landscape",
+    ),
+    "1104×1472": PresetMetadata(
+        1104,
+        1472,
+        "3:4",
+        0.750,
+        1.62,
+        "Qwen",
+        "Portrait",
+        "Qwen portrait 3:4 - classic portrait",
+    ),
+    "1584×1056": PresetMetadata(
+        1584,
+        1056,
+        "3:2",
+        1.500,
+        1.67,
+        "Qwen",
+        "Landscape",
+        "Qwen landscape 3:2 - photography standard",
+    ),
+    "1056×1584": PresetMetadata(
+        1056,
+        1584,
+        "2:3",
+        0.667,
+        1.67,
+        "Qwen",
+        "Portrait",
+        "Qwen portrait 2:3 - portrait photography",
+    ),
+    "2080×688": PresetMetadata(
+        2080,
+        688,
+        "3:1",
+        3.023,
+        1.43,
+        "Qwen",
+        "Landscape",
+        "Qwen experimental landscape 3:1 - ultra-wide",
+    ),
+    "688×2080": PresetMetadata(
+        688,
+        2080,
+        "1:3",
+        0.331,
+        1.43,
+        "Qwen",
+        "Portrait",
+        "Qwen experimental portrait 1:3 - ultra-tall",
+    ),
 }
 
 # Legacy compatibility - maintain old preset dictionaries
@@ -302,6 +393,12 @@ ULTRA_WIDE_PRESETS: Dict[str, Tuple[int, int]] = {
     k: (v.width, v.height)
     for k, v in PRESET_METADATA.items()
     if v.model_group == "Ultra-Wide"
+}
+
+QWEN_PRESETS: Dict[str, Tuple[int, int]] = {
+    k: (v.width, v.height)
+    for k, v in PRESET_METADATA.items()
+    if v.model_group == "Qwen"
 }
 
 # Combined preset options for ComfyUI dropdown
@@ -386,6 +483,22 @@ PRESET_CATEGORIES = {
         for k, v in PRESET_METADATA.items()
         if v.model_group == "Ultra-Wide" and v.category == "Banner"
     ],
+    # Qwen Categories
+    "Qwen Square": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "Qwen" and v.category == "Square"
+    ],
+    "Qwen Portrait": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "Qwen" and v.category == "Portrait"
+    ],
+    "Qwen Landscape": [
+        k
+        for k, v in PRESET_METADATA.items()
+        if v.model_group == "Qwen" and v.category == "Landscape"
+    ],
 }
 
 # Legacy compatibility - preset descriptions
@@ -398,6 +511,7 @@ MODEL_RECOMMENDATIONS = {
     "Ultra-Wide": [
         k for k, v in PRESET_METADATA.items() if v.model_group == "Ultra-Wide"
     ],
+    "Qwen": [k for k, v in PRESET_METADATA.items() if v.model_group == "Qwen"],
 }
 
 
