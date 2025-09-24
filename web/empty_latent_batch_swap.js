@@ -159,15 +159,17 @@ app.registerExtension({
                 if (presetWidget.callback) {
                   presetWidget.callback(
                     swappedFormattedPreset,
+                    app.canvas,
                     this,
-                    presetWidget,
+                    [0, 0],
+                    null
                   );
                 }
                 if (widthWidget.callback) {
-                  widthWidget.callback(h, this, widthWidget);
+                  widthWidget.callback(widthWidget.value, app.canvas, this, [0, 0], null);
                 }
                 if (heightWidget.callback) {
-                  heightWidget.callback(w, this, heightWidget);
+                  heightWidget.callback(heightWidget.value, app.canvas, this, [0, 0], null);
                 }
               } else {
                 // Swapped preset doesn't exist, switch to custom and swap manual values
@@ -176,13 +178,13 @@ app.registerExtension({
                 heightWidget.value = w;
 
                 if (presetWidget.callback) {
-                  presetWidget.callback("custom", this, presetWidget);
+                  presetWidget.callback("custom", app.canvas, this, [0, 0], null);
                 }
                 if (widthWidget.callback) {
-                  widthWidget.callback(h, this, widthWidget);
+                  widthWidget.callback(widthWidget.value, app.canvas, this, [0, 0], null);
                 }
                 if (heightWidget.callback) {
-                  heightWidget.callback(w, this, heightWidget);
+                  heightWidget.callback(heightWidget.value, app.canvas, this, [0, 0], null);
                 }
               }
             } else {
@@ -193,10 +195,10 @@ app.registerExtension({
 
               // Trigger widget change events
               if (widthWidget.callback) {
-                widthWidget.callback(widthWidget.value, this, widthWidget);
+                widthWidget.callback(widthWidget.value, app.canvas, this, [0, 0], null);
               }
               if (heightWidget.callback) {
-                heightWidget.callback(heightWidget.value, this, heightWidget);
+                heightWidget.callback(heightWidget.value, app.canvas, this, [0, 0], null);
               }
             }
 
