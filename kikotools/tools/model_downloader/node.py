@@ -148,7 +148,7 @@ class ModelDownloaderNode(ComfyAssetsBaseNode):
         input_str = (
             f"{url}|{save_path}|{filename}|{api_token}|{force_download}|{time.time()}"
         )
-        return hashlib.md5(input_str.encode()).hexdigest()
+        return hashlib.sha256(input_str.encode()).hexdigest()
 
 
 # Node display name
