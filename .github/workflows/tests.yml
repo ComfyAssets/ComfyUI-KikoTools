@@ -449,6 +449,14 @@ jobs:
           test -f kikotools/tools/seed_history/node.py || (echo "seed_history node.py missing" && exit 1)
           test -f kikotools/tools/seed_history/logic.py || (echo "seed_history logic.py missing" && exit 1)
 
+          # Model Downloader files
+          test -f kikotools/tools/model_downloader/node.py || (echo "model_downloader node.py missing" && exit 1)
+          test -f kikotools/tools/model_downloader/base.py || (echo "model_downloader base.py missing" && exit 1)
+          test -f kikotools/tools/model_downloader/detector.py || (echo "model_downloader detector.py missing" && exit 1)
+
+          # Text Input files
+          test -f kikotools/tools/text_input/node.py || (echo "text_input node.py missing" && exit 1)
+
           # Web files
           test -f web/width_height_swap.js || (echo "width_height_swap.js missing" && exit 1)
           test -f web/seed_history_ui.js || (echo "seed_history_ui.js missing" && exit 1)
