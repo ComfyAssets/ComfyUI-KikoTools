@@ -136,8 +136,15 @@ class CivitAIDownloader(BaseDownloader):
         # Validate output path
         self.validate_output_path(output_path)
 
+        # Validate that URL is from civitai.com domain
+        parsed_url = urlparse(url)
+        if parsed_url.netloc not in ("civitai.com", "www.civitai.com"):
+            raise ValueError(
+                f"Invalid URL: Only civitai.com URLs are supported, got {parsed_url.netloc}"
+            )
+
         # Convert web URL to API URL if needed
-        if "civitai.com" in url and "/api/download/models/" not in url:
+        if "/api/download/models/" not in url:
             ids = self._parse_civitai_url(url)
 
             # If we have a version ID, use it directly

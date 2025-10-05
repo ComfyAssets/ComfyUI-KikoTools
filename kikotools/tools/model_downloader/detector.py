@@ -67,7 +67,8 @@ class URLDetector:
         Returns:
             True if CivitAI URL
         """
-        if "civitai.com" not in parsed.netloc:
+        # Validate exact domain match to prevent subdomain attacks
+        if parsed.netloc not in ("civitai.com", "www.civitai.com"):
             return False
 
         # Check for API download endpoint
@@ -90,8 +91,15 @@ class URLDetector:
         Returns:
             True if HuggingFace URL
         """
-        # Check main domain and CDN
-        if "huggingface.co" in parsed.netloc:
+        # Validate exact domain match to prevent subdomain attacks
+        # Support both main domain and CDN domains
+        allowed_domains = (
+            "huggingface.co",
+            "www.huggingface.co",
+            "cdn.huggingface.co",
+            "cdn-lfs.huggingface.co",
+        )
+        if parsed.netloc in allowed_domains:
             return True
 
         return False

@@ -294,22 +294,33 @@ class KikoEmbeddingAutocomplete {
 
             const text = await response.text();
 
-            // Security validation
+            // Security validation - detect potentially dangerous patterns
+            // Note: This is defense-in-depth for text files, not HTML rendering
             const dangerousPatterns = [
-                /<script[\s\S]*?<\/script>/gi,
-                /<iframe[\s\S]*?>/gi,
+                // Script tags - catch all variations including bypass attempts with whitespace
+                // Matches: <script>, <script >, <script src="x">, </script >, </script>, etc.
+                /<\s*\/?script[^>]*>/gi,  // Script tags (opening/closing with any attributes/whitespace)
+                // Other dangerous HTML tags
+                /<\s*iframe[^>]*>/gi,
+                /<\s*embed[^>]*>/gi,
+                /<\s*object[^>]*>/gi,
+                // JavaScript protocol and event handlers
                 /javascript:/gi,
-                /\bon(click|load|error|mouseover|mouseout|focus|blur|change|submit)\s*=/gi,
-                /<embed[\s\S]*?>/gi,
-                /<object[\s\S]*?>/gi,
-                /import\s+[\s\S]*?from/gi,
+                /data:text\/html/gi,
+                /\bon\w+\s*=/gi,  // Matches any event handler (onclick, onload, etc.)
+                // Code execution patterns
+                /import\s+/gi,
                 /require\s*\(/gi,
                 /eval\s*\(/gi,
                 /new\s+Function\s*\(/gi,
                 /\.innerHTML\s*=/gi,
-                /document\.\w+/gi,
-                /window\.\w+/gi,
-                /(__proto__|\.prototype\.|\.constructor\s*\()/gi
+                // DOM manipulation
+                /document\./gi,
+                /window\./gi,
+                // Prototype pollution
+                /__proto__/gi,
+                /\.prototype\./gi,
+                /\.constructor\s*\(/gi
             ];
 
             for (const pattern of dangerousPatterns) {
