@@ -15,9 +15,11 @@ from .tools.kiko_film_grain import KikoFilmGrainNode
 from .tools.kiko_purge_vram import KikoPurgeVRAM
 from .tools.kiko_save_image import KikoSaveImageNode
 from .tools.local_image_loader import LocalImageLoaderNode
+from .tools.model_downloader import ModelDownloaderNode
 from .tools.resolution_calculator import ResolutionCalculatorNode
 from .tools.sampler_combo import SamplerComboCompactNode, SamplerComboNode
 from .tools.seed_history import SeedHistoryNode
+from .tools.text_input import TextInputNode
 from .tools.width_height_selector import WidthHeightSelectorNode
 from .tools.xyz_helpers import (
     FluxSamplerParamsNode,
@@ -43,9 +45,11 @@ NODE_CLASS_MAPPINGS = {
     "GeminiPrompt": GeminiPromptNode,
     "DisplayAny": DisplayAnyNode,
     "DisplayText": DisplayTextNode,
+    "TextInput": TextInputNode,
     "KikoFilmGrain": KikoFilmGrainNode,
     "KikoPurgeVRAM": KikoPurgeVRAM,
     "KikoLocalImageLoader": LocalImageLoaderNode,
+    "KikoModelDownloader": ModelDownloaderNode,
     "SamplerSelectHelper": SamplerSelectHelperNode,
     "SchedulerSelectHelper": SchedulerSelectHelperNode,
     "TextEncodeSamplerParams": TextEncodeSamplerParamsNode,
@@ -70,9 +74,11 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "GeminiPrompt": "Gemini Prompt Engineer",
     "DisplayAny": "Display Any",
     "DisplayText": "Display Text",
+    "TextInput": "Text Input",
     "KikoFilmGrain": "Film Grain",
     "KikoPurgeVRAM": "Kiko Purge VRAM",
     "KikoLocalImageLoader": "Local Image Loader",
+    "KikoModelDownloader": "Model Downloader 🌐",
     "SamplerSelectHelper": "Sampler Select Helper",
     "SchedulerSelectHelper": "Scheduler Select Helper",
     "TextEncodeSamplerParams": "Text Encode for Sampler Params",
