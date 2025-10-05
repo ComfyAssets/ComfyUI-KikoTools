@@ -152,13 +152,14 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
             import comfy.samplers
             import comfy.model_base
             import comfy.model_management
+            import comfy.utils
+            import torch
             from comfy_extras.nodes_custom_sampler import (
                 Noise_RandomNoise,
                 BasicScheduler,
                 BasicGuider,
                 SamplerCustomAdvanced,
             )
-            from comfy_extras.nodes_latent import LatentBatch
             from comfy_extras.nodes_model_advanced import (
                 ModelSamplingFlux,
                 ModelSamplingAuraFlow,
@@ -169,6 +170,33 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
         except ImportError as e:
             self.handle_error(f"Required ComfyUI modules not available: {e}")
             return (latent_image, [])
+
+        # Local implementation of LatentBatch functionality
+        # Copied from nodes_latent.py to avoid V3 schema breaking changes
+        def reshape_latent_to(target_shape, latent, repeat_batch=True):
+            """Reshape latent tensor to match target shape."""
+            if latent.shape[1:] != target_shape[1:]:
+                latent = comfy.utils.common_upscale(
+                    latent, target_shape[-1], target_shape[-2], "bilinear", "center"
+                )
+            if repeat_batch:
+                return comfy.utils.repeat_to_batch_size(latent, target_shape[0])
+            else:
+                return latent
+
+        def batch_latents(samples1, samples2):
+            """Batch two latent samples together."""
+            samples_out = samples1.copy()
+            s1 = samples1["samples"]
+            s2 = samples2["samples"]
+
+            s2 = reshape_latent_to(s1.shape, s2, repeat_batch=False)
+            s = torch.cat((s1, s2), dim=0)
+            samples_out["samples"] = s
+            samples_out["batch_index"] = samples1.get(
+                "batch_index", [x for x in range(0, s1.shape[0])]
+            ) + samples2.get("batch_index", [x for x in range(0, s2.shape[0])])
+            return samples_out
 
         try:
             if not validate_flux_params(
@@ -236,7 +264,6 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
             basicscheduler = BasicScheduler()
             basicguider = BasicGuider()
             samplercustomadvanced = SamplerCustomAdvanced()
-            latentbatch = LatentBatch()
             modelsampling = (
                 ModelSamplingFlux() if not is_schnell else ModelSamplingAuraFlow()
             )
@@ -364,7 +391,7 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
                         if out_latent is None:
                             out_latent = latent
                         else:
-                            out_latent = latentbatch.batch(out_latent, latent)[0]
+                            out_latent = batch_latents(out_latent, latent)
 
                         if total_samples > 1:
                             pbar.update(1)
