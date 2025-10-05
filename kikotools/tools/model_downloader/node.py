@@ -144,10 +144,10 @@ class ModelDownloaderNode(ComfyAssetsBaseNode):
         import time
         import hashlib
 
-        # Create a unique hash based on inputs and current time
-        input_str = (
-            f"{url}|{save_path}|{filename}|{api_token}|{force_download}|{time.time()}"
-        )
+        # Create a unique hash based on non-sensitive inputs and current time
+        # Note: api_token is excluded to avoid sensitive data in hash
+        # The token doesn't affect cache invalidation - URL changes are sufficient
+        input_str = f"{url}|{save_path}|{filename}|{force_download}|{time.time()}"
         return hashlib.sha256(input_str.encode()).hexdigest()
 
 
