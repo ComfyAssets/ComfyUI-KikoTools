@@ -93,6 +93,14 @@ jobs:
         from kikotools.tools.kiko_save_image import KikoSaveImageNode
         from kikotools.tools.kiko_save_image.logic import process_image_batch, validate_save_inputs
 
+        # Test Model Downloader imports
+        from kikotools.tools.model_downloader import ModelDownloaderNode
+        from kikotools.tools.model_downloader.detector import URLDetector, DownloaderType
+        from kikotools.tools.model_downloader.base import BaseDownloader
+
+        # Test Text Input imports
+        from kikotools.tools.text_input import TextInputNode
+
         print('✓ All module imports successful')
         "
 
@@ -278,6 +286,41 @@ jobs:
         if not hasattr(KikoSaveImageNode, 'OUTPUT_NODE') or not KikoSaveImageNode.OUTPUT_NODE:
             print('❌ KikoSaveImageNode missing OUTPUT_NODE = True')
             sys.exit(1)
+
+        # Test Model Downloader Node
+        from kikotools.tools.model_downloader.node import ModelDownloaderNode
+
+        if issubclass(ModelDownloaderNode, ComfyAssetsBaseNode):
+            print('✓ ModelDownloaderNode properly inherits from base class')
+        else:
+            print('❌ ModelDownloaderNode does not inherit from base class')
+            sys.exit(1)
+
+        # ModelDownloader is an output node, so it doesn't have RETURN_TYPES/RETURN_NAMES
+        download_required_attrs = ['INPUT_TYPES', 'FUNCTION', 'CATEGORY']
+        for attr in download_required_attrs:
+            if not hasattr(ModelDownloaderNode, attr):
+                print(f'❌ ModelDownloaderNode missing required attribute: {attr}')
+                sys.exit(1)
+
+        # Check that it's properly marked as an output node
+        if not hasattr(ModelDownloaderNode, 'OUTPUT_NODE') or not ModelDownloaderNode.OUTPUT_NODE:
+            print('❌ ModelDownloaderNode missing OUTPUT_NODE = True')
+            sys.exit(1)
+
+        # Test Text Input Node
+        from kikotools.tools.text_input.node import TextInputNode
+
+        if issubclass(TextInputNode, ComfyAssetsBaseNode):
+            print('✓ TextInputNode properly inherits from base class')
+        else:
+            print('❌ TextInputNode does not inherit from base class')
+            sys.exit(1)
+
+        for attr in required_attrs:
+            if not hasattr(TextInputNode, attr):
+                print(f'❌ TextInputNode missing required attribute: {attr}')
+                sys.exit(1)
 
         print('✓ All architecture checks passed for all tools')
         "
