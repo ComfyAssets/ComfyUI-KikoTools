@@ -18,6 +18,7 @@ from kikotools.tools.kiko_save_image.logic import (
     save_image_with_format,
     get_save_image_path,
     create_png_metadata,
+    get_next_counter,
 )
 
 
@@ -48,26 +49,105 @@ class TestKikoSaveImageLogic:
         assert pil_image.size == (32, 32)
         assert pil_image.mode == "RGBA"
 
-    def test_get_save_image_path(self):
-        """Test save path generation"""
+    def test_get_next_counter_creates_file(self):
+        """Test counter file creation"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Test basic path generation
+            # First call should create file with counter = 1
+            counter = get_next_counter(temp_dir, "test_prefix")
+            assert counter == 1
+
+            # Verify counter file was created
+            counter_file = os.path.join(temp_dir, ".test_prefix_counter.txt")
+            assert os.path.exists(counter_file)
+
+            # Verify content
+            with open(counter_file, "r") as f:
+                assert f.read().strip() == "1"
+
+    def test_get_next_counter_increments(self):
+        """Test counter increments correctly"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Multiple calls should increment
+            counter1 = get_next_counter(temp_dir, "test")
+            counter2 = get_next_counter(temp_dir, "test")
+            counter3 = get_next_counter(temp_dir, "test")
+
+            assert counter1 == 1
+            assert counter2 == 2
+            assert counter3 == 3
+
+    def test_get_next_counter_different_prefixes(self):
+        """Test counters are independent per prefix"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Different prefixes should have separate counters
+            counter_a1 = get_next_counter(temp_dir, "prefix_a")
+            counter_b1 = get_next_counter(temp_dir, "prefix_b")
+            counter_a2 = get_next_counter(temp_dir, "prefix_a")
+
+            assert counter_a1 == 1
+            assert counter_b1 == 1  # Independent counter
+            assert counter_a2 == 2
+
+    def test_get_next_counter_corrupted_file(self):
+        """Test counter handles corrupted counter files"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create corrupted counter file
+            counter_file = os.path.join(temp_dir, ".test_counter.txt")
+            with open(counter_file, "w") as f:
+                f.write("not_a_number")
+
+            # Should handle gracefully and start from 1
+            counter = get_next_counter(temp_dir, "test")
+            assert counter == 1
+
+    def test_get_next_counter_empty_file(self):
+        """Test counter handles empty counter files"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create empty counter file
+            counter_file = os.path.join(temp_dir, ".test_counter.txt")
+            with open(counter_file, "w") as f:
+                f.write("")
+
+            # Should handle gracefully and start from 1
+            counter = get_next_counter(temp_dir, "test")
+            assert counter == 1
+
+    def test_get_next_counter_sanitizes_prefix(self):
+        """Test counter sanitizes special characters in prefix"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Prefix with special characters
+            get_next_counter(temp_dir, "test/prefix:with*special")
+
+            # Counter file should be created with sanitized name
+            # Should only contain alphanumeric, dot, dash, underscore
+            counter_files = [
+                f for f in os.listdir(temp_dir) if f.endswith("_counter.txt")
+            ]
+            assert len(counter_files) == 1
+            assert "/" not in counter_files[0]
+            assert ":" not in counter_files[0]
+            assert "*" not in counter_files[0]
+
+    def test_get_save_image_path(self):
+        """Test save path generation with counter"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Test basic path generation with counter
             full_path, filename, subfolder = get_save_image_path(
-                "test_prefix", 0, ".png", temp_dir
+                "test_prefix", 1, ".png", temp_dir
             )
 
             assert full_path.startswith(temp_dir)
             assert filename.startswith("test_prefix_")
-            assert filename.endswith("_00000.png")
+            assert filename.endswith("00001.png")
 
-            # Test with empty subfolder (standard behavior)
+            # Test with different counter values
             full_path, filename, subfolder = get_save_image_path(
-                "test", 1, ".jpg", temp_dir, ""
+                "test", 42, ".jpg", temp_dir, ""
             )
 
             assert full_path.startswith(temp_dir)
             assert filename.startswith("test_")
-            assert filename.endswith("_00001.jpg")
+            assert filename.endswith("00042.jpg")
 
     def test_create_png_metadata(self):
         """Test PNG metadata creation"""
@@ -550,3 +630,47 @@ class TestIntegration:
 
                     img = Image.open(filepath)
                     assert img.size == (64, 64)
+
+    @patch("kikotools.tools.kiko_save_image.logic.folder_paths")
+    def test_multiple_calls_no_overwrites(self, mock_folder_paths):
+        """Test that multiple node calls don't overwrite files (bug fix verification)"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_folder_paths.get_output_directory.return_value = temp_dir
+
+            node = KikoSaveImageNode()
+
+            # Simulate the bug scenario: 6 separate calls with single images
+            # This would have caused overwrites before the counter fix
+            all_filenames = []
+
+            for i in range(6):
+                # Each call processes a single image (like in the bug report)
+                single_image = torch.rand(1, 32, 32, 3)
+
+                result = node.save_images(
+                    images=single_image,
+                    filename_prefix="KikoSave",
+                    format="PNG",
+                )
+
+                # Collect filenames
+                for image_info in result["ui"]["images"]:
+                    all_filenames.append(image_info["filename"])
+
+            # Verify all 6 images were saved with unique filenames
+            assert len(all_filenames) == 6
+            assert len(set(all_filenames)) == 6  # All filenames are unique
+
+            # Verify all files actually exist
+            for filename in all_filenames:
+                filepath = os.path.join(temp_dir, filename)
+                assert os.path.exists(filepath), f"File {filename} should exist"
+
+            # Verify filenames follow counter pattern
+            # Should be: KikoSave_00001.png, KikoSave_00002.png, ..., KikoSave_00006.png
+            sorted_filenames = sorted(all_filenames)
+            for i, filename in enumerate(sorted_filenames, start=1):
+                expected_counter = f"{i:05d}"
+                assert (
+                    expected_counter in filename
+                ), f"Expected counter {expected_counter} in {filename}"

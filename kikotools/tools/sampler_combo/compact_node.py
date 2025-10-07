@@ -59,7 +59,7 @@ class SamplerComboCompactNode(ComfyAssetsBaseNode):
             }
         }
 
-    RETURN_TYPES = ("SAMPLER", SCHEDULERS, "INT", "FLOAT")
+    RETURN_TYPES = (SAMPLERS, SCHEDULERS, "INT", "FLOAT")
     RETURN_NAMES = ("sampler", "scheduler", "steps", "cfg")
     FUNCTION = "get_combo"
     CATEGORY = "🫶 ComfyAssets/🌀 Samplers"
@@ -82,27 +82,13 @@ class SamplerComboCompactNode(ComfyAssetsBaseNode):
         try:
             # Use the same validation logic but with compact interface
             result = get_sampler_combo(sampler, sched, steps, cfg)
-            # Create the sampler object
-            try:
-                import comfy.samplers
-
-                sampler_obj = comfy.samplers.sampler_object(result[0])
-            except ImportError:
-                # Return sampler name for testing
-                sampler_obj = result[0]
-            return (sampler_obj, result[1], result[2], result[3])
+            # Return the sampler name as string, not object
+            return result
 
         except Exception as e:
             # Graceful fallback
             self.handle_error(f"Error in compact combo: {str(e)}")
-            try:
-                import comfy.samplers
-
-                sampler_obj = comfy.samplers.sampler_object("euler")
-            except ImportError:
-                # Return sampler name for testing
-                sampler_obj = "euler"
-            return (sampler_obj, "normal", 20, 7.0)
+            return ("euler", "normal", 20, 7.0)
 
     def __str__(self) -> str:
         """String representation of the compact node."""

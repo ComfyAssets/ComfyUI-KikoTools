@@ -10,7 +10,6 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 import torch
 from typing import Dict, List, Any, Optional, Tuple
-import time
 
 try:
     import folder_paths
@@ -22,9 +21,53 @@ except ImportError:
             return "./output"
 
 
+def get_next_counter(output_dir: str, prefix: str) -> int:
+    """
+    Get next available counter value from persistent counter file
+
+    This prevents file overwrites when the node is called multiple times
+    within the same second by maintaining a persistent counter.
+
+    Args:
+        output_dir: Directory to store counter file
+        prefix: Filename prefix to create unique counter per prefix
+
+    Returns:
+        Next available counter value
+    """
+    # Create a safe counter filename
+    safe_prefix = "".join(c for c in prefix if c.isalnum() or c in "._-")
+    counter_file = os.path.join(output_dir, f".{safe_prefix}_counter.txt")
+
+    # Read current counter
+    counter = 0
+    if os.path.exists(counter_file):
+        try:
+            with open(counter_file, "r") as f:
+                content = f.read().strip()
+                counter = int(content) if content else 0
+        except (ValueError, IOError):
+            # If file is corrupted or unreadable, start from 0
+            counter = 0
+
+    # Increment counter
+    counter += 1
+
+    # Save updated counter
+    try:
+        with open(counter_file, "w") as f:
+            f.write(str(counter))
+    except IOError:
+        # If we can't write the counter file, continue anyway
+        # Better to risk overwrites than to fail completely
+        pass
+
+    return counter
+
+
 def get_save_image_path(
     filename_prefix: str,
-    batch_number: int,
+    counter: int,
     format_ext: str,
     output_dir: str,
     subfolder: str = "",
@@ -34,13 +77,13 @@ def get_save_image_path(
 
     Args:
         filename_prefix: Base filename prefix
-        batch_number: Batch index for multiple images
+        counter: Persistent counter to ensure unique filenames
         format_ext: File extension (.png, .jpg, .webp)
         output_dir: Output directory path
         subfolder: Optional subfolder within output directory
 
     Returns:
-        Tuple of (full_path, relative_filename)
+        Tuple of (full_path, preview_filename, relative_subfolder)
     """
     # Split filename_prefix into directory path and actual filename prefix
     # This allows for directory structures like "kittybear/anime/images/kittybear"
@@ -53,9 +96,10 @@ def get_save_image_path(
     )  # Only sanitize problematic chars for filenames
     safe_prefix = "".join(c for c in safe_prefix if c.isalnum() or c in "._-")
 
-    # Create unique filename with timestamp to avoid conflicts
-    timestamp = int(time.time())
-    filename = f"{safe_prefix}_{timestamp:010d}_{batch_number:05d}{format_ext}"
+    # Create unique filename with counter to avoid conflicts
+    # Using counter instead of timestamp+batch_number prevents overwrites
+    # when multiple images are processed separately
+    filename = f"{safe_prefix}_{counter:05d}{format_ext}"
 
     # Handle subfolder and prefix directory (but not the filename part)
     path_components = []
@@ -262,13 +306,17 @@ def process_image_batch(
     results = []
     enhanced_data = []
 
-    for batch_number, image_tensor in enumerate(images):
+    for image_tensor in images:
         # Convert tensor to PIL Image
         img = convert_tensor_to_pil(image_tensor)
 
-        # Generate save path
+        # Get next counter value to ensure unique filenames
+        # This counter persists across node calls, preventing overwrites
+        counter = get_next_counter(output_dir, filename_prefix)
+
+        # Generate save path with persistent counter
         filepath, preview_filename, relative_subfolder = get_save_image_path(
-            filename_prefix, batch_number, format_ext, output_dir, ""
+            filename_prefix, counter, format_ext, output_dir, ""
         )
 
         # Save with format-specific settings
