@@ -161,9 +161,8 @@ jobs:
           assert 'cfg' in input_types['required']
           print('✓ Sampler Combo interface tests passed')
 
-          # Test return types
-          # RETURN_TYPES[1] is the actual SCHEDULERS list
-          assert node.RETURN_TYPES[0] == 'SAMPLER'
+          # Test return types - Updated to match SAMPLERS list change
+          assert node.RETURN_TYPES[0] == SAMPLERS  # Now returns SAMPLERS list
           assert isinstance(node.RETURN_TYPES[1], list)  # SCHEDULERS is a list
           assert node.RETURN_TYPES[2] == 'INT'
           assert node.RETURN_TYPES[3] == 'FLOAT'
