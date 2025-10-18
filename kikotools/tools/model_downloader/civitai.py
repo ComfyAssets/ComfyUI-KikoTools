@@ -12,6 +12,18 @@ from urllib.parse import urlparse, parse_qs, unquote
 
 from .base import BaseDownloader
 
+try:
+    import comfy.model_management
+
+    COMFY_AVAILABLE = True
+    InterruptProcessingException = comfy.model_management.InterruptProcessingException
+except ImportError:
+    COMFY_AVAILABLE = False
+    # Fallback exception type that will never be raised
+    InterruptProcessingException = type(
+        "InterruptProcessingException", (Exception,), {}
+    )
+
 
 CHUNK_SIZE = 1638400
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -258,61 +270,72 @@ class CivitAIDownloader(BaseDownloader):
             print(f"Size: {self.format_size(total_size)}")
 
         # Download with progress
-        with open(output_file, "wb") as f:
-            downloaded = 0
-            start_time = time.time()
+        try:
+            with open(output_file, "wb") as f:
+                downloaded = 0
+                start_time = time.time()
 
-            while True:
-                chunk_start_time = time.time()
-                buffer = response.read(CHUNK_SIZE)
-                chunk_end_time = time.time()
+                while True:
+                    chunk_start_time = time.time()
+                    buffer = response.read(CHUNK_SIZE)
+                    chunk_end_time = time.time()
 
-                if not buffer:
-                    break
+                    if not buffer:
+                        break
 
-                downloaded += len(buffer)
-                f.write(buffer)
-                chunk_time = chunk_end_time - chunk_start_time
+                    downloaded += len(buffer)
+                    f.write(buffer)
+                    chunk_time = chunk_end_time - chunk_start_time
 
-                # Calculate speed
-                speed = self.calculate_speed(len(buffer), chunk_time)
+                    # Check for user cancellation
+                    self.check_interrupt()
 
-                # Report progress
-                if total_size is not None:
-                    progress = downloaded / total_size
-                    sys.stdout.write(
-                        f'\r[{"=" * int(progress * 50):<50}] {progress * 100:.2f}% - {speed:.2f} MB/s'
-                    )
-                    sys.stdout.flush()
-                    self.report_progress(downloaded, total_size, f"{speed:.2f} MB/s")
-                else:
-                    sys.stdout.write(
-                        f"\rDownloaded: {self.format_size(downloaded)} - {speed:.2f} MB/s"
-                    )
-                    sys.stdout.flush()
-                    self.report_progress(downloaded, 0, f"{speed:.2f} MB/s")
+                    # Calculate speed
+                    speed = self.calculate_speed(len(buffer), chunk_time)
 
-        end_time = time.time()
-        time_taken = end_time - start_time
-        hours, remainder = divmod(time_taken, 3600)
-        minutes, seconds = divmod(remainder, 60)
+                    # Report progress
+                    if total_size is not None:
+                        progress = downloaded / total_size
+                        sys.stdout.write(
+                            f'\r[{"=" * int(progress * 50):<50}] {progress * 100:.2f}% - {speed:.2f} MB/s'
+                        )
+                        sys.stdout.flush()
+                        self.report_progress(
+                            downloaded, total_size, f"{speed:.2f} MB/s"
+                        )
+                    else:
+                        sys.stdout.write(
+                            f"\rDownloaded: {self.format_size(downloaded)} - {speed:.2f} MB/s"
+                        )
+                        sys.stdout.flush()
+                        self.report_progress(downloaded, 0, f"{speed:.2f} MB/s")
 
-        if hours > 0:
-            time_str = f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
-        elif minutes > 0:
-            time_str = f"{int(minutes)}m {int(seconds)}s"
-        else:
-            time_str = f"{int(seconds)}s"
+            end_time = time.time()
+            time_taken = end_time - start_time
+            hours, remainder = divmod(time_taken, 3600)
+            minutes, seconds = divmod(remainder, 60)
 
-        sys.stdout.write("\n")
-        print(f"✓ Download completed in {time_str}")
-        print(f"✓ File saved as: {output_file}")
+            if hours > 0:
+                time_str = f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
+            elif minutes > 0:
+                time_str = f"{int(minutes)}m {int(seconds)}s"
+            else:
+                time_str = f"{int(seconds)}s"
 
-        # Verify file size
-        actual_size = os.path.getsize(output_file)
-        if total_size and actual_size != total_size:
-            raise Exception(
-                f"Download incomplete. Expected {total_size} bytes, got {actual_size} bytes"
-            )
+            sys.stdout.write("\n")
+            print(f"✓ Download completed in {time_str}")
+            print(f"✓ File saved as: {output_file}")
 
-        return output_file
+            # Verify file size
+            actual_size = os.path.getsize(output_file)
+            if total_size and actual_size != total_size:
+                raise Exception(
+                    f"Download incomplete. Expected {total_size} bytes, got {actual_size} bytes"
+                )
+
+            return output_file
+        except InterruptProcessingException:
+            # Clean up partial download on interrupt
+            if os.path.exists(output_file):
+                os.remove(output_file)
+            raise InterruptProcessingException("Download interrupted")
