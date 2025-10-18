@@ -6,6 +6,13 @@ from typing import Optional, Callable
 from urllib.parse import urlparse, unquote
 import os
 
+try:
+    import comfy.model_management
+
+    COMFY_AVAILABLE = True
+except ImportError:
+    COMFY_AVAILABLE = False
+
 
 class BaseDownloader(ABC):
     """Abstract base class for all downloaders"""
@@ -37,6 +44,15 @@ class BaseDownloader(ABC):
         """
         if self._progress_callback:
             self._progress_callback(downloaded, total, message)
+
+    def check_interrupt(self) -> None:
+        """Check if processing has been interrupted by user
+
+        Raises:
+            comfy.model_management.InterruptProcessingException: If user cancelled
+        """
+        if COMFY_AVAILABLE:
+            comfy.model_management.throw_exception_if_processing_interrupted()
 
     def extract_filename(self, url: str, default: str = "downloaded_file") -> str:
         """Extract filename from URL

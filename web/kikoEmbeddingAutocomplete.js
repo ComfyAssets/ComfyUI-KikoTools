@@ -33,6 +33,9 @@ class KikoEmbeddingAutocomplete {
         this.widgetCleanupMap = new WeakMap();
         this.activeWidgets = new WeakSet();
 
+        // Track pending fetch requests for cleanup
+        this.pendingFetches = new Set();
+
         // Debounce resource fetching
         this.fetchResourcesDebounced = this.debounce(() => this.fetchResources(), 500);
         this.fetchResourcesDebounced();
@@ -41,9 +44,6 @@ class KikoEmbeddingAutocomplete {
         if (this.settings.customWordsUrl && this.settings.showCustomWords) {
             this.loadCustomWords(this.settings.customWordsUrl);
         }
-
-        // Track pending fetch requests for cleanup
-        this.pendingFetches = new Set();
 
         // Single suggestion container for all widgets
         this.suggestionContainer = null;

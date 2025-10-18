@@ -38,6 +38,7 @@ I’m sharing them here with the community, and I hope you find them as useful a
 | [🔤 Embedding Autocomplete](#-embedding-autocomplete) | Smart autocomplete for embeddings, LoRAs, and tags | 🔧 Utils |
 | [🧹 Kiko Purge VRAM](#-kiko-purge-vram) | Intelligent VRAM management with detailed reporting | 🛠️ Utils |
 | [📂 Local Image Loader](#-local-image-loader) | Visual gallery browser for local media files | 💾 Images |
+| [🌐 Model Downloader](#-model-downloader) | Download models from CivitAI, HuggingFace, and custom URLs | 🛠️ Utils |
 
 ### 🧰 xyz-helpers Tools
 
@@ -378,6 +379,32 @@ Visual gallery browser for loading local images, videos, and audio files directl
 - Extract prompts and settings from previously generated images
 - Preview media files before loading into workflow
 
+#### 🌐 Model Downloader
+Download models, LoRAs, and other assets directly from CivitAI, HuggingFace, and custom URLs within ComfyUI.
+
+- **Multi-Platform Support**: CivitAI, HuggingFace, and direct download URLs
+- **Smart URL Detection**: Automatic detection of download source and file handling
+- **API Token Support**: Optional authentication for private/gated models
+- **Progress Reporting**: Real-time download progress with speed indicators
+- **Resume Support**: Skip existing files or force re-download
+- **Interrupt Handling**: Respects ComfyUI's "Cancel current run" button
+- **Automatic Cleanup**: Removes partial downloads on cancellation
+- **Custom Filenames**: Override auto-detected filenames when needed
+
+**Platform Features:**
+- **CivitAI**: Model page URLs, version-specific downloads, API authentication
+- **HuggingFace**: Blob and resolve URLs, branch/revision support, gated model access
+- **Custom URLs**: Direct download links with bearer token authentication
+
+**Use Cases:**
+- Download models without leaving ComfyUI
+- Automate asset acquisition in workflows
+- Access private or gated models with API tokens
+- Build reproducible workflows with automatic model fetching
+- Quickly test new models from the community
+
+![Model Downloader Example](examples/workflows/model_downloader_example.png)
+
 ### 🔤 Embedding Autocomplete
 
 **Intelligent autocomplete for embeddings, LoRAs, and custom tags in text prompts.**
@@ -699,6 +726,8 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Sampler Select Helper** | Intelligent sampler selection with recommendations | ✅ Complete | [Docs](examples/documentation/sampler_select_helper.md) |
 | **Scheduler Select Helper** | Optimal scheduler selection for samplers | ✅ Complete | [Docs](examples/documentation/scheduler_select_helper.md) |
 | **Text Encode Sampler Params** | Combined text encoding and parameter management | ✅ Complete | [Docs](examples/documentation/text_encode_sampler_params.md) |
+| **Local Image Loader** | Visual gallery browser for local media files | ✅ Complete | [Docs](examples/documentation/local_image_loader.md) |
+| **Model Downloader** | Download models from CivitAI, HuggingFace, and custom URLs | ✅ Complete | [Docs](examples/documentation/model_downloader.md) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
@@ -981,7 +1010,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🏷️ Tags
 
-`comfyui` `custom-nodes` `image-processing` `ai-tools` `sdxl` `flux` `upscaling` `resolution` `batch-processing` `python` `pytorch`
+`comfyui` `custom-nodes` `image-processing` `ai-tools` `sdxl` `flux` `upscaling` `resolution` `batch-processing` `model-downloader` `civitai` `huggingface` `python` `pytorch`
 
 ## 🔗 Links
 
@@ -992,14 +1021,15 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 19 (13 core tools + 6 xyz-helpers)
+- **Nodes**: 20 (14 core tools + 6 xyz-helpers)
 - **Features**: Embedding Autocomplete (settings-based, not a node)
 - **Categories**: 9 emoji-based categories for better organization
+- **Download Platforms**: 3 (CivitAI, HuggingFace, Custom URLs)
 - **Format Support**: 3 (PNG, JPEG, WebP with advanced controls)
 - **Presets**: 26 curated resolution presets
 - **Interactive Features**: 8+ (swap buttons, history UI, popup viewers, parameter visualization)
 - **AI Integration**: Gemini API with 40+ model support
-- **Test Coverage**: 100% (300+ comprehensive tests)
+- **Test Coverage**: 100% (470+ comprehensive tests)
 - **Python Version**: 3.8+
 - **ComfyUI Compatibility**: Latest
 - **Dependencies**: Minimal (PyTorch, NumPy, Pillow, google-generativeai for Gemini)
