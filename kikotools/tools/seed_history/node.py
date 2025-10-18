@@ -28,11 +28,28 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
                         "default": 12345,
                         "min": 0,
                         "max": 0xFFFFFFFFFFFFFFFF,
+                        "control_after_generate": True,
                         "tooltip": "Seed value for generation processes. "
-                        "History UI tracks all changes automatically.",
+                        "Auto-increments/decrements after each run based on mode.",
                     },
                 ),
-            }
+            },
+            "optional": {
+                "mode": (
+                    [
+                        "",
+                        "fixed",
+                        "increment",
+                        "decrement",
+                        "randomize",
+                    ],  # Added empty string for legacy workflows
+                    {
+                        "default": "fixed",
+                        "tooltip": "Seed behavior after generation: "
+                        "fixed (no change), increment (+1), decrement (-1), or randomize (new random)",
+                    },
+                ),
+            },
         }
 
     RETURN_TYPES = ("INT",)
@@ -40,17 +57,48 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
     FUNCTION = "output_seed"
     CATEGORY = "🫶 ComfyAssets/🌱 Seeds"
 
-    def output_seed(self, seed: int) -> Tuple[int]:
+    @classmethod
+    def VALIDATE_INPUTS(cls, seed, mode="fixed"):
+        """Validate inputs and handle legacy workflows."""
+        # Handle empty or missing mode from old workflows (legacy support)
+        if mode is None or mode == "" or mode == "undefined":
+            return True  # Will use default "fixed" in output_seed
+
+        # Validate mode is in allowed list
+        valid_modes = ["fixed", "increment", "decrement", "randomize"]
+        if mode not in valid_modes:
+            return f"Invalid mode: {mode}. Must be one of {valid_modes}"
+
+        return True
+
+    def output_seed(self, seed: int, mode: str = "fixed") -> Tuple[int]:
         """
         Output the seed value for use in other nodes.
 
         Args:
             seed: Input seed value
+            mode: Seed mode (fixed, increment, decrement, randomize) - not used in output,
+                  but controls the widget behavior via control_after_generate
 
         Returns:
             Tuple containing the seed value
         """
         try:
+            # Handle empty mode from old workflows
+            if not mode or mode == "":
+                mode = "fixed"
+
+            # Validate mode is in allowed list
+            valid_modes = ["fixed", "increment", "decrement", "randomize"]
+            if mode not in valid_modes:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"{self.__class__.__name__}: Invalid mode '{mode}'. Using 'fixed'."
+                )
+                mode = "fixed"
+
             # Validate and sanitize the seed
             if not validate_seed_value(seed):
                 # Log the validation error but don't raise
@@ -64,6 +112,10 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
                 return (12345,)
 
             clean_seed = sanitize_seed_value(seed)
+
+            # Note: The mode parameter controls the widget's control_after_generate behavior
+            # The actual increment/decrement/randomize happens automatically in the UI
+            # based on the control_after_generate setting and the mode dropdown value
 
             return (clean_seed,)
 
