@@ -8,5 +8,15 @@
         "image": {
             "path": "/home/vito/ai-apps/ComfyUI-3.12/output/CharacterName_00016_.png"
         }
+    },
+    "18": {
+        "image": {
+            "path": "/home/vito/ai-apps/ComfyUI/output/ComfyUI_00002_.png"
+        }
+    },
+    "445": {
+        "image": {
+            "path": "/home/vito/ai-apps/ComfyUI/output/ComfyUI_00002_.png"
+        }
     }
 }
