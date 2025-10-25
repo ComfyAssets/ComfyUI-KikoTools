@@ -1,4 +1,4 @@
 # Runtime dependencies for ComfyUI-KikoTools
 
 # Gemini API integration (optional - only needed for Gemini Prompt node)
-google-generativeai>=0.3.0
+google-generativeai
