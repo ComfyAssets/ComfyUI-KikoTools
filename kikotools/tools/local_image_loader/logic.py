@@ -139,6 +139,98 @@ def scan_directory(
     return items
 
 
+def search_files(
+    root_directory: str,
+    query: str,
+    show_videos: bool = False,
+    show_audio: bool = False,
+    max_results: int = 100,
+) -> List[Dict[str, Any]]:
+    """
+    Recursively search for files matching the query.
+
+    Args:
+        root_directory: Root directory to start search
+        query: Search query (case-insensitive filename match)
+        show_videos: Include video files
+        show_audio: Include audio files
+        max_results: Maximum number of results to return
+
+    Returns:
+        List of file information dictionaries
+    """
+    if not os.path.isdir(root_directory):
+        raise NotADirectoryError(f"Not a directory: {root_directory}")
+
+    if not query or len(query.strip()) == 0:
+        return []
+
+    extensions = get_supported_extensions()
+    results = []
+    query_lower = query.lower().strip()
+
+    def search_recursive(directory: str) -> None:
+        """Recursively search directory."""
+        if len(results) >= max_results:
+            return
+
+        try:
+            items = os.listdir(directory)
+        except (PermissionError, FileNotFoundError):
+            return
+
+        for item in items:
+            if len(results) >= max_results:
+                break
+
+            full_path = os.path.join(directory, item)
+
+            try:
+                # Check if item name matches query
+                if query_lower not in item.lower():
+                    # If directory, search inside
+                    if os.path.isdir(full_path):
+                        search_recursive(full_path)
+                    continue
+
+                stats = os.stat(full_path)
+                item_data = {
+                    "path": full_path,
+                    "name": item,
+                    "directory": directory,
+                    "mtime": stats.st_mtime,
+                    "size": stats.st_size,
+                }
+
+                if os.path.isdir(full_path):
+                    results.append({**item_data, "type": "dir"})
+                    # Continue searching inside matching directories
+                    search_recursive(full_path)
+                else:
+                    ext = os.path.splitext(item)[1].lower()
+                    item_type = None
+
+                    if ext in extensions["image"]:
+                        item_type = "image"
+                    elif show_videos and ext in extensions["video"]:
+                        item_type = "video"
+                    elif show_audio and ext in extensions["audio"]:
+                        item_type = "audio"
+
+                    if item_type:
+                        results.append({**item_data, "type": item_type})
+
+            except (PermissionError, FileNotFoundError):
+                continue
+
+    search_recursive(root_directory)
+
+    # Sort by name
+    results.sort(key=lambda x: x["name"].lower())
+
+    return results
+
+
 def create_empty_tensor() -> torch.Tensor:
     """Create an empty tensor for when no image is selected."""
     return torch.zeros(1, 1, 1, 4)
