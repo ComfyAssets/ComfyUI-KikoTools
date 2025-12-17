@@ -32,7 +32,7 @@ app.registerExtension({
             tooltip: "Automatically start following execution when workflow starts",
         });
     },
-    
+
     async setup() {
         let followExecution = false;
         let isEnabled = false;
@@ -41,7 +41,7 @@ app.registerExtension({
         const checkEnabled = () => {
             const setting = app.ui.settings.getSettingValue("kikotools.follow_execution.enabled");
             isEnabled = setting !== undefined ? setting : false;
-            
+
             // If disabled, turn off follow execution
             if (!isEnabled && followExecution) {
                 followExecution = false;
@@ -81,14 +81,14 @@ app.registerExtension({
         const orig = LGraphCanvas.prototype.getCanvasMenuOptions;
         LGraphCanvas.prototype.getCanvasMenuOptions = function () {
             const options = orig.apply(this, arguments);
-            
+
             // Check if feature is enabled before adding menu items
             checkEnabled();
             if (!isEnabled) return options;
 
             // Add separator
             options.push(null);
-            
+
             // Add follow execution toggle
             options.push({
                 content: followExecution ? "🫶 Stop following execution" : "🫶 Follow execution",
