@@ -98,6 +98,16 @@ PRESET_METADATA: Dict[str, PresetMetadata] = {
         "Portrait",
         "SDXL near-square portrait - subtle portrait",
     ),
+    "720×1280": PresetMetadata(
+        720,
+        1280,
+        "9:16",
+        0.5625,
+        0.92,
+        "SDXL",
+        "Portrait",
+        "SDXL portrait 9:16 - vertical video/mobile",
+    ),
     # SDXL Presets - Landscape
     "1024×960": PresetMetadata(
         1024,
@@ -158,6 +168,16 @@ PRESET_METADATA: Dict[str, PresetMetadata] = {
         "SDXL",
         "Landscape",
         "SDXL landscape 3:1 - extreme wide panoramic",
+    ),
+    "1280×720": PresetMetadata(
+        1280,
+        720,
+        "16:9",
+        1.778,
+        0.92,
+        "SDXL",
+        "Landscape",
+        "SDXL landscape 16:9 - HD widescreen video",
     ),
     # FLUX Presets - High Quality
     "1920×1080": PresetMetadata(

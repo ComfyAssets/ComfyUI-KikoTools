@@ -73,6 +73,7 @@ def scan_directory(
     show_audio: bool = False,
     sort_by: str = "name",
     sort_order: str = "asc",
+    hide_dot_folders: bool = True,
 ) -> List[Dict[str, Any]]:
     """
     Scan a directory for supported media files.
@@ -83,6 +84,7 @@ def scan_directory(
         show_audio: Include audio files
         sort_by: Sort criteria ('name', 'date', 'size')
         sort_order: Sort order ('asc', 'desc')
+        hide_dot_folders: Hide folders starting with a dot
 
     Returns:
         List of file information dictionaries
@@ -94,6 +96,10 @@ def scan_directory(
     items = []
 
     for item in os.listdir(directory):
+        # Skip dot folders/files if hide_dot_folders is enabled
+        if hide_dot_folders and item.startswith("."):
+            continue
+
         full_path = os.path.join(directory, item)
 
         try:
