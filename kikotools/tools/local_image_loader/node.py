@@ -186,7 +186,9 @@ try:
 
         show_videos = request.query.get("show_videos", "false").lower() == "true"
         show_audio = request.query.get("show_audio", "false").lower() == "true"
-        hide_dot_folders = request.query.get("hide_dot_folders", "true").lower() == "true"
+        hide_dot_folders = (
+            request.query.get("hide_dot_folders", "true").lower() == "true"
+        )
 
         page = int(request.query.get("page", 1))
         per_page = int(request.query.get("per_page", 50))
@@ -195,7 +197,12 @@ try:
 
         try:
             items = scan_directory(
-                directory, show_videos, show_audio, sort_by, sort_order, hide_dot_folders
+                directory,
+                show_videos,
+                show_audio,
+                sort_by,
+                sort_order,
+                hide_dot_folders,
             )
 
             # Get parent directory
@@ -234,10 +241,14 @@ try:
             # Handle empty path - show root or common starting points
             if not path:
                 # Return filesystem root
-                if os.name == 'nt':  # Windows
+                if os.name == "nt":  # Windows
                     import string
-                    drives = [f"{d}:\\" for d in string.ascii_uppercase
-                              if os.path.exists(f"{d}:\\")]
+
+                    drives = [
+                        f"{d}:\\"
+                        for d in string.ascii_uppercase
+                        if os.path.exists(f"{d}:\\")
+                    ]
                     return web.json_response({"directories": drives})
                 else:  # Unix/Linux/Mac
                     return web.json_response({"directories": ["/"]})
@@ -246,7 +257,7 @@ try:
             path = os.path.expanduser(path)  # Handle ~ for home directory
 
             # If path ends with separator, list contents of that directory
-            if path.endswith(os.sep) or (os.name == 'nt' and path.endswith('/')):
+            if path.endswith(os.sep) or (os.name == "nt" and path.endswith("/")):
                 if os.path.isdir(path):
                     try:
                         entries = os.listdir(path)
@@ -256,9 +267,13 @@ try:
                             if os.path.isdir(full_path):
                                 dirs.append(full_path)
                         dirs.sort(key=lambda x: x.lower())
-                        return web.json_response({"directories": dirs[:50]})  # Limit results
+                        return web.json_response(
+                            {"directories": dirs[:50]}
+                        )  # Limit results
                     except PermissionError:
-                        return web.json_response({"directories": [], "error": "Permission denied"})
+                        return web.json_response(
+                            {"directories": [], "error": "Permission denied"}
+                        )
                 else:
                     return web.json_response({"directories": []})
 
@@ -268,8 +283,8 @@ try:
 
             if not parent_dir:
                 # Handle root level on Unix
-                if path.startswith('/'):
-                    parent_dir = '/'
+                if path.startswith("/"):
+                    parent_dir = "/"
                     basename = path[1:].lower()
                 else:
                     return web.json_response({"directories": []})
@@ -280,12 +295,18 @@ try:
                     dirs = []
                     for entry in entries:
                         full_path = os.path.join(parent_dir, entry)
-                        if os.path.isdir(full_path) and entry.lower().startswith(basename):
+                        if os.path.isdir(full_path) and entry.lower().startswith(
+                            basename
+                        ):
                             dirs.append(full_path)
                     dirs.sort(key=lambda x: x.lower())
-                    return web.json_response({"directories": dirs[:50]})  # Limit results
+                    return web.json_response(
+                        {"directories": dirs[:50]}
+                    )  # Limit results
                 except PermissionError:
-                    return web.json_response({"directories": [], "error": "Permission denied"})
+                    return web.json_response(
+                        {"directories": [], "error": "Permission denied"}
+                    )
 
             return web.json_response({"directories": []})
         except Exception as e:
