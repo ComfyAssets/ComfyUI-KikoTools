@@ -142,7 +142,7 @@ steps: 30-40
 cfg: 7-8
 sampler: dpmpp_3m_sde
 
-# Speed over quality  
+# Speed over quality
 steps: 10-15
 cfg: 5-6
 sampler: euler

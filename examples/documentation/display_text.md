@@ -85,7 +85,7 @@ Display long text content with scrolling and word wrapping.
 
 The node intelligently detects prompt formats:
 
-1. **SDXL Format**: 
+1. **SDXL Format**:
    - Looks for "Positive prompt:" and "Negative prompt:" markers
    - Case-insensitive detection
    - Handles various formatting styles
@@ -98,7 +98,7 @@ The node intelligently detects prompt formats:
 ## Styling
 
 - **Font**: Monospace for consistent alignment
-- **Colors**: 
+- **Colors**:
   - Text: Light gray (#ddd) on dark background
   - Background: Semi-transparent dark (#1a1a1a)
   - Borders: Subtle gray (#333)
