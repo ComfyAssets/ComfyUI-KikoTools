@@ -1,7 +1,7 @@
 [flake8]
 max-line-length = 127
 max-complexity = 10
-exclude = 
+exclude =
     .git,
     __pycache__,
     .mypy_cache,
@@ -12,7 +12,7 @@ exclude =
     dist,
     *.egg-info,
     .tox
-ignore = 
+ignore =
     # W503: line break before binary operator (conflicts with Black)
     W503,
     # E203: whitespace before ':' (conflicts with Black)
