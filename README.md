@@ -39,6 +39,7 @@ I’m sharing them here with the community, and I hope you find them as useful a
 | [🧹 Kiko Purge VRAM](#-kiko-purge-vram) | Intelligent VRAM management with detailed reporting | 🛠️ Utils |
 | [📂 Local Image Loader](#-local-image-loader) | Visual gallery browser for local media files | 💾 Images |
 | [🌐 Model Downloader](#-model-downloader) | Download models from CivitAI, HuggingFace, and custom URLs | 🛠️ Utils |
+| [⏱️ Workflow Timer](#️-workflow-timer) | Real-time execution timer with customizable display | 🛠️ Utils |
 
 ### 🧰 xyz-helpers Tools
 
@@ -405,6 +406,26 @@ Download models, LoRAs, and other assets directly from CivitAI, HuggingFace, and
 
 ![Model Downloader Example](examples/workflows/model_downloader_example.png)
 
+#### ⏱️ Workflow Timer
+Real-time execution timer that displays workflow duration with millisecond precision.
+
+- **Live Timing**: Updates in real-time during workflow execution (MM:SS:mmm format)
+- **Customizable Color**: Choose your preferred display color via KikoTools settings
+- **Glow Effect**: Optional pulsing glow animation (can be enabled/disabled in settings)
+- **Global Settings**: Color and glow preferences apply to all timer nodes
+- **Persistent Display**: Shows final execution time after workflow completes
+- **Multi-Node Sync**: All timer nodes stay synchronized during execution
+
+**Use Cases:**
+- Monitor workflow execution performance
+- Compare generation times across different settings
+- Identify slow nodes by adding timers at different workflow stages
+- Track optimization improvements over time
+
+**Settings (KikoTools Settings Panel):**
+- **Workflow Timer: Color** - Custom color picker for timer display
+- **Workflow Timer: Enable Glow** - Toggle pulsing glow effect on/off
+
 ### 🔤 Embedding Autocomplete
 
 **Intelligent autocomplete for embeddings, LoRAs, and custom tags in text prompts.**
@@ -448,7 +469,7 @@ This feature is an enhanced fork of the autocomplete functionality from [ComfyUI
 **Intelligent GPU memory management with threshold-based triggering and detailed reporting.**
 
 **Key Features:**
-- **4 Purge Modes**: 
+- **4 Purge Modes**:
   - `soft`: Basic garbage collection and cache clearing
   - `aggressive`: Multiple GC passes with full CUDA cache clearing
   - `models_only`: Unload all models and clear model cache
@@ -728,6 +749,7 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Text Encode Sampler Params** | Combined text encoding and parameter management | ✅ Complete | [Docs](examples/documentation/text_encode_sampler_params.md) |
 | **Local Image Loader** | Visual gallery browser for local media files | ✅ Complete | [Docs](examples/documentation/local_image_loader.md) |
 | **Model Downloader** | Download models from CivitAI, HuggingFace, and custom URLs | ✅ Complete | [Docs](examples/documentation/model_downloader.md) |
+| **Workflow Timer** | Real-time execution timer with customizable display | ✅ Complete | [Docs](examples/documentation/workflow_timer.md) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
@@ -1021,7 +1043,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 20 (14 core tools + 6 xyz-helpers)
+- **Nodes**: 21 (15 core tools + 6 xyz-helpers)
 - **Features**: Embedding Autocomplete (settings-based, not a node)
 - **Categories**: 9 emoji-based categories for better organization
 - **Download Platforms**: 3 (CivitAI, HuggingFace, Custom URLs)
