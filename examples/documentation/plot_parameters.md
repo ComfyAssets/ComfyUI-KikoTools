@@ -109,12 +109,12 @@ Parameter Grid → PlotParameters → Analysis Display
 x_axis: "guidance"
 y_axis: "perceived_quality"
 
-# Step efficiency analysis  
+# Step efficiency analysis
 x_axis: "steps"
 y_axis: "generation_time"
 
 # LoRA impact assessment
-x_axis: "lora_strength"  
+x_axis: "lora_strength"
 y_axis: "style_adherence"
 ```
 

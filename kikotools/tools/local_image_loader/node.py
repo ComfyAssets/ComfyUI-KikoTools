@@ -68,13 +68,9 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
     RETURN_TYPES = (
         "IMAGE",
         "STRING",
-        "STRING",
-        "STRING",
     )
     RETURN_NAMES = (
         "image",
-        "video_path",
-        "audio_path",
         "info",
     )
     FUNCTION = "load_media"
@@ -87,7 +83,7 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
             return os.path.getmtime(SELECTIONS_FILE)
         return float("inf")
 
-    def load_media(self, unique_id: str) -> Tuple[torch.Tensor, str, str, str]:
+    def load_media(self, unique_id: str) -> Tuple[torch.Tensor, str]:
         """
         Load selected media based on node's unique ID.
 
@@ -95,11 +91,9 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
             unique_id: Unique identifier for this node instance
 
         Returns:
-            Tuple of (image tensor, video path, audio path, info string)
+            Tuple of (image tensor, info string)
         """
         image_tensor = create_empty_tensor()
-        video_path = ""
-        audio_path = ""
         info_string = ""
 
         selections = load_selections()
@@ -116,19 +110,7 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
                 except Exception as e:
                     print(f"KikoLocalImageLoader: Error loading image: {e}")
 
-        # Get video path if selected
-        video_selection = node_selections.get("video")
-        if video_selection and video_selection.get("path"):
-            if os.path.exists(video_selection["path"]):
-                video_path = video_selection["path"]
-
-        # Get audio path if selected
-        audio_selection = node_selections.get("audio")
-        if audio_selection and audio_selection.get("path"):
-            if os.path.exists(audio_selection["path"]):
-                audio_path = audio_selection["path"]
-
-        return (image_tensor, video_path, audio_path, info_string)
+        return (image_tensor, info_string)
 
 
 # Setup API routes
@@ -194,6 +176,9 @@ try:
         if not directory or not os.path.isdir(directory):
             return web.json_response({"error": "Directory not found."}, status=404)
 
+        # Normalize path to remove trailing slashes and resolve relative paths
+        directory = os.path.normpath(directory)
+
         # Save last path
         config = load_config()
         config["last_path"] = directory
@@ -201,6 +186,9 @@ try:
 
         show_videos = request.query.get("show_videos", "false").lower() == "true"
         show_audio = request.query.get("show_audio", "false").lower() == "true"
+        hide_dot_folders = (
+            request.query.get("hide_dot_folders", "true").lower() == "true"
+        )
 
         page = int(request.query.get("page", 1))
         per_page = int(request.query.get("per_page", 50))
@@ -209,7 +197,12 @@ try:
 
         try:
             items = scan_directory(
-                directory, show_videos, show_audio, sort_by, sort_order
+                directory,
+                show_videos,
+                show_audio,
+                sort_by,
+                sort_order,
+                hide_dot_folders,
             )
 
             # Get parent directory
@@ -238,6 +231,86 @@ try:
     async def get_last_path(request):
         """API endpoint to get last used directory path."""
         return web.json_response({"last_path": load_config().get("last_path", "")})
+
+    @prompt_server.routes.get("/kiko_local_image_loader/list_directories")
+    async def list_directories(request):
+        """API endpoint to list directories for autocomplete."""
+        path = request.query.get("path", "")
+
+        try:
+            # Handle empty path - show root or common starting points
+            if not path:
+                # Return filesystem root
+                if os.name == "nt":  # Windows
+                    import string
+
+                    drives = [
+                        f"{d}:\\"
+                        for d in string.ascii_uppercase
+                        if os.path.exists(f"{d}:\\")
+                    ]
+                    return web.json_response({"directories": drives})
+                else:  # Unix/Linux/Mac
+                    return web.json_response({"directories": ["/"]})
+
+            # Normalize the path
+            path = os.path.expanduser(path)  # Handle ~ for home directory
+
+            # If path ends with separator, list contents of that directory
+            if path.endswith(os.sep) or (os.name == "nt" and path.endswith("/")):
+                if os.path.isdir(path):
+                    try:
+                        entries = os.listdir(path)
+                        dirs = []
+                        for entry in entries:
+                            full_path = os.path.join(path, entry)
+                            if os.path.isdir(full_path):
+                                dirs.append(full_path)
+                        dirs.sort(key=lambda x: x.lower())
+                        return web.json_response(
+                            {"directories": dirs[:50]}
+                        )  # Limit results
+                    except PermissionError:
+                        return web.json_response(
+                            {"directories": [], "error": "Permission denied"}
+                        )
+                else:
+                    return web.json_response({"directories": []})
+
+            # Otherwise, find matching directories in parent
+            parent_dir = os.path.dirname(path)
+            basename = os.path.basename(path).lower()
+
+            if not parent_dir:
+                # Handle root level on Unix
+                if path.startswith("/"):
+                    parent_dir = "/"
+                    basename = path[1:].lower()
+                else:
+                    return web.json_response({"directories": []})
+
+            if os.path.isdir(parent_dir):
+                try:
+                    entries = os.listdir(parent_dir)
+                    dirs = []
+                    for entry in entries:
+                        full_path = os.path.join(parent_dir, entry)
+                        if os.path.isdir(full_path) and entry.lower().startswith(
+                            basename
+                        ):
+                            dirs.append(full_path)
+                    dirs.sort(key=lambda x: x.lower())
+                    return web.json_response(
+                        {"directories": dirs[:50]}
+                    )  # Limit results
+                except PermissionError:
+                    return web.json_response(
+                        {"directories": [], "error": "Permission denied"}
+                    )
+
+            return web.json_response({"directories": []})
+        except Exception as e:
+            return web.json_response({"directories": [], "error": str(e)})
 
     @prompt_server.routes.get("/kiko_local_image_loader/thumbnail")
     async def get_thumbnail(request):

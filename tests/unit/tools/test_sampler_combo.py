@@ -178,7 +178,7 @@ class TestSamplerComboNode:
 
     def test_return_types_structure(self):
         """Test that return types are correctly defined."""
-        assert SamplerComboNode.RETURN_TYPES == ("SAMPLER", SCHEDULERS, "INT", "FLOAT")
+        assert SamplerComboNode.RETURN_TYPES == (SAMPLERS, SCHEDULERS, "INT", "FLOAT")
         assert SamplerComboNode.RETURN_NAMES == (
             "sampler_name",
             "scheduler",

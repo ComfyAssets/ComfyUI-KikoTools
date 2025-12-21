@@ -50,7 +50,7 @@ Enhanced image saving node with multiple format support, quality controls, and a
 ### Image Grid
 - **Thumbnails**: Click any image to open full-size in new tab
 - **File Info**: Shows filename and size for each image
-- **Quality Indicators**: 
+- **Quality Indicators**:
   - PNG: Compression level (0-9)
   - JPEG/WebP: Quality percentage
 - **Batch Selection**: Checkboxes for multi-select operations

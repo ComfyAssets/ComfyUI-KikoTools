@@ -269,7 +269,7 @@ app.registerExtension({
         // Add as DOM widget
         this.swapButtonWidget = this.addDOMWidget(
           "swap_button",
-          "div", 
+          "div",
           buttonContainer
         );
       };

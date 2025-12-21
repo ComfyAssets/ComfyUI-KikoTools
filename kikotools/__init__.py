@@ -13,6 +13,7 @@ from .tools.image_scale_down_by import ImageScaleDownByNode
 from .tools.image_to_multiple_of import ImageToMultipleOfNode
 from .tools.kiko_film_grain import KikoFilmGrainNode
 from .tools.kiko_purge_vram import KikoPurgeVRAM
+from .tools.kiko_workflow_timer import KikoWorkflowTimerNode
 from .tools.kiko_save_image import KikoSaveImageNode
 from .tools.local_image_loader import LocalImageLoaderNode
 from .tools.model_downloader import ModelDownloaderNode
@@ -21,6 +22,7 @@ from .tools.sampler_combo import SamplerComboCompactNode, SamplerComboNode
 from .tools.seed_history import SeedHistoryNode
 from .tools.text_input import TextInputNode
 from .tools.width_height_selector import WidthHeightSelectorNode
+from .tools.width_height_to_vec2 import WidthHeightToVec2Node
 from .tools.xyz_helpers import (
     FluxSamplerParamsNode,
     LoRAFolderBatchNode,
@@ -56,6 +58,8 @@ NODE_CLASS_MAPPINGS = {
     "FluxSamplerParams": FluxSamplerParamsNode,
     "PlotParameters+": PlotParametersNode,
     "LoRAFolderBatch": LoRAFolderBatchNode,
+    "WidthHeightToVec2": WidthHeightToVec2Node,
+    "KikoWorkflowTimer": KikoWorkflowTimerNode,
     # Note: KikoEmbeddingAutocomplete is not registered as a node
     # It's a settings-only feature accessed through ComfyUI settings menu
 }
@@ -85,6 +89,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxSamplerParams": "Flux Sampler Parameters",
     "PlotParameters+": "Plot Parameters",
     "LoRAFolderBatch": "LoRA Folder Batch",
+    "WidthHeightToVec2": "Width Height to VEC2",
+    "KikoWorkflowTimer": "Workflow Timer",
     # KikoEmbeddingAutocomplete removed - settings only, not a node
 }
 

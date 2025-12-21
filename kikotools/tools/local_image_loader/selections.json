@@ -18,5 +18,60 @@
         "image": {
             "path": "/home/vito/ai-apps/ComfyUI/output/ComfyUI_00002_.png"
         }
+    },
+    "23": {
+        "image": {
+            "path": "/home/vito/ai-apps/ComfyUI/output/Z_Image_Char/Image_00098_.png"
+        }
+    },
+    "69": {
+        "image": {
+            "path": "/home/vito/Downloads/KikoSave_00086.png"
+        }
+    },
+    "52": {
+        "image": {
+            "path": "/home/vito/ai-apps/ComfyUI/output/kiko/XXX/images/kiko_00038_.png"
+        }
+    },
+    "38": {
+        "image": {
+            "path": "/home/vito/Downloads/vito/IMG_20160422_163419.jpg"
+        }
+    },
+    "170": {
+        "image": {
+            "path": "/home/vito/ai-apps/ComfyUI/output/Z_Image_Char/Image_00326_.png"
+        }
+    },
+    "214": {
+        "image": {
+            "path": "/home/vito/ai-apps/ComfyUI/output/Z_Image_Char/Image_00329_.png"
+        }
+    },
+    "299": {
+        "image": {
+            "path": "/home/vito/Downloads/images/KikoSave_00016.png"
+        }
+    },
+    "527": {
+        "image": {
+            "path": "/home/vito/Downloads/ComfyUI_temp_sktzg_00012_.png"
+        }
+    },
+    "522": {
+        "image": {
+            "path": "/home/vito/Downloads/KikoSave_00086.png"
+        }
+    },
+    "517": {
+        "image": {
+            "path": "/home/vito/ai-apps/ComfyUI/output/vids/images/kittybear_00004.png"
+        }
+    },
+    "144": {
+        "image": {
+            "path": "/home/vito/ai-apps/ComfyUI/output/2025-04-24/ComfyUI_00002_.png"
+        }
     }
 }

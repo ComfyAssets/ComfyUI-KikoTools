@@ -30,8 +30,8 @@ app.registerExtension({
             id: "kikotools.custom_colors.enabled",
             name: "🫶 Custom Colors: Enable",
             type: "boolean",
-            defaultValue: false,
-            tooltip: "Enable custom color picker options in node context menu",
+            defaultValue: true,
+            tooltip: "Enable custom color picker options in node context menu (Full/Title/BG)",
         });
 
         app.ui.settings.addSetting({
@@ -70,11 +70,11 @@ app.registerExtension({
     setup() {
         let pickerFull, pickerTitle, pickerBG;
         let activeNode;
-        
+
         // Check if feature is enabled
         const isEnabled = () => {
             const setting = app.ui.settings.getSettingValue("kikotools.custom_colors.enabled");
-            return setting !== undefined ? setting : false;
+            return setting !== undefined ? setting : true;
         };
 
         const getSettings = () => ({
@@ -85,37 +85,49 @@ app.registerExtension({
         });
 
         // Helper function to apply color to node(s)
+        // Uses setColorOption like the built-in colors when possible
         const applyColorToNodes = (colorValue, colorType, node) => {
-            const settings = getSettings();
+            if (!colorValue) return;
+
             const graphcanvas = LGraphCanvas.active_canvas;
-            const nodes = (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) 
-                ? [node] 
+            const nodes = (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1)
+                ? [node]
                 : Object.values(graphcanvas.selected_nodes);
 
-            nodes.forEach(n => {
-                if (colorValue && colorValue !== "" && colorValue.startsWith("#")) {
-                    if (n.constructor === LiteGraph.LGraphGroup) {
-                        // For groups, only set the main color
-                        if (colorType === 'full' || colorType === 'bg') {
+            for (const n of nodes) {
+                if (n.constructor === LiteGraph.LGraphGroup) {
+                    // For groups, use setColorOption if available
+                    if (colorType === 'full' || colorType === 'bg') {
+                        if (n.setColorOption) {
+                            n.setColorOption({ groupcolor: colorValue });
+                        } else {
                             n.color = colorValue;
                         }
-                    } else {
-                        // For regular nodes
-                        switch(colorType) {
-                            case 'full':
-                                n.color = settings.autoShade ? colorShade(colorValue, 20) : colorValue;
+                    }
+                } else {
+                    // For regular nodes
+                    switch(colorType) {
+                        case 'full':
+                            // Use setColorOption if available (like built-in colors)
+                            if (n.setColorOption) {
+                                n.setColorOption({
+                                    color: colorShade(colorValue, 20),
+                                    bgcolor: colorValue
+                                });
+                            } else {
+                                n.color = colorShade(colorValue, 20);
                                 n.bgcolor = colorValue;
-                                break;
-                            case 'title':
-                                n.color = colorValue;
-                                break;
-                            case 'bg':
-                                n.bgcolor = colorValue;
-                                break;
-                        }
+                            }
+                            break;
+                        case 'title':
+                            n.color = colorValue;
+                            break;
+                        case 'bg':
+                            n.bgcolor = colorValue;
+                            break;
                     }
                 }
-            });
+            }
 
             node.setDirtyCanvas(true, true);
         };
@@ -129,13 +141,13 @@ app.registerExtension({
                     display: "none",
                 },
             });
-            
+
             picker.onchange = () => {
                 if (activeNode) {
                     applyColorToNodes(picker.value, type, activeNode);
                 }
             };
-            
+
             return picker;
         };
 
@@ -143,24 +155,36 @@ app.registerExtension({
         const onMenuNodeColors = LGraphCanvas.onMenuNodeColors;
         LGraphCanvas.onMenuNodeColors = function (value, options, e, menu, node) {
             const r = onMenuNodeColors.apply(this, arguments);
-            
+
             // Only add custom options if enabled
             if (!isEnabled()) return r;
-            
+
             const settings = getSettings();
-            
+
             requestAnimationFrame(() => {
                 const menus = document.querySelectorAll(".litecontextmenu");
                 for (let i = menus.length - 1; i >= 0; i--) {
-                    if (menus[i].firstElementChild.textContent.includes("No color") || 
-                        menus[i].firstElementChild.value?.content?.includes("No color")) {
-                        
+                    const menu = menus[i];
+                    if (!menu || !menu.firstElementChild) continue;
+
+                    // Check for "No color" in various ways to be compatible with different frontend versions
+                    const firstChild = menu.firstElementChild;
+                    const textContent = firstChild.textContent || '';
+                    const innerHTML = firstChild.innerHTML || '';
+                    const valueContent = firstChild.value?.content || '';
+
+                    const isColorMenu = textContent.includes("No color") ||
+                                       innerHTML.includes("No color") ||
+                                       valueContent.includes("No color");
+
+                    if (isColorMenu) {
+
                         // Add Custom Full option
                         if (settings.showFull) {
                             $el(
                                 "div.litemenu-entry.submenu",
                                 {
-                                    parent: menus[i],
+                                    parent: menu,
                                     $: (el) => {
                                         el.onclick = () => {
                                             LiteGraph.closeAllContextMenus();
@@ -190,7 +214,7 @@ app.registerExtension({
                             $el(
                                 "div.litemenu-entry.submenu",
                                 {
-                                    parent: menus[i],
+                                    parent: menu,
                                     $: (el) => {
                                         el.onclick = () => {
                                             LiteGraph.closeAllContextMenus();
@@ -220,7 +244,7 @@ app.registerExtension({
                             $el(
                                 "div.litemenu-entry.submenu",
                                 {
-                                    parent: menus[i],
+                                    parent: menu,
                                     $: (el) => {
                                         el.onclick = () => {
                                             LiteGraph.closeAllContextMenus();
@@ -244,7 +268,7 @@ app.registerExtension({
                                 ]
                             );
                         }
-                        
+
                         break;
                     }
                 }

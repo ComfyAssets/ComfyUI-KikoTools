@@ -1,5 +1,5 @@
-import { app } from "../../../scripts/app.js";
-import { ComfyWidgets } from "../../../scripts/widgets.js";
+import { app } from "../../scripts/app.js";
+import { ComfyWidgets } from "../../scripts/widgets.js";
 
 app.registerExtension({
     name: "ComfyAssets.DisplayAny",
@@ -25,11 +25,11 @@ app.registerExtension({
                 const lines = text ? text.split('\n') : [''];
                 const maxLinesPerWidget = 20;
                 const chunks = [];
-                
+
                 for (let i = 0; i < lines.length; i += maxLinesPerWidget) {
                     chunks.push(lines.slice(i, i + maxLinesPerWidget).join('\n'));
                 }
-                
+
                 // Create a widget for each chunk
                 chunks.forEach((chunk, index) => {
                     const w = ComfyWidgets["STRING"](this, `display_${index}`, ["STRING", { multiline: true }], app).widget;
@@ -38,7 +38,7 @@ app.registerExtension({
                     w.inputEl.style.fontFamily = "monospace";
                     w.value = chunk;
                 });
-                
+
                 // Add copy button widget
                 const copyWidget = {
                     type: "button",
@@ -76,9 +76,9 @@ app.registerExtension({
             const onExecuted = nodeType.prototype.onExecuted;
             nodeType.prototype.onExecuted = function (message) {
                 onExecuted?.apply(this, arguments);
-                
+
                 console.log("DisplayAny onExecuted message:", message);
-                
+
                 if (message?.text && message.text.length > 0) {
                     const displayText = message.text[0];
                     console.log("DisplayAny displayText:", displayText);
@@ -113,11 +113,11 @@ app.registerExtension({
             const onNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function() {
                 onNodeCreated?.apply(this, arguments);
-                
+
                 // Set minimum size - make it wider for better JSON display
                 this.size[0] = Math.max(this.size[0], 450);
                 this.size[1] = Math.max(this.size[1], 250);
-                
+
                 // Add placeholder text
                 populate.call(this, "Value will appear here...");
             };
