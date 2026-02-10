@@ -3,6 +3,12 @@ KikoTools package initialization and node registry
 Handles automatic discovery and registration of all ComfyAssets tools
 """
 
+from .tools.batch_list_converter import (
+    ImageBatchToImageListNode,
+    ImageListToImageBatchNode,
+    LatentBatchToLatentListNode,
+    LatentListToLatentBatchNode,
+)
 from .tools.batch_prompts import BatchPromptsNode
 from .tools.display_any import DisplayAnyNode
 from .tools.display_text import DisplayTextNode
@@ -34,6 +40,10 @@ from .tools.xyz_helpers import (
 
 # ComfyUI node registration mappings
 NODE_CLASS_MAPPINGS = {
+    "ImageBatchToImageList": ImageBatchToImageListNode,
+    "ImageListToImageBatch": ImageListToImageBatchNode,
+    "LatentBatchToLatentList": LatentBatchToLatentListNode,
+    "LatentListToLatentBatch": LatentListToLatentBatchNode,
     "BatchPrompts": BatchPromptsNode,
     "ResolutionCalculator": ResolutionCalculatorNode,
     "WidthHeightSelector": WidthHeightSelectorNode,
@@ -65,6 +75,10 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "ImageBatchToImageList": "Image Batch to Image List",
+    "ImageListToImageBatch": "Image List to Image Batch",
+    "LatentBatchToLatentList": "Latent Batch to Latent List",
+    "LatentListToLatentBatch": "Latent List to Latent Batch",
     "BatchPrompts": "Batch Prompts",
     "ResolutionCalculator": "Resolution Calculator",
     "WidthHeightSelector": "Width Height Selector",
