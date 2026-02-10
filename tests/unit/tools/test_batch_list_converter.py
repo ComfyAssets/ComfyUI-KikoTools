@@ -107,6 +107,52 @@ class TestBatchListConverterLogic:
         reconstructed = join_latent_batch(split_latent_batch(original))
         assert torch.equal(original["samples"], reconstructed["samples"])
 
+    def test_split_latent_preserves_noise_mask(self):
+        """noise_mask is sliced alongside samples."""
+        latent = {
+            "samples": torch.rand(3, 4, 32, 32),
+            "noise_mask": torch.rand(3, 1, 32, 32),
+        }
+        result = split_latent_batch(latent)
+        assert len(result) == 3
+        for i, item in enumerate(result):
+            assert "noise_mask" in item
+            assert item["noise_mask"].shape == (1, 1, 32, 32)
+            assert torch.equal(item["noise_mask"], latent["noise_mask"][i : i + 1])
+
+    def test_join_latent_preserves_noise_mask(self):
+        """noise_mask is concatenated alongside samples."""
+        latent_list = [
+            {
+                "samples": torch.rand(1, 4, 32, 32),
+                "noise_mask": torch.rand(1, 1, 32, 32),
+            }
+            for _ in range(3)
+        ]
+        result = join_latent_batch(latent_list)
+        assert "noise_mask" in result
+        assert result["noise_mask"].shape == (3, 1, 32, 32)
+
+    def test_latent_roundtrip_with_extra_keys(self):
+        """Round-trip preserves all tensor keys."""
+        original = {
+            "samples": torch.rand(4, 4, 64, 64),
+            "noise_mask": torch.rand(4, 1, 64, 64),
+        }
+        reconstructed = join_latent_batch(split_latent_batch(original))
+        assert torch.equal(original["samples"], reconstructed["samples"])
+        assert torch.equal(original["noise_mask"], reconstructed["noise_mask"])
+
+    def test_split_latent_copies_non_tensor_values(self):
+        """Non-tensor metadata is copied to each item."""
+        latent = {
+            "samples": torch.rand(2, 4, 32, 32),
+            "some_flag": "preserve_me",
+        }
+        result = split_latent_batch(latent)
+        for item in result:
+            assert item["some_flag"] == "preserve_me"
+
 
 class TestBatchListConverterNodes:
     """Test ComfyUI node classes."""
