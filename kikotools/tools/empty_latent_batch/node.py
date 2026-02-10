@@ -93,14 +93,14 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
             }
         }
 
-    RETURN_TYPES = ("LATENT", "INT", "INT")
-    RETURN_NAMES = ("latent", "width", "height")
+    RETURN_TYPES = ("LATENT", "INT", "INT", "INT")
+    RETURN_NAMES = ("latent", "width", "height", "batch_size")
     FUNCTION = "create_empty_latent"
     CATEGORY = "🫶 ComfyAssets/📦 Latents"
 
     def create_empty_latent(
         self, preset: str, width: int, height: int, batch_size: int
-    ) -> Tuple[Dict[str, torch.Tensor], int, int]:
+    ) -> Tuple[Dict[str, torch.Tensor], int, int, int]:
         """
         Create empty latent tensor with specified dimensions and batch size.
 
@@ -111,7 +111,7 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
             batch_size: Number of latents in the batch
 
         Returns:
-            Tuple containing (latent dictionary with 'samples' tensor, width, height)
+            Tuple containing (latent dict, width, height, batch_size)
         """
         try:
             # Extract original preset name from formatted string if needed
@@ -160,7 +160,7 @@ class EmptyLatentBatchNode(ComfyAssetsBaseNode):
                 f"(pixel dims: {final_width}×{final_height})"
             )
 
-            return (latent_dict, final_width, final_height)
+            return (latent_dict, final_width, final_height, batch_size)
 
         except Exception as e:
             # Handle any unexpected errors gracefully
