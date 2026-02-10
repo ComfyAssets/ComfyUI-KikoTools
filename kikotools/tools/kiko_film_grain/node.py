@@ -75,7 +75,7 @@ class KikoFilmGrainNode(ComfyAssetsBaseNode):
                     {
                         "default": 0,
                         "min": 0,
-                        "max": 0xFFFFFFFFFFFFFFFF,
+                        "max": 0xFFFFFFFF,  # 2**32 - 1
                         "description": "Random seed for grain pattern generation",
                     },
                 ),

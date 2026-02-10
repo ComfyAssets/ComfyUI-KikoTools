@@ -43,7 +43,7 @@ class TestSeedHistoryNode:
         assert "min" in seed_config[1]
         assert "max" in seed_config[1]
         assert seed_config[1]["min"] == 0
-        assert seed_config[1]["max"] == 0xFFFFFFFFFFFFFFFF
+        assert seed_config[1]["max"] == 0xFFFFFFFF  # 2**32 - 1
 
         # Test return types
         assert SeedHistoryNode.RETURN_TYPES == ("INT",)
@@ -56,7 +56,7 @@ class TestSeedHistoryNode:
         node = SeedHistoryNode()
 
         # Test various valid seeds
-        test_seeds = [0, 12345, 999999, 0xFFFFFFFFFFFFFFFF]
+        test_seeds = [0, 12345, 999999, 0xFFFFFFFF]  # 2**32 - 1
 
         for seed in test_seeds:
             result = node.output_seed(seed)
@@ -73,7 +73,7 @@ class TestSeedHistoryNode:
         assert result == (12345,)  # Fallback
 
         # Test seeds too large
-        result = node.output_seed(0xFFFFFFFFFFFFFFFF + 1)
+        result = node.output_seed(0xFFFFFFFF + 1)  # 2**32
         assert result == (12345,)  # Fallback
 
     def test_generate_new_seed(self):
@@ -100,11 +100,11 @@ class TestSeedHistoryNode:
         # Valid seeds
         assert node.validate_seed_input(0)
         assert node.validate_seed_input(12345)
-        assert node.validate_seed_input(0xFFFFFFFFFFFFFFFF)
+        assert node.validate_seed_input(0xFFFFFFFF)  # 2**32 - 1
 
         # Invalid seeds
         assert not node.validate_seed_input(-1)
-        assert not node.validate_seed_input(0xFFFFFFFFFFFFFFFF + 1)
+        assert not node.validate_seed_input(0xFFFFFFFF + 1)  # 2**32
         assert not node.validate_seed_input(None)
 
     def test_get_seed_info(self):
@@ -132,7 +132,7 @@ class TestSeedHistoryNode:
         range_info = node.get_seed_range_info()
         assert "Valid range" in range_info
         # Check for the hex representation which should be in the string
-        assert "0xffffffffffffffff" in range_info.lower()
+        assert "0xffffffff" in range_info.lower()  # 2**32 - 1
 
     def test_class_methods(self):
         """Test class methods."""
@@ -143,9 +143,9 @@ class TestSeedHistoryNode:
         # Test range checking
         assert SeedHistoryNode.is_seed_in_range(0)
         assert SeedHistoryNode.is_seed_in_range(12345)
-        assert SeedHistoryNode.is_seed_in_range(0xFFFFFFFFFFFFFFFF)
+        assert SeedHistoryNode.is_seed_in_range(0xFFFFFFFF)  # 2**32 - 1
         assert not SeedHistoryNode.is_seed_in_range(-1)
-        assert not SeedHistoryNode.is_seed_in_range(0xFFFFFFFFFFFFFFFF + 1)
+        assert not SeedHistoryNode.is_seed_in_range(0xFFFFFFFF + 1)  # 2**32
 
 
 class TestSeedHistoryLogic:
@@ -168,11 +168,11 @@ class TestSeedHistoryLogic:
         # Valid seeds
         assert validate_seed_value(0)
         assert validate_seed_value(12345)
-        assert validate_seed_value(0xFFFFFFFFFFFFFFFF)
+        assert validate_seed_value(0xFFFFFFFF)  # 2**32 - 1
 
         # Invalid seeds
         assert not validate_seed_value(-1)
-        assert not validate_seed_value(0xFFFFFFFFFFFFFFFF + 1)
+        assert not validate_seed_value(0xFFFFFFFF + 1)  # 2**32
         assert not validate_seed_value(None)
         assert not validate_seed_value("invalid")
         assert not validate_seed_value([])
@@ -182,7 +182,7 @@ class TestSeedHistoryLogic:
         # Valid seeds should pass through
         assert sanitize_seed_value(12345) == 12345
         assert sanitize_seed_value(0) == 0
-        assert sanitize_seed_value(0xFFFFFFFFFFFFFFFF) == 0xFFFFFFFFFFFFFFFF
+        assert sanitize_seed_value(0xFFFFFFFF) == 0xFFFFFFFF  # 2**32 - 1
 
         # String numbers should convert
         assert sanitize_seed_value("12345") == 12345
@@ -190,7 +190,7 @@ class TestSeedHistoryLogic:
 
         # Out of range should clamp
         assert sanitize_seed_value(-100) == 0
-        assert sanitize_seed_value(0xFFFFFFFFFFFFFFFF + 100) == 0xFFFFFFFFFFFFFFFF
+        assert sanitize_seed_value(0xFFFFFFFF + 100) == 0xFFFFFFFF  # clamp to 2**32 - 1
 
         # Invalid should raise
         try:

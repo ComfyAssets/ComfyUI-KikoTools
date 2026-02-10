@@ -296,7 +296,7 @@ app.registerExtension({
 
       // Generate new random seed
       nodeType.prototype.generateRandomSeed = function () {
-        const newSeed = Math.floor(Math.random() * 0xFFFFFFFFFFFFFFFF);
+        const newSeed = Math.floor(Math.random() * 0xFFFFFFFF);  // 2**32 - 1
 
         const seedWidget = this.widgets?.find(w => w.name === "seed");
         if (seedWidget) {

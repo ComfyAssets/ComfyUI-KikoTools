@@ -10,14 +10,14 @@ def generate_random_seed() -> int:
     Generate a cryptographically strong random seed value.
 
     Returns:
-        Random integer in the valid ComfyUI seed range
+        Random integer in the valid ComfyUI seed range (0 to 2**32 - 1)
     """
-    return random.randint(0, 0xFFFFFFFFFFFFFFFF)
+    return random.randint(0, 0xFFFFFFFF)  # 2**32 - 1
 
 
 def validate_seed_value(seed: Any) -> bool:
     """
-    Validate that a seed value is within acceptable range.
+    Validate that a seed value is within acceptable range (0 to 2**32 - 1).
 
     Args:
         seed: Seed value to validate
@@ -30,7 +30,7 @@ def validate_seed_value(seed: Any) -> bool:
 
     try:
         seed_int = int(seed)
-        return 0 <= seed_int <= 0xFFFFFFFFFFFFFFFF
+        return 0 <= seed_int <= 0xFFFFFFFF  # 2**32 - 1
     except (ValueError, TypeError):
         return False
 
@@ -54,11 +54,11 @@ def sanitize_seed_value(seed: Any) -> int:
     try:
         seed_int = int(seed)
 
-        # Clamp to valid range
+        # Clamp to valid range (0 to 2**32 - 1)
         if seed_int < 0:
             seed_int = 0
-        elif seed_int > 0xFFFFFFFFFFFFFFFF:
-            seed_int = 0xFFFFFFFFFFFFFFFF
+        elif seed_int > 0xFFFFFFFF:
+            seed_int = 0xFFFFFFFF
 
         return seed_int
 
