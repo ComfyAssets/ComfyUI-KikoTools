@@ -41,12 +41,13 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
     FUNCTION = "output_seed"
     CATEGORY = "🫶 ComfyAssets/🌱 Seeds"
 
-    def output_seed(self, seed: int) -> Tuple[int]:
+    def output_seed(self, seed: int, **kwargs) -> Tuple[int]:
         """
         Output the seed value for use in other nodes.
 
         Args:
             seed: Input seed value
+            **kwargs: Accepts legacy parameters (e.g. mode) for backward compatibility
 
         Returns:
             Tuple containing the seed value
