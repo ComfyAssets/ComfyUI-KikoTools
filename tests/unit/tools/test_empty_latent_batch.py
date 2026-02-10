@@ -132,7 +132,12 @@ class TestEmptyLatentBatchNode:
     def test_node_attributes(self):
         """Test node class attributes."""
         assert EmptyLatentBatchNode.RETURN_TYPES == ("LATENT", "INT", "INT", "INT")
-        assert EmptyLatentBatchNode.RETURN_NAMES == ("latent", "width", "height", "batch_size")
+        assert EmptyLatentBatchNode.RETURN_NAMES == (
+            "latent",
+            "width",
+            "height",
+            "batch_size",
+        )
         assert EmptyLatentBatchNode.FUNCTION == "create_empty_latent"
         assert EmptyLatentBatchNode.CATEGORY == "🫶 ComfyAssets/📦 Latents"
 

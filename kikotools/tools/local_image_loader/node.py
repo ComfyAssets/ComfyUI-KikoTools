@@ -8,7 +8,6 @@ from typing import Dict, Any, Tuple
 from ...base.base_node import ComfyAssetsBaseNode
 from .logic import load_image_from_path, create_empty_tensor
 
-
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))
 SELECTIONS_FILE = os.path.join(NODE_DIR, "selections.json")
 CONFIG_FILE = os.path.join(NODE_DIR, "config.json")
