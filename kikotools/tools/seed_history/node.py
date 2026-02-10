@@ -27,26 +27,10 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
                     {
                         "default": 12345,
                         "min": 0,
-                        "max": 0xFFFFFFFFFFFFFFFF,
+                        "max": 0xFFFFFFFF,  # 2**32 - 1
                         "control_after_generate": True,
                         "tooltip": "Seed value for generation processes. "
-                        "Auto-increments/decrements after each run based on mode.",
-                    },
-                ),
-            },
-            "optional": {
-                "mode": (
-                    [
-                        "",
-                        "fixed",
-                        "increment",
-                        "decrement",
-                        "randomize",
-                    ],  # Added empty string for legacy workflows
-                    {
-                        "default": "fixed",
-                        "tooltip": "Seed behavior after generation: "
-                        "fixed (no change), increment (+1), decrement (-1), or randomize (new random)",
+                        "Use 'control after generate' to set behavior after each run.",
                     },
                 ),
             },
@@ -57,51 +41,20 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
     FUNCTION = "output_seed"
     CATEGORY = "🫶 ComfyAssets/🌱 Seeds"
 
-    @classmethod
-    def VALIDATE_INPUTS(cls, seed, mode="fixed"):
-        """Validate inputs and handle legacy workflows."""
-        # Handle empty or missing mode from old workflows (legacy support)
-        if mode is None or mode == "" or mode == "undefined":
-            return True  # Will use default "fixed" in output_seed
-
-        # Validate mode is in allowed list
-        valid_modes = ["fixed", "increment", "decrement", "randomize"]
-        if mode not in valid_modes:
-            return f"Invalid mode: {mode}. Must be one of {valid_modes}"
-
-        return True
-
-    def output_seed(self, seed: int, mode: str = "fixed") -> Tuple[int]:
+    def output_seed(self, seed: int, **kwargs) -> Tuple[int]:
         """
         Output the seed value for use in other nodes.
 
         Args:
             seed: Input seed value
-            mode: Seed mode (fixed, increment, decrement, randomize) - not used in output,
-                  but controls the widget behavior via control_after_generate
+            **kwargs: Accepts legacy parameters (e.g. mode) for backward compatibility
 
         Returns:
             Tuple containing the seed value
         """
         try:
-            # Handle empty mode from old workflows
-            if not mode or mode == "":
-                mode = "fixed"
-
-            # Validate mode is in allowed list
-            valid_modes = ["fixed", "increment", "decrement", "randomize"]
-            if mode not in valid_modes:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(
-                    f"{self.__class__.__name__}: Invalid mode '{mode}'. Using 'fixed'."
-                )
-                mode = "fixed"
-
             # Validate and sanitize the seed
             if not validate_seed_value(seed):
-                # Log the validation error but don't raise
                 import logging
 
                 logger = logging.getLogger(__name__)
@@ -112,15 +65,9 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
                 return (12345,)
 
             clean_seed = sanitize_seed_value(seed)
-
-            # Note: The mode parameter controls the widget's control_after_generate behavior
-            # The actual increment/decrement/randomize happens automatically in the UI
-            # based on the control_after_generate setting and the mode dropdown value
-
             return (clean_seed,)
 
         except Exception as e:
-            # Handle any unexpected errors gracefully
             import logging
 
             logger = logging.getLogger(__name__)
@@ -194,7 +141,7 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
         Returns:
             Range information string
         """
-        max_seed = 0xFFFFFFFFFFFFFFFF
+        max_seed = 0xFFFFFFFF  # 2**32 - 1
         return f"Valid range: 0 to {max_seed:,} ({hex(max_seed)})"
 
     @classmethod
@@ -218,7 +165,7 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
         Returns:
             True if seed is in valid range
         """
-        return 0 <= seed <= 0xFFFFFFFFFFFFFFFF
+        return 0 <= seed <= 0xFFFFFFFF  # 2**32 - 1
 
     def __str__(self) -> str:
         """String representation of the node."""
@@ -230,6 +177,6 @@ class SeedHistoryNode(ComfyAssetsBaseNode):
             f"SeedHistoryNode("
             f"category='{self.CATEGORY}', "
             f"function='{self.FUNCTION}', "
-            f"max_seed={hex(0xFFFFFFFFFFFFFFFF)}"
+            f"max_seed={hex(0xFFFFFFFF)}"  # 2**32 - 1
             f")"
         )

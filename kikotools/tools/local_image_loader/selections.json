@@ -11,7 +11,7 @@
     },
     "18": {
         "image": {
-            "path": "/home/vito/ai-apps/ComfyUI/output/ComfyUI_00002_.png"
+            "path": "/home/vito/ai-apps/ComfyUI/output/vids/KikoSave_00005.png"
         }
     },
     "445": {
@@ -66,12 +66,22 @@
     },
     "517": {
         "image": {
-            "path": "/home/vito/ai-apps/ComfyUI/output/vids/images/kittybear_00004.png"
+            "path": "/home/vito/ai-apps/ComfyUI/output/vids/KikoSave_00005.png"
         }
     },
     "144": {
         "image": {
             "path": "/home/vito/ai-apps/ComfyUI/output/2025-04-24/ComfyUI_00002_.png"
+        }
+    },
+    "569": {
+        "image": {
+            "path": "/home/vito/ai-apps/ComfyUI/output/vids/KikoSave_00008.png"
+        }
+    },
+    "136": {
+        "image": {
+            "path": "/home/vito/ai-apps/ComfyUI/output/vids/KikoSave_00005.png"
         }
     }
 }

@@ -131,8 +131,13 @@ class TestEmptyLatentBatchNode:
 
     def test_node_attributes(self):
         """Test node class attributes."""
-        assert EmptyLatentBatchNode.RETURN_TYPES == ("LATENT", "INT", "INT")
-        assert EmptyLatentBatchNode.RETURN_NAMES == ("latent", "width", "height")
+        assert EmptyLatentBatchNode.RETURN_TYPES == ("LATENT", "INT", "INT", "INT")
+        assert EmptyLatentBatchNode.RETURN_NAMES == (
+            "latent",
+            "width",
+            "height",
+            "batch_size",
+        )
         assert EmptyLatentBatchNode.FUNCTION == "create_empty_latent"
         assert EmptyLatentBatchNode.CATEGORY == "🫶 ComfyAssets/📦 Latents"
 
@@ -141,13 +146,14 @@ class TestEmptyLatentBatchNode:
         result = self.node.create_empty_latent("custom", 512, 512, 1)
 
         assert isinstance(result, tuple)
-        assert len(result) == 3  # Now returns (latent, width, height)
+        assert len(result) == 4  # Returns (latent, width, height, batch_size)
 
-        latent_dict, width, height = result
+        latent_dict, width, height, batch_size = result
         assert isinstance(latent_dict, dict)
         assert "samples" in latent_dict
         assert width == 512
         assert height == 512
+        assert batch_size == 1
 
         samples = latent_dict["samples"]
         assert isinstance(samples, torch.Tensor)
@@ -155,12 +161,13 @@ class TestEmptyLatentBatchNode:
 
     def test_create_empty_latent_with_batch(self):
         """Test empty latent creation with batch size."""
-        batch_size = 3
-        result = self.node.create_empty_latent("custom", 1024, 768, batch_size)
+        input_batch_size = 3
+        result = self.node.create_empty_latent("custom", 1024, 768, input_batch_size)
 
-        latent_dict, width, height = result
+        latent_dict, width, height, batch_size = result
         assert width == 1024
         assert height == 768
+        assert batch_size == 3
         samples = latent_dict["samples"]
         assert samples.shape == (3, 4, 96, 128)  # batch=3, 768/8=96, 1024/8=128
 
@@ -169,10 +176,11 @@ class TestEmptyLatentBatchNode:
         # Input dimensions not divisible by 8
         result = self.node.create_empty_latent("custom", 513, 515, 1)
 
-        latent_dict, width, height = result
+        latent_dict, width, height, batch_size = result
         # Dimensions should be rounded UP to nearest multiple of 8
         assert width == 520  # 513 -> 520
         assert height == 520  # 515 -> 520
+        assert batch_size == 1
         samples = latent_dict["samples"]
         # Should be adjusted to 520x520 -> 65x65 latent
         assert samples.shape == (1, 4, 65, 65)
