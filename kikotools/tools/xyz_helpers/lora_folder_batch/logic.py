@@ -1,11 +1,16 @@
 """Logic module for LoRA Folder Batch node."""
 
+import math
 import os
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
+
+MAX_STRENGTH_VALUES = 1000
+DEFAULT_RANGE_STEP = 0.1
+_RANGE_EPSILON = 1e-4
 
 
 def get_lora_folders() -> List[str]:
@@ -35,106 +40,100 @@ def get_lora_folders() -> List[str]:
         return [".", "flux", "sdxl", "sd15"]
 
 
-def scan_folder_for_loras(folder_path: str) -> List[str]:  # noqa: C901
-    """
-    Scan a folder for LoRA files (.safetensors).
-
-    Args:
-        folder_path: Path to folder to scan (absolute or relative to models/loras)
-
-    Returns:
-        List of LoRA filenames relative to models/loras directory
-    """
+def _get_lora_roots() -> List[str]:
+    """Return every configured loras root directory (empty if unavailable)."""
     try:
         import folder_paths
 
-        # Get all LoRA paths from ComfyUI (includes extra_model_paths)
-        lora_paths = folder_paths.folder_names_and_paths.get("loras", [[]])[0]
-
-        # Determine the full path and base lora path
-        full_path = None
-        base_lora_path = None
-
-        # Check if this is an absolute path
-        if os.path.isabs(folder_path):
-            full_path = folder_path
-
-            # Check if this path is inside any of the known lora directories
-            for lora_base in lora_paths:
-                # Normalize paths for comparison
-                norm_full = os.path.normpath(full_path)
-                norm_base = os.path.normpath(lora_base)
-
-                # Check if full_path starts with this lora_base
-                if norm_full.startswith(norm_base):
-                    base_lora_path = lora_base
-                    break
-
-                # Also check if the path is a subdirectory under lora/loras
-                if "lora" in norm_full.lower():
-                    # Find the lora or loras directory in the path
-                    path_parts = norm_full.replace("\\", "/").split("/")
-                    for i, part in enumerate(path_parts):
-                        if part.lower() in ["lora", "loras"]:
-                            # Check if this matches our lora_base
-                            potential_base = "/".join(path_parts[: i + 1])
-                            if os.path.normpath(potential_base) == norm_base:
-                                base_lora_path = lora_base
-                                break
-                    if base_lora_path:
-                        break
-        else:
-            # Relative path provided
-            base_lora_path = lora_paths[0] if lora_paths else ""
-            full_path = os.path.join(base_lora_path, folder_path)
-
-        if not os.path.exists(full_path):
-            logger.warning(f"Folder does not exist: {full_path}")
-            return []
-
-        # Scan for .safetensors files recursively
-        lora_files = []
-        for root, _, files in os.walk(full_path):
-            for file in files:
-                if file.endswith(".safetensors"):
-                    # Get the full path to the file
-                    file_full_path = os.path.join(root, file)
-
-                    # Calculate the correct relative path for ComfyUI
-                    if base_lora_path:
-                        # Path is inside a known lora directory
-                        try:
-                            rel_path = os.path.relpath(file_full_path, base_lora_path)
-                            lora_files.append(rel_path.replace("\\", "/"))
-                        except ValueError:
-                            # Different drives on Windows, use path relative to scan folder
-                            rel_path = os.path.relpath(file_full_path, full_path)
-                            if rel_path == ".":
-                                lora_files.append(file)
-                            else:
-                                lora_files.append(rel_path.replace("\\", "/"))
-                    else:
-                        # Path is outside known lora directories
-                        # Return path relative to the scanned folder
-                        rel_path = os.path.relpath(file_full_path, full_path)
-                        if rel_path == ".":
-                            lora_files.append(file)
-                        else:
-                            lora_files.append(rel_path.replace("\\", "/"))
-
-        # Sort naturally (handles epoch numbers properly)
-        lora_files = natural_sort(lora_files)
-
-        logger.info(f"Found {len(lora_files)} LoRA files in {folder_path}")
-        if lora_files and logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f"Base lora path: {base_lora_path}")
-            logger.debug(f"Full scan path: {full_path}")
-            logger.debug(f"First few LoRA paths returned: {lora_files[:3]}")
-        return lora_files
-
-    except Exception as e:
-        logger.error(f"Error scanning folder {folder_path}: {e}")
+        entry = folder_paths.folder_names_and_paths.get("loras")
+        return list(entry[0]) if entry else []
+    except (ImportError, AttributeError, IndexError, TypeError):
         return []
+
+
+def _is_within(path: str, root: str) -> bool:
+    """True if realpath `path` equals or is inside realpath `root`."""
+    try:
+        real_path, real_root = os.path.realpath(path), os.path.realpath(root)
+        return os.path.commonpath([real_path, real_root]) == real_root
+    except ValueError:  # different drives or mixed absolute/relative
+        return False
+
+
+def _resolve_scan_targets(folder_path: str) -> List[Tuple[str, Optional[str]]]:
+    """
+    Resolve a folder setting to (directory, base_root) pairs to scan.
+
+    base_root is the loras root the directory lives in, or None when the
+    directory is an absolute path outside every known root.
+    """
+    roots = _get_lora_roots()
+
+    if os.path.isabs(folder_path):
+        base = next((r for r in roots if _is_within(folder_path, r)), None)
+        return [(folder_path, base)]
+
+    targets = []
+    for root in roots:
+        candidate = os.path.join(root, folder_path)
+        if not _is_within(candidate, root):
+            logger.warning(f"Folder escapes the loras directory: {folder_path}")
+            continue
+        targets.append((candidate, root))
+    return targets
+
+
+def _scan_entries(folder_path: str) -> List[Tuple[str, str]]:
+    """Return (relative_name, absolute_path) for every .safetensors found."""
+    entries: Dict[str, str] = {}
+    for directory, base in _resolve_scan_targets(folder_path):
+        if not os.path.isdir(directory):
+            continue
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if not file.endswith(".safetensors"):
+                    continue
+                full = os.path.join(root, file)
+                try:
+                    rel = os.path.relpath(full, base or directory)
+                except ValueError:
+                    rel = os.path.relpath(full, directory)
+                entries.setdefault(rel.replace("\\", "/"), full)
+    return [(name, entries[name]) for name in natural_sort(list(entries))]
+
+
+def scan_folder_for_loras(folder_path: str) -> List[str]:
+    """
+    Scan a folder for LoRA files (.safetensors).
+
+    Relative folders are searched in every configured loras root. Absolute
+    folders are matched to a root by real-path containment (so a sibling like
+    ``loras_backup`` is not mistaken for ``loras``).
+
+    Args:
+        folder_path: Folder to scan (absolute or relative to the loras roots)
+
+    Returns:
+        Naturally sorted LoRA names relative to their loras root (or to the
+        scanned folder when it lies outside every root)
+    """
+    names = [name for name, _ in _scan_entries(folder_path)]
+    if not names:
+        logger.warning(f"No LoRA files found in {folder_path}")
+    else:
+        logger.info(f"Found {len(names)} LoRA files in {folder_path}")
+    return names
+
+
+def get_lora_file_mtimes(folder_path: str) -> List[Tuple[str, float]]:
+    """Return sorted (name, mtime) pairs for LoRAs in a folder."""
+    result = []
+    for name, full in _scan_entries(folder_path):
+        try:
+            result.append((name, os.path.getmtime(full)))
+        except OSError:
+            result.append((name, -1.0))
+    return result
 
 
 def sort_lora_files(lora_files: List[str], sort_order: str) -> List[str]:
@@ -232,66 +231,82 @@ def filter_loras_by_pattern(
     return filtered
 
 
-def parse_strength_string(strength_str: str) -> List[float]:  # noqa: C901
+def _parse_finite(token: str, what: str, original: str) -> float:
+    try:
+        value = float(token.strip())
+    except ValueError:
+        raise ValueError(f"Invalid strength {what} '{token.strip()}' in '{original}'")
+    if not math.isfinite(value):
+        raise ValueError(f"Invalid strength {what} '{token.strip()}' in '{original}'")
+    return value
+
+
+def _parse_strength_range(text: str) -> List[float]:
+    """Parse 'start...end' or 'start...end+step'."""
+    parts = text.split("...")
+    if len(parts) != 2:
+        raise ValueError(f"Invalid strength range '{text}': use start...end[+step]")
+    start = _parse_finite(parts[0], "start", text)
+
+    end_part = parts[1]
+    if "+" in end_part:
+        pieces = end_part.split("+")
+        if len(pieces) != 2:
+            raise ValueError(f"Invalid strength range '{text}': use start...end[+step]")
+        end = _parse_finite(pieces[0], "end", text)
+        step = _parse_finite(pieces[1], "step", text)
+    else:
+        end = _parse_finite(end_part, "end", text)
+        step = DEFAULT_RANGE_STEP
+
+    if step <= 0:
+        raise ValueError(
+            f"Invalid strength range '{text}': step must be greater than 0"
+        )
+    if end < start:
+        raise ValueError(
+            f"Invalid strength range '{text}': reversed range "
+            f"(start {start:g} is greater than end {end:g})"
+        )
+
+    count = int(math.floor((end - start) / step + _RANGE_EPSILON)) + 1
+    if count > MAX_STRENGTH_VALUES:
+        raise ValueError(
+            f"Strength range '{text}' would generate {count} values; "
+            f"the maximum is {MAX_STRENGTH_VALUES}"
+        )
+    return [round(start + i * step, 4) for i in range(count)]
+
+
+def parse_strength_string(strength_str: str) -> List[float]:
     """
     Parse strength string into list of values.
 
     Supports:
+    - Blank: defaults to [1.0]
     - Single value: "1.0"
     - Multiple values: "0.5, 0.75, 1.0"
-    - Range: "0.5...1.0" (with optional step)
+    - Range: "0.5...1.0" (default step 0.1) or "0.5...1.0+0.25"
 
-    Args:
-        strength_str: String representation of strengths
-
-    Returns:
-        List of strength values
+    Raises:
+        ValueError: On malformed input, non-positive step, reversed range, or
+            more than MAX_STRENGTH_VALUES generated values.
     """
     strength_str = strength_str.strip()
-
     if not strength_str:
         return [1.0]
 
-    # Check for range notation
     if "..." in strength_str:
-        parts = strength_str.split("...")
-        if len(parts) == 2:
-            try:
-                start = float(parts[0].strip())
-                end_part = parts[1].strip()
+        return _parse_strength_range(strength_str)
 
-                # Check for step
-                if "+" in end_part:
-                    end_str, step_str = end_part.split("+")
-                    end = float(end_str.strip())
-                    step = float(step_str.strip())
-                else:
-                    end = float(end_part)
-                    step = 0.1  # Default step
-
-                # Generate range
-                values = []
-                current = start
-                while current <= end + 0.0001:  # Small epsilon for float comparison
-                    values.append(round(current, 4))
-                    current += step
-
-                return values
-            except ValueError as e:
-                logger.error(f"Invalid range format: {e}")
-                return [1.0]
-
-    # Parse comma-separated values
-    try:
-        values = []
-        for item in strength_str.split(","):
-            item = item.strip()
-            if item:
-                values.append(float(item))
-        return values if values else [1.0]
-    except ValueError as e:
-        logger.error(f"Invalid strength values: {e}")
-        return [1.0]
+    values = [
+        _parse_finite(item, "value", strength_str)
+        for item in strength_str.split(",")
+        if item.strip()
+    ]
+    if not values:
+        raise ValueError(f"No strength values found in '{strength_str}'")
+    return values
 
 
 def create_lora_params(
@@ -311,6 +326,9 @@ def create_lora_params(
     if not lora_files:
         logger.warning("No LoRA files provided")
         return {"loras": [], "strengths": []}
+
+    if not strengths:
+        raise ValueError("At least one strength value is required")
 
     if batch_mode == "combinatorial":
         # Each LoRA gets tested with each strength
@@ -412,33 +430,15 @@ def validate_folder_path(folder_path: str) -> bool:
     """
     Validate that the folder path exists and is accessible.
 
-    Args:
-        folder_path: Folder path to validate (absolute or relative)
-
-    Returns:
-        True if valid
+    Relative paths are accepted if they exist inside any loras root.
     """
     try:
-        # Handle absolute paths
         if os.path.isabs(folder_path):
-            return os.path.exists(folder_path) and os.path.isdir(folder_path)
+            return os.path.isdir(folder_path)
 
-        # Handle relative paths
-        import folder_paths
-
-        lora_paths = folder_paths.folder_names_and_paths.get("loras", [[]])[0]
-
-        if not lora_paths:
-            return False
-
-        lora_base_path = lora_paths[0]
-
-        if folder_path == ".":
-            full_path = lora_base_path
-        else:
-            full_path = os.path.join(lora_base_path, folder_path)
-
-        return os.path.exists(full_path) and os.path.isdir(full_path)
-
+        return any(
+            os.path.isdir(directory)
+            for directory, _ in _resolve_scan_targets(folder_path)
+        )
     except Exception:
         return False

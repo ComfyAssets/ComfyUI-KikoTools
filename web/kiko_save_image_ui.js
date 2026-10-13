@@ -377,6 +377,26 @@ function injectStyles() {
     }
 }
 
+// Escape a value for safe interpolation into HTML text or attribute contexts
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Build a ComfyUI /api/view URL with every parameter encoded
+function buildViewUrl(filename, subfolder, type) {
+    const params = new URLSearchParams({ filename: filename ?? '' });
+    if (subfolder && subfolder.trim()) {
+        params.set('subfolder', subfolder);
+    }
+    params.set('type', type || 'output');
+    return `${window.location.origin}/api/view?${params.toString()}`;
+}
+
 // Format file size for display
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 B';
@@ -388,8 +408,6 @@ function formatFileSize(bytes) {
 
 // Open image in new tab
 function openImageInTab(imagePath, subfolder = '', enablePopup = true) {
-    console.log(`KikoSaveImage: Attempting to open image: ${imagePath}, subfolder: ${subfolder}`);
-
     // Note: enablePopup parameter is kept for compatibility but not used
     // since popup now controls viewer visibility, not individual image clicks
 
@@ -403,16 +421,12 @@ function openImageInTab(imagePath, subfolder = '', enablePopup = true) {
         fullPath = `${basePath}/api/view?filename=${encodeURIComponent(imagePath)}&type=output`;
     }
 
-    console.log(`KikoSaveImage: Opening URL: ${fullPath}`);
-
     // Extract clean filename for window name (remove timestamp and batch number)
     const cleanName = imagePath.split('_').slice(0, -2).join('_') || 'KikoSaveImage';
 
     // Try to open the image with a clean window name
     const newWindow = window.open(fullPath, cleanName.replace(/[^a-zA-Z0-9]/g, '_'));
-    if (newWindow) {
-        console.log('KikoSaveImage: Successfully opened new window');
-    } else {
+    if (!newWindow) {
         console.error('KikoSaveImage: Failed to open new window - popup blocked?');
         // Fallback: copy URL to clipboard and alert user
         navigator.clipboard.writeText(fullPath).then(() => {
@@ -435,11 +449,25 @@ class KikoImageViewer extends HTMLElement {
         this.dragOffset = { x: 0, y: 0 };
         this.lastHeaderClick = 0;
 
+        // Bind document-level drag handlers once so they can be removed later
+        this.boundHandleDrag = this.handleDrag.bind(this);
+        this.boundEndDrag = this.endDrag.bind(this);
+
         // Always start at default position
     }
 
     static get observedAttributes() {
         return ['data'];
+    }
+
+    connectedCallback() {
+        document.addEventListener('mousemove', this.boundHandleDrag);
+        document.addEventListener('mouseup', this.boundEndDrag);
+    }
+
+    disconnectedCallback() {
+        document.removeEventListener('mousemove', this.boundHandleDrag);
+        document.removeEventListener('mouseup', this.boundEndDrag);
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
@@ -455,8 +483,6 @@ class KikoImageViewer extends HTMLElement {
     }
 
     setImageData(data) {
-        console.log('KikoImageViewer: setImageData called with:', data);
-        console.log('KikoImageViewer: First image data:', data[0]);
         this.imageData = data;
         this.autoUnrollOnNewImages();
         this.render();
@@ -513,9 +539,7 @@ class KikoImageViewer extends HTMLElement {
             });
         });
 
-        // Global mouse events for dragging
-        document.addEventListener('mousemove', this.handleDrag.bind(this));
-        document.addEventListener('mouseup', this.endDrag.bind(this));
+        // Document-level drag listeners are managed in connectedCallback/disconnectedCallback
     }
 
     startDrag(e) {
@@ -697,11 +721,8 @@ class KikoImageViewer extends HTMLElement {
     openAllImagesWithDelay() {
         const selectedIndices = Array.from(this.selectedImages);
         if (selectedIndices.length === 0) {
-            console.log('KikoSaveImage: No images selected for opening');
             return;
         }
-
-        console.log(`KikoSaveImage: Opening ${selectedIndices.length} images with delay`);
 
         // Open images with 150ms delay between each to prevent popup blocking
         selectedIndices.forEach((index, i) => {
@@ -716,12 +737,7 @@ class KikoImageViewer extends HTMLElement {
 
     downloadImage(imageData) {
         // Construct proper image URL handling subfolder
-        let imageUrl;
-        if (imageData.subfolder && imageData.subfolder.trim()) {
-            imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(imageData.filename)}&subfolder=${encodeURIComponent(imageData.subfolder)}&type=${imageData.type}`;
-        } else {
-            imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(imageData.filename)}&type=${imageData.type}`;
-        }
+        const imageUrl = buildViewUrl(imageData.filename, imageData.subfolder, imageData.type);
 
         // Create temporary link and trigger download
         const link = document.createElement('a');
@@ -748,7 +764,7 @@ class KikoImageViewer extends HTMLElement {
         }
 
         const header = this.imageData.length === 1
-            ? `Saved Image (${this.imageData[0].format})`
+            ? `Saved Image (${escapeHtml(this.imageData[0].format)})`
             : `Saved Images (${this.imageData.length} files)`;
 
         const containerStyle = this.isMinimized ? 'style="display: none;"' : '';
@@ -791,15 +807,10 @@ class KikoImageViewer extends HTMLElement {
 
     createImageItem(data, index) {
         // Construct proper image URL handling subfolder
-        let imageUrl;
-        if (data.subfolder && data.subfolder.trim()) {
-            // ComfyUI expects subfolder to be passed separately
-            imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(data.filename)}&subfolder=${encodeURIComponent(data.subfolder)}&type=${data.type}`;
-        } else {
-            imageUrl = `${window.location.origin}/api/view?filename=${encodeURIComponent(data.filename)}&type=${data.type}`;
-        }
+        // ComfyUI expects subfolder to be passed separately
+        const imageUrl = buildViewUrl(data.filename, data.subfolder, data.type);
 
-        const formatClass = `kiko-format-${data.format.toLowerCase()}`;
+        const formatClass = `kiko-format-${String(data.format ?? '').toLowerCase().replace(/[^a-z0-9_-]/g, '')}`;
 
         // Format file size
         const fileSize = data.file_size ? formatFileSize(data.file_size) : 'Unknown';
@@ -818,7 +829,7 @@ class KikoImageViewer extends HTMLElement {
 
         return `
             <div class="kiko-image-item" data-index="${index}">
-                <img src="${imageUrl}" alt="${data.filename}" loading="lazy" />
+                <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(data.filename)}" loading="lazy" />
 
                 ${this.imageData.length > 1 ? `
                     <div class="kiko-image-selector" data-index="${index}" title="Select image"></div>
@@ -829,14 +840,14 @@ class KikoImageViewer extends HTMLElement {
                 </div>
 
                 <div class="kiko-image-info">
-                    <div class="kiko-image-filename" title="${data.filename}">
-                        ${data.filename}
+                    <div class="kiko-image-filename" title="${escapeHtml(data.filename)}">
+                        ${escapeHtml(data.filename)}
                     </div>
                     <div class="kiko-image-details">
                         <div class="kiko-image-stats">
-                            <span class="kiko-format-badge ${formatClass}">${data.format}</span>
-                            ${data.dimensions || 'Unknown'} • ${fileSize}
-                            ${qualityInfo ? ` • ${qualityInfo}` : ''}
+                            <span class="kiko-format-badge ${formatClass}">${escapeHtml(data.format)}</span>
+                            ${escapeHtml(data.dimensions || 'Unknown')} • ${escapeHtml(fileSize)}
+                            ${qualityInfo ? ` • ${escapeHtml(qualityInfo)}` : ''}
                         </div>
                     </div>
                 </div>
@@ -852,7 +863,6 @@ class KikoImageViewer extends HTMLElement {
                 item.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log(`KikoImageViewer: Clicking image ${index}: ${data.filename}`);
                     openImageInTab(data.filename, data.subfolder || '');
                 });
             }
@@ -872,8 +882,7 @@ function createImagePreview(imageData) {
 
     // Create image element
     const img = document.createElement('img');
-    const imagePath = `/api/view?filename=${imageData.filename}&type=${imageData.type}`;
-    img.src = imagePath;
+    img.src = buildViewUrl(imageData.filename, imageData.subfolder, imageData.type);
     img.alt = imageData.filename;
 
     // Create info overlay
@@ -1012,17 +1021,13 @@ app.registerExtension({
             // Replace the standard image viewer with our custom web component
             const originalOnExecuted = nodeType.prototype.onExecuted;
             nodeType.prototype.onExecuted = function(message) {
-                console.log('KikoSaveImage: onExecuted called with message:', message);
-
                 // Skip the original ComfyUI preview system
                 // Don't call originalOnExecuted to prevent default image display
 
                 // Use our custom web component instead
                 if (message && message.kiko_enhanced && message.kiko_enhanced.length > 0) {
-                    console.log('KikoSaveImage: Creating custom image viewer');
                     this.createCustomImageViewer(message.kiko_enhanced);
                 } else {
-                    console.log('KikoSaveImage: No enhanced data found, falling back to standard preview');
                     // Fall back to standard behavior if no enhanced data
                     if (originalOnExecuted) {
                         originalOnExecuted.apply(this, arguments);
@@ -1032,14 +1037,10 @@ app.registerExtension({
 
             // Add method to create custom image viewer
             nodeType.prototype.createCustomImageViewer = function(imageData) {
-                console.log('KikoSaveImage: Creating custom viewer for', imageData.length, 'images');
-
                 // Check if popup is enabled for any image (use first image's popup setting)
                 const popupEnabled = imageData.length > 0 ? imageData[0].popup : true;
-                console.log('KikoSaveImage: Popup enabled:', popupEnabled);
 
                 if (!popupEnabled) {
-                    console.log('KikoSaveImage: Popup disabled, not showing custom viewer');
                     return;
                 }
 
@@ -1049,7 +1050,6 @@ app.registerExtension({
                     // Update existing viewer with new data
                     existingViewer.setImageData(imageData);
                     existingViewer.show(); // Make sure it's visible
-                    console.log('KikoSaveImage: Updated existing viewer');
                     return;
                 }
 
@@ -1072,8 +1072,6 @@ app.registerExtension({
 
                 // Append to body (floating window) - always visible
                 document.body.appendChild(viewer);
-
-                console.log('KikoSaveImage: Custom viewer created successfully');
             };
 
             // Add method to create toggle button
@@ -1137,49 +1135,15 @@ app.registerExtension({
 
                 nodeElement.appendChild(toggleButton);
                 this.kikoToggleButton = toggleButton;
-
-                console.log('KikoSaveImage: Toggle button created');
             };
 
             // Legacy method kept for compatibility (not used with web component)
             nodeType.prototype.enhanceImagePreviews = function(imageData) {
-                console.log('KikoSaveImage: Legacy enhanceImagePreviews called (should use web component instead)');
+                // No-op: superseded by the kiko-image-viewer web component
             };
         }
     }
 });
-
-// Export helper functions to global scope for debugging
-window.kikoSaveImageTest = function() {
-    console.log('KikoSaveImage: Testing click functionality...');
-
-    // Find all images in the document
-    const allImages = document.querySelectorAll('img');
-    console.log(`Found ${allImages.length} images in document`);
-
-    // Try to find images that look like our saved images
-    allImages.forEach((img, index) => {
-        console.log(`Image ${index}: src = ${img.src}`);
-
-        // Add test click handler to all images
-        img.style.border = '2px solid red';
-        img.style.cursor = 'pointer';
-        img.title = 'TEST: Click to open in new tab';
-
-        // Remove old handlers and add new one
-        const newImg = img.cloneNode(true);
-        img.parentNode.replaceChild(newImg, img);
-
-        newImg.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('TEST CLICK WORKED!', newImg.src);
-            window.open(newImg.src, '_blank');
-        }, true);
-    });
-
-    console.log('KikoSaveImage: Test setup complete. All images should now be clickable with red borders.');
-};
 
 // 🎉 RESET VIEWER WINDOWS 🎉
 window.kikoResetViewer = function() {
@@ -1219,4 +1183,3 @@ console.log('🎉 KikoSaveImage: Extension loaded!');
 console.log('💡 Helper functions available:');
 console.log('   📞 kikoResetViewer() - Remove existing viewer windows');
 console.log('   🚀 kikoForceViewer() - Show demo viewer');
-console.log('   🧪 kikoSaveImageTest() - Test image click functionality');

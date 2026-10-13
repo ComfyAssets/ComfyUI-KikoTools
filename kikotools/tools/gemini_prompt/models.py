@@ -154,7 +154,7 @@ def _load_cache() -> Optional[Dict]:
         return None
 
     try:
-        with open(CACHE_FILE, "r") as f:
+        with open(CACHE_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         # Check if cache is expired
@@ -176,7 +176,7 @@ def _save_cache(models: List[str], descriptions: Dict[str, str]) -> None:
             "timestamp": time.time(),
         }
 
-        with open(CACHE_FILE, "w") as f:
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
     except Exception as e:
         logger.warning(f"Failed to save cache: {e}")

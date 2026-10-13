@@ -448,8 +448,10 @@ const KikoWorkflowTimerExtension = {
                 KikoGlobalTimer.registerNode(this);
             };
 
+            const origOnRemoved = nodeType.prototype.onRemoved;
             nodeType.prototype.onRemoved = function() {
                 KikoGlobalTimer.unregisterNode(this);
+                return origOnRemoved?.apply(this, arguments);
             };
 
             const origOnSerialize = nodeType.prototype.onSerialize;
@@ -461,7 +463,7 @@ const KikoWorkflowTimerExtension = {
             const origOnConfigure = nodeType.prototype.onConfigure;
             nodeType.prototype.onConfigure = function(info) {
                 origOnConfigure?.apply(this, arguments);
-                this.properties = info.properties || {};
+                this.properties = { ...(this.properties || {}), ...(info?.properties || {}) };
 
                 if (this.timerDisplay) {
                     this.timerDisplay.textContent = this.properties.elapsed_time_str || "00:00:000";

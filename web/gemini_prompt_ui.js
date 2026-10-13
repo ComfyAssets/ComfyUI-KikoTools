@@ -138,8 +138,16 @@ app.registerExtension({
                 const result = onExecuted?.apply(this, arguments);
 
                 if (this.status) {
+                    // Remember the user's color only if no flash is already pending,
+                    // otherwise we would capture our own temporary flash color
+                    if (this.geminiFlashTimeout) {
+                        clearTimeout(this.geminiFlashTimeout);
+                    } else {
+                        this.geminiPrevBgcolor = this.bgcolor;
+                    }
+
                     // Check if there was an error in the output
-                    const outputs = message.output;
+                    const outputs = message?.output;
                     if (outputs && outputs.prompt && outputs.prompt[0] && outputs.prompt[0].startsWith("Error:")) {
                         this.status.value = "Error - Check output";
                         this.bgcolor = "#552222";
@@ -148,16 +156,29 @@ app.registerExtension({
                         this.bgcolor = "#225522";
                     }
 
-                    // Reset color after delay
-                    setTimeout(() => {
-                        this.bgcolor = "";
+                    // Restore the previous color after delay
+                    this.geminiFlashTimeout = setTimeout(() => {
+                        this.geminiFlashTimeout = null;
+                        this.bgcolor = this.geminiPrevBgcolor;
+                        this.geminiPrevBgcolor = undefined;
                         if (this.status) {
                             this.status.value = "Ready";
                         }
+                        this.setDirtyCanvas?.(true, true);
                     }, 3000);
                 }
 
                 return result;
+            };
+
+            // Clear any pending color-restore timer when the node is removed
+            const onRemoved = nodeType.prototype.onRemoved;
+            nodeType.prototype.onRemoved = function() {
+                if (this.geminiFlashTimeout) {
+                    clearTimeout(this.geminiFlashTimeout);
+                    this.geminiFlashTimeout = null;
+                }
+                return onRemoved?.apply(this, arguments);
             };
         }
     },

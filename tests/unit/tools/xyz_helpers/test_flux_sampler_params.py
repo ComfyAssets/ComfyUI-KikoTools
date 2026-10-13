@@ -24,7 +24,8 @@ class TestFluxSamplerParamsLogic:
         assert parse_string_to_list("1.0, 2.5, 3.7") == [1.0, 2.5, 3.7]
         assert parse_string_to_list("5") == [5.0]
         assert parse_string_to_list("") == []
-        assert parse_string_to_list("1.0, invalid, 3.0") == [1.0, 3.0]
+        with pytest.raises(ValueError, match="invalid"):
+            parse_string_to_list("1.0, invalid, 3.0")
 
     def test_parse_seed_string(self):
         """Test parsing seed strings."""

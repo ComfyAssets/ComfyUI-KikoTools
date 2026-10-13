@@ -5,7 +5,7 @@ import json
 import torch
 import numpy as np
 from PIL import Image
-from typing import Tuple, Dict, Any, List
+from typing import Tuple, Dict, Any, List, Optional, Iterable
 
 
 def get_supported_extensions() -> Dict[str, List[str]]:
@@ -15,6 +15,108 @@ def get_supported_extensions() -> Dict[str, List[str]]:
         "video": [".mp4", ".webm", ".mov", ".mkv", ".avi"],
         "audio": [".mp3", ".wav", ".ogg", ".flac"],
     }
+
+
+def resolve_path(path: Any) -> Optional[str]:
+    """Resolve a user supplied path with realpath (symlinks and ``..``).
+
+    Returns None for anything that is not a usable non-empty string.
+    """
+    if not isinstance(path, str) or not path or "\0" in path:
+        return None
+    return os.path.realpath(path)
+
+
+def is_within_roots(path: Any, roots: Iterable[Any]) -> bool:
+    """Return True if the resolved path is inside (or equal to) one of the roots.
+
+    Uses os.path.commonpath on realpath-resolved values, so sibling
+    directories sharing a string prefix, ``..`` and symlinks cannot escape.
+    """
+    real = resolve_path(path)
+    if real is None:
+        return False
+    for root in roots:
+        real_root = resolve_path(root)
+        if real_root is None:
+            continue
+        try:
+            if os.path.commonpath([real, real_root]) == real_root:
+                return True
+        except ValueError:  # different drives / mixed absolute and relative
+            continue
+    return False
+
+
+def is_too_broad_root(path: Any, home: Optional[str] = None) -> bool:
+    """Return True if path is unusable or too broad to be a saved root.
+
+    Refuses filesystem/drive roots, the home directory itself and any
+    ancestor of it (e.g. /home), since those would expose every media file
+    a user owns. Folders inside home are fine.
+    """
+    real = resolve_path(path)
+    if real is None:
+        return True
+    if os.path.dirname(real) == real:  # "/" or a drive root like "C:\\"
+        return True
+    real_home = os.path.realpath(home or os.path.expanduser("~"))
+    try:
+        return os.path.commonpath([real, real_home]) == real
+    except ValueError:  # different drives
+        return False
+
+
+def is_allowed_media_path(
+    path: Any, roots: Iterable[Any], kinds: Iterable[str] = ("image",)
+) -> bool:
+    """Return True if path is a media file of the given kinds inside a root.
+
+    ``kinds`` are keys of get_supported_extensions() (image/video/audio).
+    The extension is checked on the resolved path so a symlink named
+    ``x.png`` pointing at a non-media file is refused.
+    """
+    real = resolve_path(path)
+    if real is None:
+        return False
+    extensions = get_supported_extensions()
+    allowed = {e for k in kinds for e in extensions.get(k, [])}
+    if os.path.splitext(real)[1].lower() not in allowed:
+        return False
+    return is_within_roots(real, roots)
+
+
+def is_allowed_image_path(path: Any, roots: Iterable[Any]) -> bool:
+    """Return True if path is an image file located inside one of the roots."""
+    return is_allowed_media_path(path, roots, ("image",))
+
+
+def list_subdirectories(path: str, limit: int = 50) -> List[str]:
+    """List sub-directory paths (never files) for the folder picker.
+
+    If ``path`` ends with a separator, its child directories are returned;
+    otherwise sibling directories whose name starts with the last component.
+    May raise PermissionError.
+    """
+    if path.endswith(os.sep) or (os.name == "nt" and path.endswith("/")):
+        parent_dir, prefix = path, ""
+    else:
+        parent_dir = os.path.dirname(path)
+        prefix = os.path.basename(path).lower()
+        if not parent_dir:
+            return []
+
+    if not os.path.isdir(parent_dir):
+        return []
+
+    dirs = [
+        os.path.join(parent_dir, entry)
+        for entry in os.listdir(parent_dir)
+        if entry.lower().startswith(prefix)
+        and os.path.isdir(os.path.join(parent_dir, entry))
+    ]
+    dirs.sort(key=lambda x: x.lower())
+    return dirs[:limit]
 
 
 def load_image_from_path(path: str) -> Tuple[torch.Tensor, Dict[str, Any]]:

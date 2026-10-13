@@ -1,47 +1,36 @@
 """CivitAI downloader implementation"""
 
-import os
-import sys
 import json
-import time
+import logging
+import os
 import urllib.request
 import urllib.parse
 import urllib.error
 from typing import Optional, Dict, Any
-from urllib.parse import urlparse, parse_qs, unquote
+from urllib.parse import urlparse, parse_qs, unquote, urljoin
 
-from .base import BaseDownloader
+from .base import (
+    USER_AGENT,
+    BaseDownloader,
+    safe_server_filename,
+    validate_filename,
+    validate_url_scheme,
+)
 
-try:
-    import comfy.model_management
+logger = logging.getLogger(__name__)
 
-    COMFY_AVAILABLE = True
-    InterruptProcessingException = comfy.model_management.InterruptProcessingException
-except ImportError:
-    COMFY_AVAILABLE = False
-    # Fallback exception type that will never be raised
-    InterruptProcessingException = type(
-        "InterruptProcessingException", (Exception,), {}
-    )
-
-
-CHUNK_SIZE = 1638400
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 API_BASE = "https://civitai.com/api/v1"
-MAX_RETRIES = 3
-RETRY_DELAY = 5
+REDIRECT_STATUSES = (301, 302, 303, 307, 308)
+
+HTTP_ERROR_HINTS = {
+    401: "Authentication required. Please provide a valid API token.",
+    403: "Access forbidden. The model might be restricted or require special permissions.",
+    404: "Model not found. The URL might be incorrect or the model was removed.",
+}
 
 
 class CivitAIDownloader(BaseDownloader):
     """Downloader for CivitAI models"""
-
-    def __init__(self, token: Optional[str] = None):
-        """Initialize CivitAI downloader
-
-        Args:
-            token: Optional CivitAI API token
-        """
-        super().__init__(token)
 
     def _make_request(
         self, url: str, headers: Optional[Dict[str, str]] = None
@@ -117,7 +106,7 @@ class CivitAIDownloader(BaseDownloader):
         request = self._make_request(url)
 
         try:
-            with urllib.request.urlopen(request) as response:
+            with self.open_url(request) as response:
                 return json.loads(response.read().decode())
         except urllib.error.HTTPError as e:
             if e.code == 404:
@@ -145,8 +134,10 @@ class CivitAIDownloader(BaseDownloader):
         Raises:
             Exception: If download fails
         """
-        # Validate output path
-        self.validate_output_path(output_path)
+        validate_url_scheme(url)
+        if filename:
+            validate_filename(filename)
+        output_dir = self.resolve_output_dir(output_path)
 
         # Validate that URL is from civitai.com domain
         parsed_url = urlparse(url)
@@ -181,161 +172,67 @@ class CivitAIDownloader(BaseDownloader):
         headers = {"User-Agent": USER_AGENT}
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
-
-        # Disable automatic redirect handling
-        class NoRedirection(urllib.request.HTTPErrorProcessor):
-            def http_response(self, request, response):
-                return response
-
-            https_response = http_response
-
         request = urllib.request.Request(url, headers=headers)
-        opener = urllib.request.build_opener(NoRedirection)
 
         try:
-            response = opener.open(request)
+            response = self.open_url(request, follow_redirects=False)
         except urllib.error.HTTPError as e:
-            if e.code == 401:
-                raise Exception(
-                    "Authentication required. Please provide a valid API token."
-                )
-            elif e.code == 403:
-                raise Exception(
-                    "Access forbidden. The model might be restricted or require special permissions."
-                )
-            elif e.code == 404:
-                raise Exception(
-                    "Model not found. The URL might be incorrect or the model was removed."
-                )
-            elif e.code == 429:
-                raise Exception(
-                    "Rate limited. Please wait a moment before trying again."
-                )
-            else:
-                raise Exception(f"HTTP error {e.code}: {e.reason}")
+            self.raise_for_http_status(e.code, e.reason, HTTP_ERROR_HINTS)
+        except urllib.error.URLError as e:
+            raise Exception(f"Network error: {e.reason}")
 
-        # Handle redirects
-        if response.status in [301, 302, 303, 307, 308]:
+        if response.status in REDIRECT_STATUSES:
             redirect_url = response.getheader("Location")
+            response.close()
+            if not redirect_url:
+                raise Exception("Redirect response did not include a Location header")
+            redirect_url = urljoin(url, redirect_url)
+            validate_url_scheme(redirect_url)
 
-            # Handle relative redirects
-            if redirect_url.startswith("/"):
-                base_url = urlparse(url)
-                redirect_url = f"{base_url.scheme}://{base_url.netloc}{redirect_url}"
-
-            # Extract filename from redirect URL if not provided
             if not filename:
-                parsed_url = urlparse(redirect_url)
-                query_params = parse_qs(parsed_url.query)
-                content_disposition = query_params.get(
-                    "response-content-disposition", [None]
-                )[0]
+                filename = self._filename_from_redirect(redirect_url)
 
-                if content_disposition and "filename=" in content_disposition:
-                    filename = unquote(
-                        content_disposition.split("filename=")[1].strip('"')
+            # The signed redirect target gets no credentials
+            try:
+                response = self.open_url(
+                    urllib.request.Request(
+                        redirect_url, headers={"User-Agent": USER_AGENT}
                     )
-                else:
-                    # Fallback: extract filename from URL path
-                    path = parsed_url.path
-                    if path and "/" in path:
-                        filename = path.split("/")[-1]
-                    else:
-                        filename = "downloaded_file.safetensors"
-
-            response = urllib.request.urlopen(redirect_url)
-        elif response.status == 404:
-            raise Exception("File not found")
-        elif response.status != 200:
-            raise Exception(f"Download failed with status {response.status}")
-
-        # Use provided filename or extracted filename
-        if not filename:
-            filename = self.extract_filename(url, default="model.safetensors")
-
-        output_file = os.path.join(output_path, filename)
-
-        # Check if should download
-        if not self.should_download(output_file, force):
-            print(f"File already exists: {output_file}")
-            return output_file
-
-        total_size = response.getheader("Content-Length")
-        if total_size is not None:
-            total_size = int(total_size)
-
-        print(f"Downloading: {filename}")
-        print(f"Destination: {output_file}")
-        if total_size:
-            print(f"Size: {self.format_size(total_size)}")
-
-        # Download with progress
-        try:
-            with open(output_file, "wb") as f:
-                downloaded = 0
-                start_time = time.time()
-
-                while True:
-                    chunk_start_time = time.time()
-                    buffer = response.read(CHUNK_SIZE)
-                    chunk_end_time = time.time()
-
-                    if not buffer:
-                        break
-
-                    downloaded += len(buffer)
-                    f.write(buffer)
-                    chunk_time = chunk_end_time - chunk_start_time
-
-                    # Check for user cancellation
-                    self.check_interrupt()
-
-                    # Calculate speed
-                    speed = self.calculate_speed(len(buffer), chunk_time)
-
-                    # Report progress
-                    if total_size is not None:
-                        progress = downloaded / total_size
-                        sys.stdout.write(
-                            f'\r[{"=" * int(progress * 50):<50}] {progress * 100:.2f}% - {speed:.2f} MB/s'
-                        )
-                        sys.stdout.flush()
-                        self.report_progress(
-                            downloaded, total_size, f"{speed:.2f} MB/s"
-                        )
-                    else:
-                        sys.stdout.write(
-                            f"\rDownloaded: {self.format_size(downloaded)} - {speed:.2f} MB/s"
-                        )
-                        sys.stdout.flush()
-                        self.report_progress(downloaded, 0, f"{speed:.2f} MB/s")
-
-            end_time = time.time()
-            time_taken = end_time - start_time
-            hours, remainder = divmod(time_taken, 3600)
-            minutes, seconds = divmod(remainder, 60)
-
-            if hours > 0:
-                time_str = f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
-            elif minutes > 0:
-                time_str = f"{int(minutes)}m {int(seconds)}s"
-            else:
-                time_str = f"{int(seconds)}s"
-
-            sys.stdout.write("\n")
-            print(f"✓ Download completed in {time_str}")
-            print(f"✓ File saved as: {output_file}")
-
-            # Verify file size
-            actual_size = os.path.getsize(output_file)
-            if total_size and actual_size != total_size:
-                raise Exception(
-                    f"Download incomplete. Expected {total_size} bytes, got {actual_size} bytes"
                 )
+            except urllib.error.HTTPError as e:
+                self.raise_for_http_status(e.code, e.reason, HTTP_ERROR_HINTS)
+            except urllib.error.URLError as e:
+                raise Exception(f"Network error: {e.reason}")
+        elif response.status != 200:
+            code = response.status
+            response.close()
+            self.raise_for_http_status(
+                code, "Download failed", {**HTTP_ERROR_HINTS, 404: "File not found"}
+            )
 
+        if not filename:
+            filename = safe_server_filename(
+                self.extract_filename(url, default="model.safetensors"),
+                "model.safetensors",
+            )
+
+        output_file = os.path.join(output_dir, filename)
+        if not self.should_download(output_file, force):
+            response.close()
+            logger.info("File already exists: %s", output_file)
             return output_file
-        except InterruptProcessingException:
-            # Clean up partial download on interrupt
-            if os.path.exists(output_file):
-                os.remove(output_file)
-            raise InterruptProcessingException("Download interrupted")
+
+        total_size = self.parse_content_length(response)
+        logger.info("Downloading %s to %s", filename, output_file)
+        return self.save_response(response, output_file, total_size)
+
+    def _filename_from_redirect(self, redirect_url: str) -> str:
+        """Derive a safe filename from a CivitAI redirect URL."""
+        parsed = urlparse(redirect_url)
+        disposition = parse_qs(parsed.query).get("response-content-disposition", [""])[
+            0
+        ]
+        name = self.extract_filename_from_header(unquote(disposition))
+        if not name:
+            name = parsed.path.rsplit("/", 1)[-1]
+        return safe_server_filename(name, "downloaded_file.safetensors")

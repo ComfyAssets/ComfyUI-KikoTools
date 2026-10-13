@@ -10,6 +10,8 @@ from kikotools.tools.model_downloader.base import BaseDownloader
 class TestDownloader(BaseDownloader):
     """Concrete downloader for testing"""
 
+    __test__ = False
+
     def download(self, url, output_path, filename=None, force=False):
         """Test implementation"""
         return f"{output_path}/{filename or 'test.file'}"

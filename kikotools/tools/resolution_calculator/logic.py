@@ -6,6 +6,8 @@ Pure functions for dimension extraction and scaling calculations
 import torch
 from typing import Tuple, Optional, Dict
 
+MIN_DIMENSION = 8
+
 
 def extract_dimensions(
     image: Optional[torch.Tensor] = None,
@@ -100,8 +102,9 @@ def calculate_scaled_dimensions(
     new_width = int(width * scale_factor)
     new_height = int(height * scale_factor)
 
-    # Ensure divisible by 8
-    return ensure_divisible_by_8(new_width, new_height)
+    # Ensure divisible by 8, never collapsing to zero for tiny inputs
+    new_width, new_height = ensure_divisible_by_8(new_width, new_height)
+    return max(new_width, MIN_DIMENSION), max(new_height, MIN_DIMENSION)
 
 
 def validate_scale_factor(

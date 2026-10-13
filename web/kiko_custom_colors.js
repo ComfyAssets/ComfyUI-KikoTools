@@ -22,10 +22,91 @@ const colorShade = (col, amt) => {
     return `#${rr}${gg}${bb}`;
 };
 
+// One lazily-created hidden color input, shared by every menu entry.
+// applyPicked holds what the currently open picker should do on change.
+let picker;
+let applyPicked;
+
+const isEnabled = () => {
+    const setting = app.ui.settings.getSettingValue("kikotools.custom_colors.enabled");
+    return setting !== undefined ? setting : true;
+};
+
+const getSettings = () => ({
+    showFull: app.ui.settings.getSettingValue("kikotools.custom_colors.show_full") !== false,
+    showTitle: app.ui.settings.getSettingValue("kikotools.custom_colors.show_title") !== false,
+    showBG: app.ui.settings.getSettingValue("kikotools.custom_colors.show_bg") !== false,
+    autoShade: app.ui.settings.getSettingValue("kikotools.custom_colors.auto_shade") !== false,
+});
+
+// Helper function to apply color to node(s)
+// Uses setColorOption like the built-in colors when possible
+const applyColorToNodes = (colorValue, colorType, node) => {
+    if (!colorValue) return;
+
+    const graphcanvas = LGraphCanvas.active_canvas;
+    const nodes = (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1)
+        ? [node]
+        : Object.values(graphcanvas.selected_nodes);
+    const titleColor = getSettings().autoShade ? colorShade(colorValue, 20) : colorValue;
+
+    for (const n of nodes) {
+        switch (colorType) {
+            case 'full':
+                if (n.setColorOption) {
+                    n.setColorOption({ color: titleColor, bgcolor: colorValue });
+                } else {
+                    n.color = titleColor;
+                    n.bgcolor = colorValue;
+                }
+                break;
+            case 'title':
+                n.color = colorValue;
+                break;
+            case 'bg':
+                n.bgcolor = colorValue;
+                break;
+        }
+    }
+
+    node.setDirtyCanvas(true, true);
+};
+
+// Groups have a single color
+const applyColorToGroup = (colorValue, group) => {
+    if (!colorValue) return;
+    if (group.setColorOption) {
+        group.setColorOption({ groupcolor: colorValue });
+    } else {
+        group.color = colorValue;
+    }
+    app.canvas.setDirty(true, true);
+};
+
+// Open the shared hidden color input; apply(color) runs when a color is picked
+const openPicker = (initialColor, apply) => {
+    if (!picker) {
+        picker = $el("input", {
+            type: "color",
+            parent: document.body,
+            style: { display: "none" },
+        });
+        picker.onchange = () => applyPicked?.(picker.value);
+    }
+    applyPicked = apply;
+    picker.value = initialColor || "#000000";
+    picker.click();
+};
+
+// Wrap menu options in the "Custom Colors" submenu (or nothing if empty)
+const customColorsMenu = (options) => options.length === 0 ? [] : [
+    null, // separator
+    { content: "🫶 Custom Colors", submenu: { options } },
+];
+
 app.registerExtension({
     name: "kikotools.customColors",
     async init() {
-        // Register settings
         app.ui.settings.addSetting({
             id: "kikotools.custom_colors.enabled",
             name: "🫶 Custom Colors: Enable",
@@ -67,213 +148,40 @@ app.registerExtension({
         });
     },
 
-    setup() {
-        let pickerFull, pickerTitle, pickerBG;
-        let activeNode;
+    // New API: return items to append to node right-click menu
+    getNodeMenuItems(node) {
+        if (!isEnabled()) return [];
 
-        // Check if feature is enabled
-        const isEnabled = () => {
-            const setting = app.ui.settings.getSettingValue("kikotools.custom_colors.enabled");
-            return setting !== undefined ? setting : true;
-        };
+        const settings = getSettings();
+        const options = [];
 
-        const getSettings = () => ({
-            showFull: app.ui.settings.getSettingValue("kikotools.custom_colors.show_full") !== false,
-            showTitle: app.ui.settings.getSettingValue("kikotools.custom_colors.show_title") !== false,
-            showBG: app.ui.settings.getSettingValue("kikotools.custom_colors.show_bg") !== false,
-            autoShade: app.ui.settings.getSettingValue("kikotools.custom_colors.auto_shade") !== false,
+        const addOption = (label, type, initialColor) => options.push({
+            content: label,
+            callback: () => openPicker(initialColor, (color) => applyColorToNodes(color, type, node)),
         });
 
-        // Helper function to apply color to node(s)
-        // Uses setColorOption like the built-in colors when possible
-        const applyColorToNodes = (colorValue, colorType, node) => {
-            if (!colorValue) return;
+        if (settings.showFull) addOption("🫶 Custom Full", 'full', node.bgcolor);
+        if (settings.showTitle) addOption("🫶 Custom Title", 'title', node.color);
+        if (settings.showBG) addOption("🫶 Custom BG", 'bg', node.bgcolor);
 
-            const graphcanvas = LGraphCanvas.active_canvas;
-            const nodes = (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1)
-                ? [node]
-                : Object.values(graphcanvas.selected_nodes);
+        return customColorsMenu(options);
+    },
 
-            for (const n of nodes) {
-                if (n.constructor === LiteGraph.LGraphGroup) {
-                    // For groups, use setColorOption if available
-                    if (colorType === 'full' || colorType === 'bg') {
-                        if (n.setColorOption) {
-                            n.setColorOption({ groupcolor: colorValue });
-                        } else {
-                            n.color = colorValue;
-                        }
-                    }
-                } else {
-                    // For regular nodes
-                    switch(colorType) {
-                        case 'full':
-                            // Use setColorOption if available (like built-in colors)
-                            if (n.setColorOption) {
-                                n.setColorOption({
-                                    color: colorShade(colorValue, 20),
-                                    bgcolor: colorValue
-                                });
-                            } else {
-                                n.color = colorShade(colorValue, 20);
-                                n.bgcolor = colorValue;
-                            }
-                            break;
-                        case 'title':
-                            n.color = colorValue;
-                            break;
-                        case 'bg':
-                            n.bgcolor = colorValue;
-                            break;
-                    }
-                }
-            }
+    // Groups have no node menu hook; like the frontend's own Comfy.GroupOptions,
+    // find the group under the mouse when the canvas menu opens.
+    getCanvasMenuItems(canvas) {
+        if (!isEnabled()) return [];
 
-            node.setDirtyCanvas(true, true);
-        };
+        const [x, y] = canvas.graph_mouse ?? [];
+        const group = canvas.graph?.getGroupOnPos?.(x, y);
+        if (!group) return [];
 
-        // Create color picker input if not exists
-        const createPicker = (type) => {
-            const picker = $el("input", {
-                type: "color",
-                parent: document.body,
-                style: {
-                    display: "none",
-                },
-            });
+        const settings = getSettings();
+        if (!settings.showFull && !settings.showBG) return [];
 
-            picker.onchange = () => {
-                if (activeNode) {
-                    applyColorToNodes(picker.value, type, activeNode);
-                }
-            };
-
-            return picker;
-        };
-
-        // Hook into the node colors menu
-        const onMenuNodeColors = LGraphCanvas.onMenuNodeColors;
-        LGraphCanvas.onMenuNodeColors = function (value, options, e, menu, node) {
-            const r = onMenuNodeColors.apply(this, arguments);
-
-            // Only add custom options if enabled
-            if (!isEnabled()) return r;
-
-            const settings = getSettings();
-
-            requestAnimationFrame(() => {
-                const menus = document.querySelectorAll(".litecontextmenu");
-                for (let i = menus.length - 1; i >= 0; i--) {
-                    const menu = menus[i];
-                    if (!menu || !menu.firstElementChild) continue;
-
-                    // Check for "No color" in various ways to be compatible with different frontend versions
-                    const firstChild = menu.firstElementChild;
-                    const textContent = firstChild.textContent || '';
-                    const innerHTML = firstChild.innerHTML || '';
-                    const valueContent = firstChild.value?.content || '';
-
-                    const isColorMenu = textContent.includes("No color") ||
-                                       innerHTML.includes("No color") ||
-                                       valueContent.includes("No color");
-
-                    if (isColorMenu) {
-
-                        // Add Custom Full option
-                        if (settings.showFull) {
-                            $el(
-                                "div.litemenu-entry.submenu",
-                                {
-                                    parent: menu,
-                                    $: (el) => {
-                                        el.onclick = () => {
-                                            LiteGraph.closeAllContextMenus();
-                                            if (!pickerFull) {
-                                                pickerFull = createPicker('full');
-                                            }
-                                            activeNode = node;
-                                            pickerFull.value = node.bgcolor || "#000000";
-                                            pickerFull.click();
-                                        };
-                                    },
-                                },
-                                [
-                                    $el("span", {
-                                        style: {
-                                            paddingLeft: "4px",
-                                            display: "block",
-                                        },
-                                        textContent: "🫶 Custom Full",
-                                    }),
-                                ]
-                            );
-                        }
-
-                        // Add Custom Title option
-                        if (settings.showTitle) {
-                            $el(
-                                "div.litemenu-entry.submenu",
-                                {
-                                    parent: menu,
-                                    $: (el) => {
-                                        el.onclick = () => {
-                                            LiteGraph.closeAllContextMenus();
-                                            if (!pickerTitle) {
-                                                pickerTitle = createPicker('title');
-                                            }
-                                            activeNode = node;
-                                            pickerTitle.value = node.color || "#000000";
-                                            pickerTitle.click();
-                                        };
-                                    },
-                                },
-                                [
-                                    $el("span", {
-                                        style: {
-                                            paddingLeft: "4px",
-                                            display: "block",
-                                        },
-                                        textContent: "🫶 Custom Title",
-                                    }),
-                                ]
-                            );
-                        }
-
-                        // Add Custom BG option
-                        if (settings.showBG) {
-                            $el(
-                                "div.litemenu-entry.submenu",
-                                {
-                                    parent: menu,
-                                    $: (el) => {
-                                        el.onclick = () => {
-                                            LiteGraph.closeAllContextMenus();
-                                            if (!pickerBG) {
-                                                pickerBG = createPicker('bg');
-                                            }
-                                            activeNode = node;
-                                            pickerBG.value = node.bgcolor || "#000000";
-                                            pickerBG.click();
-                                        };
-                                    },
-                                },
-                                [
-                                    $el("span", {
-                                        style: {
-                                            paddingLeft: "4px",
-                                            display: "block",
-                                        },
-                                        textContent: "🫶 Custom BG",
-                                    }),
-                                ]
-                            );
-                        }
-
-                        break;
-                    }
-                }
-            });
-            return r;
-        };
+        return customColorsMenu([{
+            content: "🫶 Custom Group Color",
+            callback: () => openPicker(group.color, (color) => applyColorToGroup(color, group)),
+        }]);
     },
 });

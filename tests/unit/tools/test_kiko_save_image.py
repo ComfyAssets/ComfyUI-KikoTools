@@ -204,8 +204,8 @@ class TestKikoSaveImageLogic:
                 assert os.path.exists(filepath)
 
                 # Verify image can be loaded
-                saved_img = Image.open(filepath)
-                assert saved_img.size == (32, 32)
+                with Image.open(filepath) as saved_img:
+                    assert saved_img.size == (32, 32)
 
     @patch("kikotools.tools.kiko_save_image.logic.folder_paths")
     def test_process_image_batch_jpeg(self, mock_folder_paths):
@@ -236,9 +236,9 @@ class TestKikoSaveImageLogic:
             filepath = os.path.join(temp_dir, results[0]["filename"])
             assert os.path.exists(filepath)
 
-            saved_img = Image.open(filepath)
-            assert saved_img.size == (64, 64)
-            assert saved_img.mode == "RGB"  # JPEG converts to RGB
+            with Image.open(filepath) as saved_img:
+                assert saved_img.size == (64, 64)
+                assert saved_img.mode == "RGB"  # JPEG converts to RGB
 
     @patch("kikotools.tools.kiko_save_image.logic.folder_paths")
     def test_process_image_batch_webp(self, mock_folder_paths):
@@ -338,8 +338,8 @@ class TestKikoSaveImageLogic:
             assert os.path.exists(temp_path)
 
             # Verify saved image
-            saved_img = Image.open(temp_path)
-            assert saved_img.size == (32, 32)
+            with Image.open(temp_path) as saved_img:
+                assert saved_img.size == (32, 32)
 
         finally:
             if os.path.exists(temp_path):
@@ -361,8 +361,8 @@ class TestKikoSaveImageLogic:
             assert result["quality"] == 95
 
             # Verify saved image is RGB
-            saved_img = Image.open(temp_path)
-            assert saved_img.mode == "RGB"
+            with Image.open(temp_path) as saved_img:
+                assert saved_img.mode == "RGB"
 
         finally:
             if os.path.exists(temp_path):
@@ -588,9 +588,9 @@ class TestIntegration:
                 assert os.path.exists(filepath)
 
                 # Verify image properties
-                img = Image.open(filepath)
-                assert img.size == (64, 64)
-                assert img.format == "PNG"
+                with Image.open(filepath) as img:
+                    assert img.size == (64, 64)
+                    assert img.format == "PNG"
 
     @patch("kikotools.tools.kiko_save_image.logic.folder_paths")
     def test_full_pipeline_all_formats(self, mock_folder_paths, sample_image_tensor):
@@ -628,8 +628,8 @@ class TestIntegration:
                     filepath = os.path.join(temp_dir, image_info["filename"])
                     assert os.path.exists(filepath)
 
-                    img = Image.open(filepath)
-                    assert img.size == (64, 64)
+                    with Image.open(filepath) as img:
+                        assert img.size == (64, 64)
 
     @patch("kikotools.tools.kiko_save_image.logic.folder_paths")
     def test_multiple_calls_no_overwrites(self, mock_folder_paths):
@@ -674,3 +674,55 @@ class TestIntegration:
                 assert (
                     expected_counter in filename
                 ), f"Expected counter {expected_counter} in {filename}"
+
+
+class TestSavePathTraversal:
+    """filename_prefix directory part must stay inside the output directory"""
+
+    def test_parent_traversal_rejected(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        with pytest.raises(ValueError, match="outside"):
+            get_save_image_path("../../evil/x", 1, ".png", str(out))
+        assert not (tmp_path / "evil").exists()
+
+    def test_absolute_prefix_rejected(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        target = tmp_path / "abs_target"
+        with pytest.raises(ValueError, match="absolute"):
+            get_save_image_path(f"{target}/x", 1, ".png", str(out))
+        assert not target.exists()
+
+    def test_symlink_escape_rejected(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        os.symlink(outside, out / "link")
+        with pytest.raises(ValueError, match="outside"):
+            get_save_image_path("link/x", 1, ".png", str(out))
+
+    def test_subfolder_traversal_rejected(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        with pytest.raises(ValueError, match="outside"):
+            get_save_image_path("x", 1, ".png", str(out), "../escape")
+
+    def test_nested_prefix_allowed(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        full_path, name, rel = get_save_image_path("a/b/img", 3, ".png", str(out))
+        assert os.path.isdir(out / "a" / "b")
+        # realpath both sides: Windows tmp dirs use 8.3 names (RUNNER~1)
+        expected = os.path.join(str(out), "a", "b", "img_00003.png")
+        assert os.path.realpath(full_path) == os.path.realpath(expected)
+        # Separator follows the user's prefix ("a/b" on Windows too);
+        # ComfyUI's /view normalizes it, so compare normalized paths
+        assert os.path.normpath(rel) == os.path.join("a", "b")
+
+    def test_inner_dotdot_that_stays_inside_allowed(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        full_path, _, _ = get_save_image_path("a/../b/img", 1, ".png", str(out))
+        assert os.path.realpath(full_path).startswith(os.path.realpath(out))

@@ -46,6 +46,7 @@ class TestLocalImageLoaderLogic:
     def test_load_image_from_path_rgb(self):
         """Test loading an RGB image from file."""
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.close()  # Windows can't reopen/delete an open file
             # Create a test image
             img = Image.new("RGB", (100, 100), color="red")
             img.save(tmp.name)
@@ -71,6 +72,7 @@ class TestLocalImageLoaderLogic:
     def test_load_image_from_path_rgba(self):
         """Test loading an RGBA image from file."""
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.close()  # Windows can't reopen/delete an open file
             # Create a test image with alpha
             img = Image.new("RGBA", (50, 50), color=(255, 0, 0, 128))
             img.save(tmp.name)
@@ -93,6 +95,7 @@ class TestLocalImageLoaderLogic:
     def test_load_image_from_path_with_metadata(self):
         """Test loading an image with embedded metadata."""
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.close()  # Windows can't reopen/delete an open file
             # Create image with metadata
             img = Image.new("RGB", (100, 100), color="blue")
 
@@ -198,18 +201,8 @@ class TestLocalImageLoaderNode:
 
     def test_node_properties(self):
         """Test node properties."""
-        assert LocalImageLoaderNode.RETURN_TYPES == (
-            "IMAGE",
-            "STRING",
-            "STRING",
-            "STRING",
-        )
-        assert LocalImageLoaderNode.RETURN_NAMES == (
-            "image",
-            "video_path",
-            "audio_path",
-            "info",
-        )
+        assert LocalImageLoaderNode.RETURN_TYPES == ("IMAGE", "STRING")
+        assert LocalImageLoaderNode.RETURN_NAMES == ("image", "info")
         assert LocalImageLoaderNode.FUNCTION == "load_media"
         assert LocalImageLoaderNode.CATEGORY == "🫶 ComfyAssets/💾 Images"
 
@@ -219,14 +212,12 @@ class TestLocalImageLoaderNode:
         mock_load_selections.return_value = {}
 
         node = LocalImageLoaderNode()
-        image, video_path, audio_path, info = node.load_media("test_id")
+        image, info = node.load_media("test_id")
 
         # Check empty returns
         assert isinstance(image, torch.Tensor)
         assert image.shape == (1, 1, 1, 4)
         assert torch.all(image == 0)
-        assert video_path == ""
-        assert audio_path == ""
         assert info == ""
 
     @patch("kikotools.tools.local_image_loader.node.load_selections")
@@ -244,20 +235,24 @@ class TestLocalImageLoaderNode:
         test_metadata = {"width": 100, "height": 100, "filename": "image.jpg"}
         mock_load_image.return_value = (test_tensor, test_metadata)
 
-        # Mock os.path.exists
-        with patch("os.path.exists", return_value=True):
+        # Mock os.path.exists and the allowed roots
+        with (
+            patch("os.path.exists", return_value=True),
+            patch(
+                "kikotools.tools.local_image_loader.node.get_allowed_roots",
+                return_value=["/path/to"],
+            ),
+        ):
             node = LocalImageLoaderNode()
-            image, video_path, audio_path, info = node.load_media("test_id")
+            image, info = node.load_media("test_id")
 
         # Check returns
         assert torch.equal(image, test_tensor)
-        assert video_path == ""
-        assert audio_path == ""
         assert json.loads(info) == test_metadata
 
     @patch("kikotools.tools.local_image_loader.node.load_selections")
-    def test_load_media_with_video_audio_selection(self, mock_load_selections):
-        """Test loading media with video and audio selection."""
+    def test_load_media_ignores_video_audio_selection(self, mock_load_selections):
+        """Video/audio selections are not outputs of this node any more."""
         mock_load_selections.return_value = {
             "test_id": {
                 "video": {"path": "/path/to/video.mp4"},
@@ -265,15 +260,9 @@ class TestLocalImageLoaderNode:
             }
         }
 
-        with patch("os.path.exists", return_value=True):
-            node = LocalImageLoaderNode()
-            image, video_path, audio_path, info = node.load_media("test_id")
+        image, info = LocalImageLoaderNode().load_media("test_id")
 
-        # Check returns
-        assert isinstance(image, torch.Tensor)
-        assert image.shape == (1, 1, 1, 4)  # Empty tensor
-        assert video_path == "/path/to/video.mp4"
-        assert audio_path == "/path/to/audio.mp3"
+        assert image.shape == (1, 1, 1, 4)
         assert info == ""
 
     def test_is_changed(self):

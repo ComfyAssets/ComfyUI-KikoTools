@@ -105,7 +105,7 @@ def get_version():
     try:
         pyproject_path = Path(__file__).parent / "pyproject.toml"
         if pyproject_path.exists():
-            content = pyproject_path.read_text()
+            content = pyproject_path.read_text(encoding="utf-8")
             match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
             if match:
                 return match.group(1)
@@ -118,7 +118,10 @@ def get_version():
 print()
 print(f"\033[94m[ComfyUI-KikoTools] Version:\033[0m {get_version()}")
 for node_key, display_name in NODE_DISPLAY_NAME_MAPPINGS.items():
-    print(f"🫶 \033[94mLoaded:\033[0m {display_name}")
+    # ASCII only: a Windows console using a legacy code page cannot print emoji,
+    # and a UnicodeEncodeError here would abort loading the whole node.
+    ascii_name = display_name.encode("ascii", "ignore").decode().strip()
+    print(f"  \033[94mLoaded:\033[0m {ascii_name}")
 print(f"\033[94mTotal: {len(NODE_CLASS_MAPPINGS)} tools loaded\033[0m")
 print()
 

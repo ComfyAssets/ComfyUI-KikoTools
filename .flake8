@@ -11,7 +11,8 @@ exclude =
     build,
     dist,
     *.egg-info,
-    .tox
+    .tox,
+    referance
 ignore =
     # W503: line break before binary operator (conflicts with Black)
     W503,

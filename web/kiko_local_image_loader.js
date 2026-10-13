@@ -1,6 +1,34 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
 
+// Escape a value for safe interpolation into HTML text or attribute contexts
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Build a readable error message from a non-OK fetch response
+async function describeHttpError(response) {
+    let detail = '';
+    try {
+        const body = await response.json();
+        detail = body?.error || body?.message || '';
+    } catch (e) {
+        // Non-JSON body; fall back to the status code
+    }
+    if (response.status === 403) {
+        return detail || 'Access denied: path is outside the allowed folders';
+    }
+    if (response.status === 400) {
+        return detail || 'Invalid path or request';
+    }
+    return detail || `Request failed (HTTP ${response.status})`;
+}
+
 // Setup global lightbox for image preview
 function setupGlobalLightbox() {
     if (document.getElementById('kiko-image-lightbox')) return;
@@ -511,7 +539,22 @@ app.registerExtension({
                 const debouncedLayout = debounce(applyMasonryLayout, 20);
 
                 // Set up ResizeObserver for responsive layout
-                new ResizeObserver(debouncedLayout).observe(cardHolder);
+                this.kikoResizeObserver = new ResizeObserver(debouncedLayout);
+                this.kikoResizeObserver.observe(cardHolder);
+
+                const originalOnRemoved = this.onRemoved;
+                this.onRemoved = function () {
+                    if (this.kikoResizeObserver) {
+                        this.kikoResizeObserver.disconnect();
+                        this.kikoResizeObserver = null;
+                    }
+                    return originalOnRemoved?.apply(this, arguments);
+                };
+
+                const showStatus = (message) => {
+                    statusMessage.style.display = 'block';
+                    statusMessage.textContent = message;
+                };
 
                 // Autocomplete functionality
                 let autocompleteSelectedIndex = -1;
@@ -521,6 +564,10 @@ app.registerExtension({
                 async function fetchDirectorySuggestions(path) {
                     try {
                         const response = await api.fetchApi(`/kiko_local_image_loader/list_directories?path=${encodeURIComponent(path)}`);
+                        if (!response.ok) {
+                            // Disallowed or invalid paths simply yield no suggestions
+                            return [];
+                        }
                         const data = await response.json();
                         return data.directories || [];
                     } catch (error) {
@@ -545,11 +592,11 @@ app.registerExtension({
                         const parentPath = parts.length > 0 ? '/' + parts.join('/') : '';
 
                         return `
-                            <div class="kiko-autocomplete-item" data-index="${index}" data-path="${path}">
+                            <div class="kiko-autocomplete-item" data-index="${index}" data-path="${escapeHtml(path)}">
                                 <div class="folder-icon">${smallFolderSVG}</div>
                                 <div class="path-text">
-                                    <span class="folder-name">${folderName}</span>
-                                    ${parentPath ? `<span class="parent-path"> — ${parentPath}</span>` : ''}
+                                    <span class="folder-name">${escapeHtml(folderName)}</span>
+                                    ${parentPath ? `<span class="parent-path"> — ${escapeHtml(parentPath)}</span>` : ''}
                                 </div>
                             </div>
                         `;
@@ -668,6 +715,9 @@ app.registerExtension({
                 async function loadSavedPaths() {
                     try {
                         const response = await api.fetchApi('/kiko_local_image_loader/get_saved_paths');
+                        if (!response.ok) {
+                            throw new Error(await describeHttpError(response));
+                        }
                         const data = await response.json();
 
                         pathPresets.innerHTML = '<option value="">-- Saved Paths --</option>';
@@ -683,27 +733,41 @@ app.registerExtension({
                     }
                 }
 
-                // Save current path
-                savePathBtn.onclick = async () => {
-                    if (!currentDirectory) return;
-
+                // Add a directory to the saved paths (the backend only serves
+                // media inside saved paths + ComfyUI input/output).
+                // Returns true on success.
+                async function addSavedPath(directory) {
                     try {
                         const response = await api.fetchApi('/kiko_local_image_loader/get_saved_paths');
+                        if (!response.ok) {
+                            throw new Error(await describeHttpError(response));
+                        }
                         const data = await response.json();
                         const savedPaths = data.saved_paths || [];
 
-                        if (!savedPaths.includes(currentDirectory)) {
-                            savedPaths.push(currentDirectory);
-                            await api.fetchApi('/kiko_local_image_loader/save_paths', {
+                        if (!savedPaths.includes(directory)) {
+                            const saveResponse = await api.fetchApi('/kiko_local_image_loader/save_paths', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ paths: savedPaths })
+                                body: JSON.stringify({ paths: [...savedPaths, directory] })
                             });
+                            if (!saveResponse.ok) {
+                                throw new Error(await describeHttpError(saveResponse));
+                            }
                             await loadSavedPaths();
                         }
+                        return true;
                     } catch (error) {
                         console.error('Error saving path:', error);
+                        showStatus(`Error saving path: ${error.message}`);
+                        return false;
                     }
+                }
+
+                // Save current path
+                savePathBtn.onclick = async () => {
+                    if (!currentDirectory) return;
+                    await addSavedPath(currentDirectory);
                 };
 
                 // Delete selected saved path
@@ -713,20 +777,27 @@ app.registerExtension({
 
                     try {
                         const response = await api.fetchApi('/kiko_local_image_loader/get_saved_paths');
+                        if (!response.ok) {
+                            throw new Error(await describeHttpError(response));
+                        }
                         const data = await response.json();
                         const savedPaths = data.saved_paths || [];
 
                         const updatedPaths = savedPaths.filter(p => p !== selectedPath);
                         if (updatedPaths.length !== savedPaths.length) {
-                            await api.fetchApi('/kiko_local_image_loader/save_paths', {
+                            const saveResponse = await api.fetchApi('/kiko_local_image_loader/save_paths', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ paths: updatedPaths })
                             });
+                            if (!saveResponse.ok) {
+                                throw new Error(await describeHttpError(saveResponse));
+                            }
                             await loadSavedPaths();
                         }
                     } catch (error) {
                         console.error('Error deleting path:', error);
+                        showStatus(`Error deleting path: ${error.message}`);
                     }
                 };
 
@@ -736,6 +807,28 @@ app.registerExtension({
                         loadImages(parentDirectory);
                     }
                 };
+
+                // Called when the user browses to a folder that isn't a saved
+                // path yet (backend answered 403). statusMessage is visible.
+                // Adding a folder is an explicit click (never automatic), and the
+                // full path is shown so the user sees exactly what they expose.
+                // The server rejects "/" and the home folder itself.
+                function handleFolderNotAllowed(directory, page) {
+                    statusMessage.textContent = 'This folder is not in your saved paths: ';
+                    const pathLabel = document.createElement('code');
+                    pathLabel.textContent = directory;
+                    const addBtn = document.createElement('button');
+                    addBtn.textContent = 'Add folder & open';
+                    addBtn.style.marginLeft = '8px';
+                    addBtn.onclick = async () => {
+                        addBtn.disabled = true;
+                        // On failure addSavedPath shows the server's reason
+                        if (await addSavedPath(directory)) {
+                            loadImages(directory, page);
+                        }
+                    };
+                    statusMessage.append(pathLabel, addBtn);
+                }
 
                 // Load images from directory
                 async function loadImages(directory, page = 1) {
@@ -757,6 +850,14 @@ app.registerExtension({
 
                     try {
                         const response = await api.fetchApi(`/kiko_local_image_loader/images?${params}`);
+                        if (response.status === 403) {
+                            handleFolderNotAllowed(directory, page);
+                            return;
+                        }
+                        if (!response.ok) {
+                            statusMessage.textContent = await describeHttpError(response);
+                            return;
+                        }
                         const data = await response.json();
 
                         if (data.error) {
@@ -820,7 +921,7 @@ app.registerExtension({
                                 <div class="kiko-card-media-wrapper">
                                     <div class="kiko-folder-card">
                                         <div class="kiko-folder-icon">${folderSVG}</div>
-                                        <div class="kiko-folder-name">${item.name}</div>
+                                        <div class="kiko-folder-name">${escapeHtml(item.name)}</div>
                                     </div>
                                 </div>
                             `;
@@ -831,9 +932,9 @@ app.registerExtension({
                             const thumbnailUrl = `/kiko_local_image_loader/thumbnail?filepath=${encodeURIComponent(item.path)}`;
                             card.innerHTML = `
                                 <div class="kiko-card-media-wrapper">
-                                    <img src="${thumbnailUrl}" alt="${item.name}" />
+                                    <img src="${escapeHtml(thumbnailUrl)}" alt="${escapeHtml(item.name)}" />
                                 </div>
-                                <div class="kiko-card-info-panel">${item.name}</div>
+                                <div class="kiko-card-info-panel">${escapeHtml(item.name)}</div>
                             `;
 
                             // Trigger layout when image loads
@@ -856,10 +957,10 @@ app.registerExtension({
                             const thumbnailUrl = `/kiko_local_image_loader/thumbnail?filepath=${encodeURIComponent(item.path)}`;
                             card.innerHTML = `
                                 <div class="kiko-card-media-wrapper">
-                                    <img src="${thumbnailUrl}" alt="${item.name}" />
+                                    <img src="${escapeHtml(thumbnailUrl)}" alt="${escapeHtml(item.name)}" />
                                     <div class="kiko-video-card-overlay">${videoSVG}</div>
                                 </div>
-                                <div class="kiko-card-info-panel">${item.name}</div>
+                                <div class="kiko-card-info-panel">${escapeHtml(item.name)}</div>
                             `;
 
                             const img = card.querySelector('img');
@@ -882,7 +983,7 @@ app.registerExtension({
                                 <div class="kiko-card-media-wrapper">
                                     <div class="kiko-audio-card">
                                         <div class="kiko-audio-icon">${audioSVG}</div>
-                                        <div class="kiko-audio-name">${item.name}</div>
+                                        <div class="kiko-audio-name">${escapeHtml(item.name)}</div>
                                     </div>
                                 </div>
                             `;
@@ -924,7 +1025,7 @@ app.registerExtension({
 
                     // Send to backend
                     try {
-                        await api.fetchApi('/kiko_local_image_loader/set_node_selection', {
+                        const response = await api.fetchApi('/kiko_local_image_loader/set_node_selection', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -933,11 +1034,16 @@ app.registerExtension({
                                 type: type
                             })
                         });
+                        if (!response.ok) {
+                            showStatus(`Selection rejected: ${await describeHttpError(response)}`);
+                            return;
+                        }
 
                         // Trigger node update
                         node.setDirtyCanvas(true);
                     } catch (error) {
                         console.error('Error setting selection:', error);
+                        showStatus('Error setting selection');
                     }
                 }
 
@@ -997,10 +1103,13 @@ app.registerExtension({
 
                 // Try to load last path
                 api.fetchApi('/kiko_local_image_loader/get_last_path').then(async response => {
+                    if (!response.ok) return;
                     const data = await response.json();
                     if (data.last_path) {
                         loadImages(data.last_path);
                     }
+                }).catch(error => {
+                    console.error('Error loading last path:', error);
                 });
 
                 return r;

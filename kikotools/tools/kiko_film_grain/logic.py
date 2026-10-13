@@ -100,13 +100,15 @@ def generate_grain_texture(
     Returns:
         Grain texture tensor of shape [B, H/scale, W/scale, 3]
     """
-    torch.manual_seed(seed)
+    # Local generator: never touch the global RNG state
+    generator = torch.Generator()
+    generator.manual_seed(int(seed))
 
     grain_height = max(1, int(height / scale))
     grain_width = max(1, int(width / scale))
 
     # Generate random noise
-    grain = torch.rand(batch_size, grain_height, grain_width, 3)
+    grain = torch.rand(batch_size, grain_height, grain_width, 3, generator=generator)
 
     return grain
 
@@ -140,7 +142,8 @@ def apply_film_grain(
     Returns:
         Image with film grain applied
     """
-    if strength == 0.0:
+    # Only short-circuit when nothing at all would change (toe still applies)
+    if strength == 0.0 and toe == 0.0:
         return image
 
     # Handle empty batch

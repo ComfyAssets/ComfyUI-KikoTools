@@ -1,12 +1,17 @@
 """Flux Sampler Params node for ComfyUI."""
 
 from typing import Tuple, Any, Dict, List, Optional
+import hashlib
+import json
 import time
 import logging
 from ....base.base_node import ComfyAssetsBaseNode
 from .logic import (
     parse_string_to_list,
+    parse_steps_list,
     parse_seed_string,
+    seed_string_is_random,
+    is_schnell_model,
     parse_sampler_string,
     parse_scheduler_string,
     get_default_flux_params,
@@ -122,6 +127,21 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
             },
         }
 
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        """
+        Re-run every time when seeds are random, otherwise use a stable hash.
+
+        NaN never compares equal to itself, so ComfyUI re-executes the node.
+        """
+        if seed_string_is_random(str(kwargs.get("seed", ""))):
+            return float("nan")
+        widgets = {
+            key: value for key, value in kwargs.items() if isinstance(value, str)
+        }
+        payload = json.dumps(widgets, sort_keys=True)
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
     RETURN_TYPES = ("LATENT", "SAMPLER_PARAMS")
     RETURN_NAMES = ("latent", "params")
     FUNCTION = "process_batch"
@@ -150,7 +170,6 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
         """
         try:
             import comfy.samplers
-            import comfy.model_base
             import comfy.model_management
             import comfy.utils
             import torch
@@ -199,12 +218,15 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
             return samples_out
 
         try:
-            if not validate_flux_params(
-                steps, guidance, max_shift, base_shift, denoise
-            ):
-                self.handle_error("Invalid parameter format")
+            validate_flux_params(steps, guidance, max_shift, base_shift, denoise)
 
-            is_schnell = model.model.model_type == comfy.model_base.ModelType.FLOW
+            if loras is not None and not loras.get("loras"):
+                raise ValueError(
+                    "LoRA input contains no LoRAs (is the LoRA folder empty "
+                    "or fully filtered?)"
+                )
+
+            is_schnell = is_schnell_model(model)
             defaults = get_default_flux_params(is_schnell)
 
             seeds = parse_seed_string(seed)
@@ -214,13 +236,13 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
             )
 
             steps = steps if steps else str(defaults["steps"])
-            steps_list = [int(s) for s in parse_string_to_list(steps)]
+            steps_list = parse_steps_list(steps)
 
             guidance = guidance if guidance else str(defaults["guidance"])
-            guidance_list = parse_string_to_list(guidance)
+            guidance_list = parse_string_to_list(guidance, "guidance")
 
             denoise = denoise if denoise else "1.0"
-            denoise_list = parse_string_to_list(denoise)
+            denoise_list = parse_string_to_list(denoise, "denoise")
 
             if not is_schnell:
                 max_shift = max_shift if max_shift else str(defaults["max_shift"])
@@ -229,8 +251,8 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
                 max_shift = "0"
                 base_shift = base_shift if base_shift else str(defaults["base_shift"])
 
-            max_shift_list = parse_string_to_list(max_shift)
-            base_shift_list = parse_string_to_list(base_shift)
+            max_shift_list = parse_string_to_list(max_shift, "max_shift")
+            base_shift_list = parse_string_to_list(base_shift, "base_shift")
 
             cond_text, cond_encoded = process_conditioning_input(conditioning)
 
@@ -258,6 +280,12 @@ class FluxSamplerParamsNode(ComfyAssetsBaseNode):
                 len(cond_encoded),
                 lora_strength_count,
             )
+
+            if total_samples < 1:
+                raise ValueError(
+                    "No parameter combinations to run: check that seed, sampler, "
+                    "scheduler, steps, guidance and denoise each yield a value"
+                )
 
             self.log_info(f"Processing {total_samples} parameter combinations")
 

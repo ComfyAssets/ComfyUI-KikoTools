@@ -30,7 +30,7 @@ def tensor_to_pil(tensor: np.ndarray) -> Image.Image:
     image_array = (tensor * 255).astype(np.uint8)
 
     # Convert to PIL
-    return Image.fromarray(image_array, mode="RGB")
+    return Image.fromarray(image_array)
 
 
 def image_to_base64(image: Image.Image, format: str = "PNG") -> str:
@@ -65,7 +65,7 @@ def get_api_key() -> Optional[str]:
                 os.path.dirname(__file__), "..", "..", "..", "gemini_config.json"
             )
             if os.path.exists(config_path):
-                with open(config_path, "r") as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     config = json.load(f)
                     api_key = config.get("api_key")
         except Exception:
