@@ -164,3 +164,8 @@ experiments/
 # Gemini model cache
 .gemini_models_cache.json
 referance/
+
+# Runtime state written inside the package (repo is symlinked into custom_nodes)
+kikotools/tools/local_image_loader/config.json
+kikotools/tools/local_image_loader/selections.json
+gemini_config.json
