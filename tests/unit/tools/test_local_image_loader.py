@@ -46,6 +46,7 @@ class TestLocalImageLoaderLogic:
     def test_load_image_from_path_rgb(self):
         """Test loading an RGB image from file."""
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.close()  # Windows can't reopen/delete an open file
             # Create a test image
             img = Image.new("RGB", (100, 100), color="red")
             img.save(tmp.name)
@@ -71,6 +72,7 @@ class TestLocalImageLoaderLogic:
     def test_load_image_from_path_rgba(self):
         """Test loading an RGBA image from file."""
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.close()  # Windows can't reopen/delete an open file
             # Create a test image with alpha
             img = Image.new("RGBA", (50, 50), color=(255, 0, 0, 128))
             img.save(tmp.name)
@@ -93,6 +95,7 @@ class TestLocalImageLoaderLogic:
     def test_load_image_from_path_with_metadata(self):
         """Test loading an image with embedded metadata."""
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.close()  # Windows can't reopen/delete an open file
             # Create image with metadata
             img = Image.new("RGB", (100, 100), color="blue")
 

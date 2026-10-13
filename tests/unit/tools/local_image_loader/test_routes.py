@@ -79,6 +79,7 @@ class TestAllowedRoots:
         # A "/" saved before the guard existed must not keep working.
         monkeypatch.setattr(node_mod, "CONFIG_FILE", str(tmp_path / "c.json"))
         monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
         node_mod.save_config(
             {"saved_paths": [os.path.abspath(os.sep), str(tmp_path), "/saved"]}
         )
@@ -352,6 +353,7 @@ class TestSelectionAndConfig:
         home = tmp_path / "h" / "user"
         home.mkdir(parents=True)
         monkeypatch.setenv("HOME", str(home))
+        monkeypatch.setenv("USERPROFILE", str(home))
         path = {
             "root": os.path.abspath(os.sep),
             "home": str(home),
