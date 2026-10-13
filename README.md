@@ -40,6 +40,7 @@ I’m sharing them here with the community, and I hope you find them as useful a
 | [📂 Local Image Loader](#-local-image-loader) | Visual gallery browser for local media files | 💾 Images |
 | [🌐 Model Downloader](#-model-downloader) | Download models from CivitAI, HuggingFace, and custom URLs | 🛠️ Utils |
 | [⏱️ Workflow Timer](#️-workflow-timer) | Real-time execution timer with customizable display | 🛠️ Utils |
+| [🗂️ Project File Path](#️-project-file-path) | Build safe, organized save prefixes like `MyProject/images/image` | 🛠️ Utils |
 
 ### 🧰 xyz-helpers Tools
 
@@ -425,6 +426,18 @@ Real-time execution timer that displays workflow duration with millisecond preci
 **Settings (KikoTools Settings Panel):**
 - **Workflow Timer: Color** - Custom color picker for timer display
 - **Workflow Timer: Enable Glow** - Toggle pulsing glow effect on/off
+
+#### 🗂️ Project File Path
+Builds an organized save prefix to wire into a save node's `filename_prefix`.
+
+- **Structure**: `root/project_name/[YYYY-MM-DD/]subfolder/filename`, e.g. `MyProject/2026-10-13/images/image`
+- **Date Folder**: Optional toggle inserts today's date after the project; the node re-runs when the date changes
+- **Safe Paths**: Unsafe characters are removed, spaces become underscores, and `..` segments are dropped so paths stay inside the output folder
+- **Nested Folders**: Use `a/b` in `subfolder` for deeper structure
+- **Extensions**: Known file extensions (`.png`, `.mp4`, ...) are stripped from `filename`; `render_v1.5` is left as is
+- **Separator**: `auto`, `forward_slash` or `backslash`
+
+Based on the idea of the Project File Path Generator from djz-nodes.
 
 ### 🔤 Embedding Autocomplete
 

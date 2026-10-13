@@ -22,6 +22,7 @@ from .tools.kiko_purge_vram import KikoPurgeVRAM
 from .tools.kiko_workflow_timer import KikoWorkflowTimerNode
 from .tools.kiko_save_image import KikoSaveImageNode
 from .tools.local_image_loader import LocalImageLoaderNode
+from .tools.project_file_path import ProjectFilePathNode
 from .tools.model_downloader import ModelDownloaderNode
 from .tools.resolution_calculator import ResolutionCalculatorNode
 from .tools.sampler_combo import SamplerComboCompactNode, SamplerComboNode
@@ -70,6 +71,7 @@ NODE_CLASS_MAPPINGS = {
     "LoRAFolderBatch": LoRAFolderBatchNode,
     "WidthHeightToVec2": WidthHeightToVec2Node,
     "KikoWorkflowTimer": KikoWorkflowTimerNode,
+    "KikoProjectFilePath": ProjectFilePathNode,
     # Note: KikoEmbeddingAutocomplete is not registered as a node
     # It's a settings-only feature accessed through ComfyUI settings menu
 }
@@ -105,6 +107,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoRAFolderBatch": "LoRA Folder Batch",
     "WidthHeightToVec2": "Width Height to VEC2",
     "KikoWorkflowTimer": "Workflow Timer",
+    "KikoProjectFilePath": "Project File Path",
     # KikoEmbeddingAutocomplete removed - settings only, not a node
 }
 
