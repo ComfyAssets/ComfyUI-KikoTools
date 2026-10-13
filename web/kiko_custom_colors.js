@@ -22,9 +22,10 @@ const colorShade = (col, amt) => {
     return `#${rr}${gg}${bb}`;
 };
 
-// Lazy-initialized color pickers (reused across invocations)
-let pickerFull, pickerTitle, pickerBG;
-let activeNode;
+// One lazily-created hidden color input, shared by every menu entry.
+// applyPicked holds what the currently open picker should do on change.
+let picker;
+let applyPicked;
 
 const isEnabled = () => {
     const setting = app.ui.settings.getSettingValue("kikotools.custom_colors.enabled");
@@ -47,60 +48,61 @@ const applyColorToNodes = (colorValue, colorType, node) => {
     const nodes = (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1)
         ? [node]
         : Object.values(graphcanvas.selected_nodes);
+    const titleColor = getSettings().autoShade ? colorShade(colorValue, 20) : colorValue;
 
     for (const n of nodes) {
-        if (n.constructor === LiteGraph.LGraphGroup) {
-            if (colorType === 'full' || colorType === 'bg') {
+        switch (colorType) {
+            case 'full':
                 if (n.setColorOption) {
-                    n.setColorOption({ groupcolor: colorValue });
+                    n.setColorOption({ color: titleColor, bgcolor: colorValue });
                 } else {
-                    n.color = colorValue;
-                }
-            }
-        } else {
-            switch(colorType) {
-                case 'full':
-                    if (n.setColorOption) {
-                        n.setColorOption({
-                            color: colorShade(colorValue, 20),
-                            bgcolor: colorValue
-                        });
-                    } else {
-                        n.color = colorShade(colorValue, 20);
-                        n.bgcolor = colorValue;
-                    }
-                    break;
-                case 'title':
-                    n.color = colorValue;
-                    break;
-                case 'bg':
+                    n.color = titleColor;
                     n.bgcolor = colorValue;
-                    break;
-            }
+                }
+                break;
+            case 'title':
+                n.color = colorValue;
+                break;
+            case 'bg':
+                n.bgcolor = colorValue;
+                break;
         }
     }
 
     node.setDirtyCanvas(true, true);
 };
 
-// Create hidden color picker input (lazily, reused)
-const createPicker = (type) => {
-    const picker = $el("input", {
-        type: "color",
-        parent: document.body,
-        style: {
-            display: "none",
-        },
-    });
-
-    picker.onchange = () => {
-        if (activeNode) {
-            applyColorToNodes(picker.value, type, activeNode);
-        }
-    };
-
-    return picker;
+// Groups have a single color
+const applyColorToGroup = (colorValue, group) => {
+    if (!colorValue) return;
+    if (group.setColorOption) {
+        group.setColorOption({ groupcolor: colorValue });
+    } else {
+        group.color = colorValue;
+    }
+    app.canvas.setDirty(true, true);
 };
+
+// Open the shared hidden color input; apply(color) runs when a color is picked
+const openPicker = (initialColor, apply) => {
+    if (!picker) {
+        picker = $el("input", {
+            type: "color",
+            parent: document.body,
+            style: { display: "none" },
+        });
+        picker.onchange = () => applyPicked?.(picker.value);
+    }
+    applyPicked = apply;
+    picker.value = initialColor || "#000000";
+    picker.click();
+};
+
+// Wrap menu options in the "Custom Colors" submenu (or nothing if empty)
+const customColorsMenu = (options) => options.length === 0 ? [] : [
+    null, // separator
+    { content: "🫶 Custom Colors", submenu: { options } },
+];
 
 app.registerExtension({
     name: "kikotools.customColors",
@@ -153,52 +155,33 @@ app.registerExtension({
         const settings = getSettings();
         const options = [];
 
-        if (settings.showFull) {
-            options.push({
-                content: "🫶 Custom Full",
-                callback: () => {
-                    if (!pickerFull) pickerFull = createPicker('full');
-                    activeNode = node;
-                    pickerFull.value = node.bgcolor || "#000000";
-                    pickerFull.click();
-                },
-            });
-        }
+        const addOption = (label, type, initialColor) => options.push({
+            content: label,
+            callback: () => openPicker(initialColor, (color) => applyColorToNodes(color, type, node)),
+        });
 
-        if (settings.showTitle) {
-            options.push({
-                content: "🫶 Custom Title",
-                callback: () => {
-                    if (!pickerTitle) pickerTitle = createPicker('title');
-                    activeNode = node;
-                    pickerTitle.value = node.color || "#000000";
-                    pickerTitle.click();
-                },
-            });
-        }
+        if (settings.showFull) addOption("🫶 Custom Full", 'full', node.bgcolor);
+        if (settings.showTitle) addOption("🫶 Custom Title", 'title', node.color);
+        if (settings.showBG) addOption("🫶 Custom BG", 'bg', node.bgcolor);
 
-        if (settings.showBG) {
-            options.push({
-                content: "🫶 Custom BG",
-                callback: () => {
-                    if (!pickerBG) pickerBG = createPicker('bg');
-                    activeNode = node;
-                    pickerBG.value = node.bgcolor || "#000000";
-                    pickerBG.click();
-                },
-            });
-        }
+        return customColorsMenu(options);
+    },
 
-        if (options.length === 0) return [];
+    // Groups have no node menu hook; like the frontend's own Comfy.GroupOptions,
+    // find the group under the mouse when the canvas menu opens.
+    getCanvasMenuItems(canvas) {
+        if (!isEnabled()) return [];
 
-        return [
-            null, // separator
-            {
-                content: "🫶 Custom Colors",
-                submenu: {
-                    options: options,
-                },
-            },
-        ];
+        const [x, y] = canvas.graph_mouse ?? [];
+        const group = canvas.graph?.getGroupOnPos?.(x, y);
+        if (!group) return [];
+
+        const settings = getSettings();
+        if (!settings.showFull && !settings.showBG) return [];
+
+        return customColorsMenu([{
+            content: "🫶 Custom Group Color",
+            callback: () => openPicker(group.color, (color) => applyColorToGroup(color, group)),
+        }]);
     },
 });

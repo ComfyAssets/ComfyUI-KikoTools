@@ -13,8 +13,6 @@ app.registerExtension({
             return [];
         }
 
-        node.setDirtyCanvas(true, true);
-
         return [
             null, // separator
             {
