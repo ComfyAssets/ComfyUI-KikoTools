@@ -6,44 +6,24 @@ import { app } from "../../scripts/app.js";
 app.registerExtension({
     name: "ComfyAssets.Extensions",
 
-    async setup() {
-        // Wait for the canvas to be ready
-        setTimeout(() => {
-            const getNodeMenuOptions = LGraphCanvas.prototype.getNodeMenuOptions;
+    // New API: return items to append to node right-click menu
+    getNodeMenuItems(node) {
+        // Only add our menu items to ComfyAssets nodes
+        if (!node.constructor.category || !node.constructor.category.includes("ComfyAssets")) {
+            return [];
+        }
 
-            LGraphCanvas.prototype.getNodeMenuOptions = function (node) {
-                const options = getNodeMenuOptions.apply(this, arguments);
+        node.setDirtyCanvas(true, true);
 
-                // Only add our menu items to ComfyAssets nodes
-                if (node.constructor.category && node.constructor.category.includes("ComfyAssets")) {
-                    node.setDirtyCanvas(true, true);
-
-                    // Find the position before the last separator (usually before "Remove")
-                    let insertIndex = options.length - 1;
-                    for (let i = options.length - 1; i >= 0; i--) {
-                        if (options[i] === null) {
-                            insertIndex = i;
-                            break;
-                        }
-                    }
-
-                    // Insert our custom menu items
-                    const kikoOptions = [
-                        null, // separator
-                        {
-                            content: "🎨 Node Dimensions",
-                            callback: () => {
-                                KikoToolsExtensions.showNodeDimensionsDialog(node);
-                            }
-                        }
-                    ];
-
-                    options.splice(insertIndex, 0, ...kikoOptions);
+        return [
+            null, // separator
+            {
+                content: "🎨 Node Dimensions",
+                callback: () => {
+                    KikoToolsExtensions.showNodeDimensionsDialog(node);
                 }
-
-                return options;
-            };
-        }, 500);
+            }
+        ];
     }
 });
 
@@ -71,6 +51,7 @@ class KikoToolsExtensions {
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         `;
 
+        // innerHTML used here with hardcoded templates only (numeric node dimensions)
         dialog.innerHTML = htmlContent;
 
         // Create button container

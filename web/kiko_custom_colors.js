@@ -22,10 +22,89 @@ const colorShade = (col, amt) => {
     return `#${rr}${gg}${bb}`;
 };
 
+// Lazy-initialized color pickers (reused across invocations)
+let pickerFull, pickerTitle, pickerBG;
+let activeNode;
+
+const isEnabled = () => {
+    const setting = app.ui.settings.getSettingValue("kikotools.custom_colors.enabled");
+    return setting !== undefined ? setting : true;
+};
+
+const getSettings = () => ({
+    showFull: app.ui.settings.getSettingValue("kikotools.custom_colors.show_full") !== false,
+    showTitle: app.ui.settings.getSettingValue("kikotools.custom_colors.show_title") !== false,
+    showBG: app.ui.settings.getSettingValue("kikotools.custom_colors.show_bg") !== false,
+    autoShade: app.ui.settings.getSettingValue("kikotools.custom_colors.auto_shade") !== false,
+});
+
+// Helper function to apply color to node(s)
+// Uses setColorOption like the built-in colors when possible
+const applyColorToNodes = (colorValue, colorType, node) => {
+    if (!colorValue) return;
+
+    const graphcanvas = LGraphCanvas.active_canvas;
+    const nodes = (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1)
+        ? [node]
+        : Object.values(graphcanvas.selected_nodes);
+
+    for (const n of nodes) {
+        if (n.constructor === LiteGraph.LGraphGroup) {
+            if (colorType === 'full' || colorType === 'bg') {
+                if (n.setColorOption) {
+                    n.setColorOption({ groupcolor: colorValue });
+                } else {
+                    n.color = colorValue;
+                }
+            }
+        } else {
+            switch(colorType) {
+                case 'full':
+                    if (n.setColorOption) {
+                        n.setColorOption({
+                            color: colorShade(colorValue, 20),
+                            bgcolor: colorValue
+                        });
+                    } else {
+                        n.color = colorShade(colorValue, 20);
+                        n.bgcolor = colorValue;
+                    }
+                    break;
+                case 'title':
+                    n.color = colorValue;
+                    break;
+                case 'bg':
+                    n.bgcolor = colorValue;
+                    break;
+            }
+        }
+    }
+
+    node.setDirtyCanvas(true, true);
+};
+
+// Create hidden color picker input (lazily, reused)
+const createPicker = (type) => {
+    const picker = $el("input", {
+        type: "color",
+        parent: document.body,
+        style: {
+            display: "none",
+        },
+    });
+
+    picker.onchange = () => {
+        if (activeNode) {
+            applyColorToNodes(picker.value, type, activeNode);
+        }
+    };
+
+    return picker;
+};
+
 app.registerExtension({
     name: "kikotools.customColors",
     async init() {
-        // Register settings
         app.ui.settings.addSetting({
             id: "kikotools.custom_colors.enabled",
             name: "🫶 Custom Colors: Enable",
@@ -67,213 +146,59 @@ app.registerExtension({
         });
     },
 
-    setup() {
-        let pickerFull, pickerTitle, pickerBG;
-        let activeNode;
+    // New API: return items to append to node right-click menu
+    getNodeMenuItems(node) {
+        if (!isEnabled()) return [];
 
-        // Check if feature is enabled
-        const isEnabled = () => {
-            const setting = app.ui.settings.getSettingValue("kikotools.custom_colors.enabled");
-            return setting !== undefined ? setting : true;
-        };
+        const settings = getSettings();
+        const options = [];
 
-        const getSettings = () => ({
-            showFull: app.ui.settings.getSettingValue("kikotools.custom_colors.show_full") !== false,
-            showTitle: app.ui.settings.getSettingValue("kikotools.custom_colors.show_title") !== false,
-            showBG: app.ui.settings.getSettingValue("kikotools.custom_colors.show_bg") !== false,
-            autoShade: app.ui.settings.getSettingValue("kikotools.custom_colors.auto_shade") !== false,
-        });
-
-        // Helper function to apply color to node(s)
-        // Uses setColorOption like the built-in colors when possible
-        const applyColorToNodes = (colorValue, colorType, node) => {
-            if (!colorValue) return;
-
-            const graphcanvas = LGraphCanvas.active_canvas;
-            const nodes = (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1)
-                ? [node]
-                : Object.values(graphcanvas.selected_nodes);
-
-            for (const n of nodes) {
-                if (n.constructor === LiteGraph.LGraphGroup) {
-                    // For groups, use setColorOption if available
-                    if (colorType === 'full' || colorType === 'bg') {
-                        if (n.setColorOption) {
-                            n.setColorOption({ groupcolor: colorValue });
-                        } else {
-                            n.color = colorValue;
-                        }
-                    }
-                } else {
-                    // For regular nodes
-                    switch(colorType) {
-                        case 'full':
-                            // Use setColorOption if available (like built-in colors)
-                            if (n.setColorOption) {
-                                n.setColorOption({
-                                    color: colorShade(colorValue, 20),
-                                    bgcolor: colorValue
-                                });
-                            } else {
-                                n.color = colorShade(colorValue, 20);
-                                n.bgcolor = colorValue;
-                            }
-                            break;
-                        case 'title':
-                            n.color = colorValue;
-                            break;
-                        case 'bg':
-                            n.bgcolor = colorValue;
-                            break;
-                    }
-                }
-            }
-
-            node.setDirtyCanvas(true, true);
-        };
-
-        // Create color picker input if not exists
-        const createPicker = (type) => {
-            const picker = $el("input", {
-                type: "color",
-                parent: document.body,
-                style: {
-                    display: "none",
+        if (settings.showFull) {
+            options.push({
+                content: "🫶 Custom Full",
+                callback: () => {
+                    if (!pickerFull) pickerFull = createPicker('full');
+                    activeNode = node;
+                    pickerFull.value = node.bgcolor || "#000000";
+                    pickerFull.click();
                 },
             });
+        }
 
-            picker.onchange = () => {
-                if (activeNode) {
-                    applyColorToNodes(picker.value, type, activeNode);
-                }
-            };
-
-            return picker;
-        };
-
-        // Hook into the node colors menu
-        const onMenuNodeColors = LGraphCanvas.onMenuNodeColors;
-        LGraphCanvas.onMenuNodeColors = function (value, options, e, menu, node) {
-            const r = onMenuNodeColors.apply(this, arguments);
-
-            // Only add custom options if enabled
-            if (!isEnabled()) return r;
-
-            const settings = getSettings();
-
-            requestAnimationFrame(() => {
-                const menus = document.querySelectorAll(".litecontextmenu");
-                for (let i = menus.length - 1; i >= 0; i--) {
-                    const menu = menus[i];
-                    if (!menu || !menu.firstElementChild) continue;
-
-                    // Check for "No color" in various ways to be compatible with different frontend versions
-                    const firstChild = menu.firstElementChild;
-                    const textContent = firstChild.textContent || '';
-                    const innerHTML = firstChild.innerHTML || '';
-                    const valueContent = firstChild.value?.content || '';
-
-                    const isColorMenu = textContent.includes("No color") ||
-                                       innerHTML.includes("No color") ||
-                                       valueContent.includes("No color");
-
-                    if (isColorMenu) {
-
-                        // Add Custom Full option
-                        if (settings.showFull) {
-                            $el(
-                                "div.litemenu-entry.submenu",
-                                {
-                                    parent: menu,
-                                    $: (el) => {
-                                        el.onclick = () => {
-                                            LiteGraph.closeAllContextMenus();
-                                            if (!pickerFull) {
-                                                pickerFull = createPicker('full');
-                                            }
-                                            activeNode = node;
-                                            pickerFull.value = node.bgcolor || "#000000";
-                                            pickerFull.click();
-                                        };
-                                    },
-                                },
-                                [
-                                    $el("span", {
-                                        style: {
-                                            paddingLeft: "4px",
-                                            display: "block",
-                                        },
-                                        textContent: "🫶 Custom Full",
-                                    }),
-                                ]
-                            );
-                        }
-
-                        // Add Custom Title option
-                        if (settings.showTitle) {
-                            $el(
-                                "div.litemenu-entry.submenu",
-                                {
-                                    parent: menu,
-                                    $: (el) => {
-                                        el.onclick = () => {
-                                            LiteGraph.closeAllContextMenus();
-                                            if (!pickerTitle) {
-                                                pickerTitle = createPicker('title');
-                                            }
-                                            activeNode = node;
-                                            pickerTitle.value = node.color || "#000000";
-                                            pickerTitle.click();
-                                        };
-                                    },
-                                },
-                                [
-                                    $el("span", {
-                                        style: {
-                                            paddingLeft: "4px",
-                                            display: "block",
-                                        },
-                                        textContent: "🫶 Custom Title",
-                                    }),
-                                ]
-                            );
-                        }
-
-                        // Add Custom BG option
-                        if (settings.showBG) {
-                            $el(
-                                "div.litemenu-entry.submenu",
-                                {
-                                    parent: menu,
-                                    $: (el) => {
-                                        el.onclick = () => {
-                                            LiteGraph.closeAllContextMenus();
-                                            if (!pickerBG) {
-                                                pickerBG = createPicker('bg');
-                                            }
-                                            activeNode = node;
-                                            pickerBG.value = node.bgcolor || "#000000";
-                                            pickerBG.click();
-                                        };
-                                    },
-                                },
-                                [
-                                    $el("span", {
-                                        style: {
-                                            paddingLeft: "4px",
-                                            display: "block",
-                                        },
-                                        textContent: "🫶 Custom BG",
-                                    }),
-                                ]
-                            );
-                        }
-
-                        break;
-                    }
-                }
+        if (settings.showTitle) {
+            options.push({
+                content: "🫶 Custom Title",
+                callback: () => {
+                    if (!pickerTitle) pickerTitle = createPicker('title');
+                    activeNode = node;
+                    pickerTitle.value = node.color || "#000000";
+                    pickerTitle.click();
+                },
             });
-            return r;
-        };
+        }
+
+        if (settings.showBG) {
+            options.push({
+                content: "🫶 Custom BG",
+                callback: () => {
+                    if (!pickerBG) pickerBG = createPicker('bg');
+                    activeNode = node;
+                    pickerBG.value = node.bgcolor || "#000000";
+                    pickerBG.click();
+                },
+            });
+        }
+
+        if (options.length === 0) return [];
+
+        return [
+            null, // separator
+            {
+                content: "🫶 Custom Colors",
+                submenu: {
+                    options: options,
+                },
+            },
+        ];
     },
 });
