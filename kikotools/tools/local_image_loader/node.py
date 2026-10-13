@@ -143,7 +143,9 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
         # Load image if selected
         image_selection = node_selections.get("image")
         if image_selection and image_selection.get("path"):
-            image_path = image_selection["path"]
+            # Load the resolved path we validated, so a symlink swapped after
+            # the check can't redirect the read.
+            image_path = resolve_path(image_selection["path"])
             if not is_allowed_image_path(image_path, get_allowed_roots()):
                 # selections.json may have been tampered with
                 logger.warning("Refusing to load disallowed path: %s", image_path)
