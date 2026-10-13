@@ -733,10 +733,10 @@ app.registerExtension({
                     }
                 }
 
-                // Save current path
-                savePathBtn.onclick = async () => {
-                    if (!currentDirectory) return;
-
+                // Add a directory to the saved paths (the backend only serves
+                // media inside saved paths + ComfyUI input/output).
+                // Returns true on success.
+                async function addSavedPath(directory) {
                     try {
                         const response = await api.fetchApi('/kiko_local_image_loader/get_saved_paths');
                         if (!response.ok) {
@@ -745,22 +745,29 @@ app.registerExtension({
                         const data = await response.json();
                         const savedPaths = data.saved_paths || [];
 
-                        if (!savedPaths.includes(currentDirectory)) {
-                            savedPaths.push(currentDirectory);
+                        if (!savedPaths.includes(directory)) {
                             const saveResponse = await api.fetchApi('/kiko_local_image_loader/save_paths', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ paths: savedPaths })
+                                body: JSON.stringify({ paths: [...savedPaths, directory] })
                             });
                             if (!saveResponse.ok) {
                                 throw new Error(await describeHttpError(saveResponse));
                             }
                             await loadSavedPaths();
                         }
+                        return true;
                     } catch (error) {
                         console.error('Error saving path:', error);
                         showStatus(`Error saving path: ${error.message}`);
+                        return false;
                     }
+                }
+
+                // Save current path
+                savePathBtn.onclick = async () => {
+                    if (!currentDirectory) return;
+                    await addSavedPath(currentDirectory);
                 };
 
                 // Delete selected saved path
@@ -801,6 +808,28 @@ app.registerExtension({
                     }
                 };
 
+                // Called when the user browses to a folder that isn't a saved
+                // path yet (backend answered 403). statusMessage is visible.
+                // Adding a folder is an explicit click (never automatic), and the
+                // full path is shown so the user sees exactly what they expose.
+                // The server rejects "/" and the home folder itself.
+                function handleFolderNotAllowed(directory, page) {
+                    statusMessage.textContent = 'This folder is not in your saved paths: ';
+                    const pathLabel = document.createElement('code');
+                    pathLabel.textContent = directory;
+                    const addBtn = document.createElement('button');
+                    addBtn.textContent = 'Add folder & open';
+                    addBtn.style.marginLeft = '8px';
+                    addBtn.onclick = async () => {
+                        addBtn.disabled = true;
+                        // On failure addSavedPath shows the server's reason
+                        if (await addSavedPath(directory)) {
+                            loadImages(directory, page);
+                        }
+                    };
+                    statusMessage.append(pathLabel, addBtn);
+                }
+
                 // Load images from directory
                 async function loadImages(directory, page = 1) {
                     if (!directory) return;
@@ -821,6 +850,10 @@ app.registerExtension({
 
                     try {
                         const response = await api.fetchApi(`/kiko_local_image_loader/images?${params}`);
+                        if (response.status === 403) {
+                            handleFolderNotAllowed(directory, page);
+                            return;
+                        }
                         if (!response.ok) {
                             statusMessage.textContent = await describeHttpError(response);
                             return;
