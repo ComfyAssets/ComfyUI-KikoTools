@@ -55,6 +55,11 @@ class KikoPurgeVRAM(BaseNode):
     OUTPUT_NODE = True
     DESCRIPTION = "Purge VRAM to free up GPU memory during workflow execution. Passes through any input unchanged."
 
+    @classmethod
+    def IS_CHANGED(cls, *args: Any, **kwargs: Any) -> float:
+        """Always re-run: a purge must never be skipped by ComfyUI caching."""
+        return float("nan")
+
     def purge_vram(
         self,
         anything: Any,

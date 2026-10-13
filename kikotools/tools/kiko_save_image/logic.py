@@ -65,6 +65,23 @@ def get_next_counter(output_dir: str, prefix: str) -> int:
     return counter
 
 
+def _ensure_inside_output_dir(
+    folder: str, output_dir: str, prefix_dir: str, subfolder: str
+) -> None:
+    """Raise ValueError unless folder resolves to a location inside output_dir."""
+    real_root = os.path.realpath(output_dir)
+    real_folder = os.path.realpath(folder)
+    try:
+        inside = os.path.commonpath([real_root, real_folder]) == real_root
+    except ValueError:  # e.g. different drives on Windows
+        inside = False
+    if not inside:
+        raise ValueError(
+            "Resolved output folder is outside the output directory "
+            f"(prefix directory {prefix_dir!r}, subfolder {subfolder!r})"
+        )
+
+
 def get_save_image_path(
     filename_prefix: str,
     counter: int,
@@ -87,6 +104,11 @@ def get_save_image_path(
     """
     # Split filename_prefix into directory path and actual filename prefix
     # This allows for directory structures like "kittybear/anime/images/kittybear"
+    if os.path.isabs(filename_prefix) or os.path.isabs(subfolder or ""):
+        raise ValueError(
+            "Absolute paths are not allowed in filename_prefix or subfolder: "
+            f"{filename_prefix!r}"
+        )
     prefix_dir = os.path.dirname(filename_prefix)
     prefix_name = os.path.basename(filename_prefix)
 
@@ -113,6 +135,9 @@ def get_save_image_path(
         path_components.append(prefix_dir)
 
     full_output_folder = os.path.join(*path_components)
+
+    # Reject anything that would resolve outside the output directory
+    _ensure_inside_output_dir(full_output_folder, output_dir, prefix_dir, subfolder)
 
     # Ensure directory exists
     os.makedirs(full_output_folder, exist_ok=True)
@@ -265,7 +290,7 @@ def process_image_batch(
     popup: bool = True,
     prompt: Optional[Dict] = None,
     extra_pnginfo: Optional[Dict] = None,
-) -> List[Dict[str, Any]]:
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
     Process and save a batch of images with specified format settings
 
@@ -281,7 +306,7 @@ def process_image_batch(
         extra_pnginfo: Additional PNG metadata
 
     Returns:
-        List of saved image information dicts
+        Tuple of (ComfyUI preview result dicts, enhanced info dicts)
     """
     # Get output directory
     output_dir = folder_paths.get_output_directory()

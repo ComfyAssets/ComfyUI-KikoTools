@@ -334,3 +334,21 @@ class TestIntegrationScenarios:
         assert abs(height - expected_height) <= 8
         assert width % 8 == 0
         assert height % 8 == 0
+
+
+class TestMinimumDimensionClamp:
+    def test_tiny_image_never_rounds_to_zero(self):
+        from kikotools.tools.resolution_calculator.logic import (
+            calculate_scaled_dimensions,
+        )
+
+        assert calculate_scaled_dimensions(4, 4, 0.1) == (8, 8)
+
+    def test_end_to_end_tiny_input(self):
+        from kikotools.tools.resolution_calculator.logic import (
+            calculate_resolution_from_input,
+        )
+
+        image = torch.zeros(1, 8, 16, 3)
+        w, h = calculate_resolution_from_input(0.1, image=image)
+        assert w >= 8 and h >= 8

@@ -247,3 +247,30 @@ class TestEdgeCases:
         )
         assert result.min() >= 0.0
         assert result.max() <= 1.0
+
+
+class TestFilmGrainRegressions:
+    def test_does_not_touch_global_rng(self):
+        image = torch.rand(1, 16, 16, 3)
+        torch.manual_seed(1234)
+        expected = torch.rand(3)
+        torch.manual_seed(1234)
+        apply_film_grain(image, strength=0.5, seed=99)
+        assert torch.equal(torch.rand(3), expected)
+
+    def test_same_seed_is_deterministic(self):
+        image = torch.rand(1, 16, 16, 3)
+        a = apply_film_grain(image, strength=0.5, seed=7)
+        b = apply_film_grain(image, strength=0.5, seed=7)
+        c = apply_film_grain(image, strength=0.5, seed=8)
+        assert torch.equal(a, b)
+        assert not torch.equal(a, c)
+
+    def test_zero_strength_zero_toe_returns_input(self):
+        image = torch.rand(1, 8, 8, 3)
+        assert torch.equal(apply_film_grain(image, strength=0.0, toe=0.0), image)
+
+    def test_zero_strength_still_applies_toe(self):
+        image = torch.zeros(1, 8, 8, 3)
+        result = apply_film_grain(image, strength=0.0, toe=0.25, seed=1)
+        assert torch.allclose(result, torch.full_like(result, 0.25), atol=1e-6)

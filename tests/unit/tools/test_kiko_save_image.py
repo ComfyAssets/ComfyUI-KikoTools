@@ -674,3 +674,51 @@ class TestIntegration:
                 assert (
                     expected_counter in filename
                 ), f"Expected counter {expected_counter} in {filename}"
+
+
+class TestSavePathTraversal:
+    """filename_prefix directory part must stay inside the output directory"""
+
+    def test_parent_traversal_rejected(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        with pytest.raises(ValueError, match="outside"):
+            get_save_image_path("../../evil/x", 1, ".png", str(out))
+        assert not (tmp_path / "evil").exists()
+
+    def test_absolute_prefix_rejected(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        target = tmp_path / "abs_target"
+        with pytest.raises(ValueError, match="absolute"):
+            get_save_image_path(f"{target}/x", 1, ".png", str(out))
+        assert not target.exists()
+
+    def test_symlink_escape_rejected(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        os.symlink(outside, out / "link")
+        with pytest.raises(ValueError, match="outside"):
+            get_save_image_path("link/x", 1, ".png", str(out))
+
+    def test_subfolder_traversal_rejected(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        with pytest.raises(ValueError, match="outside"):
+            get_save_image_path("x", 1, ".png", str(out), "../escape")
+
+    def test_nested_prefix_allowed(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        full_path, name, rel = get_save_image_path("a/b/img", 3, ".png", str(out))
+        assert os.path.isdir(out / "a" / "b")
+        assert full_path == os.path.join(str(out), "a", "b", "img_00003.png")
+        assert rel == os.path.join("a", "b")
+
+    def test_inner_dotdot_that_stays_inside_allowed(self, tmp_path):
+        out = tmp_path / "output"
+        out.mkdir()
+        full_path, _, _ = get_save_image_path("a/../b/img", 1, ".png", str(out))
+        assert os.path.realpath(full_path).startswith(os.path.realpath(out))

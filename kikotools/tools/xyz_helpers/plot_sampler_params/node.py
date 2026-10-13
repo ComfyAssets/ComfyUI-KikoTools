@@ -173,7 +173,7 @@ class PlotParametersNode(ComfyAssetsBaseNode):
             # Get font
             font_path = self._get_font_path()
             width = images.shape[2]
-            font_size = min(48, int(32 * (width / 1024)))
+            font_size = max(1, min(48, int(32 * (width / 1024))))
 
             try:
                 font = ImageFont.truetype(font_path, font_size)

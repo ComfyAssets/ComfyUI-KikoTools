@@ -299,3 +299,11 @@ class TestKikoPurgeVRAMNode:
         assert KikoPurgeVRAM.OUTPUT_NODE is True
         assert len(KikoPurgeVRAM.RETURN_TYPES) == 2
         assert KikoPurgeVRAM.RETURN_NAMES == ("passthrough", "memory_report")
+
+
+class TestPurgeIsChanged:
+    def test_is_changed_is_nan_so_cache_never_hits(self):
+        from kikotools.tools.kiko_purge_vram.node import KikoPurgeVRAM
+
+        value = KikoPurgeVRAM.IS_CHANGED(anything=1, mode="soft", report_memory=True)
+        assert value != value  # NaN is never equal to itself
