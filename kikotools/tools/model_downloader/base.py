@@ -19,6 +19,27 @@ CHUNK_SIZE = 1638400
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 ALLOWED_SCHEMES = ("http", "https")
 PART_SUFFIX = ".part"
+# Only model weights and inert data files may be written; never code.
+ALLOWED_FILE_EXTENSIONS = frozenset(
+    {
+        ".safetensors",
+        ".sft",
+        ".ckpt",
+        ".pt",
+        ".pt2",
+        ".pth",
+        ".bin",
+        ".gguf",
+        ".onnx",
+        ".model",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".txt",
+    }
+)
+# folder_paths entries that hold code rather than models.
+EXCLUDED_FOLDER_NAMES = frozenset({"custom_nodes"})
 
 try:
     import comfy.model_management
@@ -115,7 +136,9 @@ def _default_model_roots() -> List[str]:
         roots.append(models_dir)
     registry = getattr(fp, "folder_names_and_paths", None)
     if isinstance(registry, dict):
-        for entry in registry.values():
+        for name, entry in registry.items():
+            if name in EXCLUDED_FOLDER_NAMES:
+                continue
             try:
                 paths = entry[0]
             except (TypeError, IndexError, KeyError):
@@ -288,7 +311,16 @@ class BaseDownloader(ABC):
         """Stream response to output_file atomically via a .part file.
 
         The .part file is removed on any failure (including interrupts).
+
+        Raises:
+            ValueError: If output_file is not a model/data file type.
         """
+        extension = os.path.splitext(output_file)[1].lower()
+        if extension not in ALLOWED_FILE_EXTENSIONS:
+            raise ValueError(
+                f"Refusing to save file type '{extension or 'none'}': "
+                f"only model files ({', '.join(sorted(ALLOWED_FILE_EXTENSIONS))})"
+            )
         part_file = output_file + PART_SUFFIX
         try:
             downloaded = 0

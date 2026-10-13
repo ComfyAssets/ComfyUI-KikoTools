@@ -196,6 +196,18 @@ class TestResolveOutputDir:
             with pytest.raises(ValueError):
                 d.resolve_output_dir("/etc")
 
+    def test_default_roots_exclude_custom_nodes(self, root, tmp_path):
+        # ComfyUI registers custom_nodes in folder_names_and_paths; writing
+        # there means code execution on the next restart.
+        custom_nodes = tmp_path / "custom_nodes"
+        custom_nodes.mkdir()
+        fp = MagicMock()
+        fp.models_dir = str(root)
+        fp.folder_names_and_paths = {"custom_nodes": ([str(custom_nodes)], set())}
+        with patch.dict("sys.modules", {"folder_paths": fp}):
+            with pytest.raises(ValueError):
+                CustomDownloader().resolve_output_dir(str(custom_nodes / "evil"))
+
     def test_injected_roots_accept_list(self, root, tmp_path):
         other = tmp_path / "other"
         d = CustomDownloader(models_root=[str(root), str(other)])
@@ -276,6 +288,23 @@ class TestRedirectHandler:
 
 
 class TestSaveResponse:
+    @pytest.mark.parametrize(
+        "name", ["evil.py", "__init__.py", "run.sh", "x.pyc", "noext", "a.SH"]
+    )
+    def test_refuses_non_model_file_types(self, tmp_path, name):
+        target = tmp_path / name
+        with pytest.raises(ValueError, match="file type"):
+            CustomDownloader().save_response(FakeResponse(b"x"), str(target), 1)
+        assert not target.exists()
+        assert not (tmp_path / (name + ".part")).exists()
+
+    @pytest.mark.parametrize(
+        "name", ["m.safetensors", "m.GGUF", "m.ckpt", "m.pth", "cfg.json"]
+    )
+    def test_accepts_model_file_types(self, tmp_path, name):
+        target = str(tmp_path / name)
+        assert CustomDownloader().save_response(FakeResponse(b"x"), target, 1)
+
     def test_success_atomic(self, tmp_path):
         target = str(tmp_path / "f.bin")
         resp = FakeResponse(b"abcdef")
@@ -292,7 +321,7 @@ class TestSaveResponse:
         cb = MagicMock()
         d = CustomDownloader()
         d.set_progress_callback(cb)
-        d.save_response(FakeResponse(b"abc"), str(tmp_path / "f"), None)
+        d.save_response(FakeResponse(b"abc"), str(tmp_path / "f.bin"), None)
         assert cb.call_args.args[:2] == (3, 0)
 
     def test_strict_size_mismatch_leaves_nothing(self, tmp_path):
@@ -319,7 +348,7 @@ class TestSaveResponse:
         d = CustomDownloader()
         with patch.object(d, "check_interrupt", side_effect=KeyboardInterrupt):
             with pytest.raises(KeyboardInterrupt):
-                d.save_response(FakeResponse(b"abc"), str(tmp_path / "f"), 3)
+                d.save_response(FakeResponse(b"abc"), str(tmp_path / "f.bin"), 3)
         assert os.listdir(tmp_path) == []
 
     def test_existing_final_file_untouched_on_failure(self, tmp_path):
@@ -367,12 +396,13 @@ class TestCustom:
     def test_malicious_header_filename_is_basenamed(self, root, out, opener):
         _, op = opener
         op.open.return_value = FakeResponse(
-            b"d", headers={"Content-Disposition": 'attachment; filename="../../evil"'}
+            b"d",
+            headers={"Content-Disposition": 'attachment; filename="../../evil.bin"'},
         )
         path = make(CustomDownloader, root).download("https://h/dl", out)
-        assert os.path.basename(path) == "evil"
+        assert os.path.basename(path) == "evil.bin"
         assert os.path.dirname(path) == os.path.realpath(out)
-        assert not (root.parent / "evil").exists()
+        assert not (root.parent / "evil.bin").exists()
 
     def test_default_name_only_when_no_header_and_no_url_name(self, root, out, opener):
         _, op = opener
@@ -443,25 +473,27 @@ class TestCustom:
         _, op = opener
         op.open.side_effect = http_error(code)
         with pytest.raises(Exception, match=text):
-            make(CustomDownloader, root).download("https://h/x", out, filename="a")
+            make(CustomDownloader, root).download("https://h/x", out, filename="a.bin")
 
     def test_url_error(self, root, out, opener):
         _, op = opener
         op.open.side_effect = urllib.error.URLError("dns")
         with pytest.raises(Exception, match="Network error: dns"):
-            make(CustomDownloader, root).download("https://h/x", out, filename="a")
+            make(CustomDownloader, root).download("https://h/x", out, filename="a.bin")
 
     def test_size_mismatch_warns_but_saves(self, root, out, opener):
         _, op = opener
         op.open.return_value = FakeResponse(b"ab", headers={"Content-Length": "9"})
-        path = make(CustomDownloader, root).download("https://h/x", out, filename="a")
+        path = make(CustomDownloader, root).download(
+            "https://h/x", out, filename="a.bin"
+        )
         assert os.path.exists(path)
 
     def test_midstream_failure_leaves_no_file(self, root, out, opener):
         _, op = opener
         op.open.return_value = FakeResponse(b"x" * 50, fail_after=5)
         with pytest.raises(ConnectionResetError):
-            make(CustomDownloader, root).download("https://h/x", out, filename="a")
+            make(CustomDownloader, root).download("https://h/x", out, filename="a.bin")
         assert os.listdir(out) == []
 
     def test_token_not_logged(self, root, out, opener, caplog):
@@ -469,7 +501,7 @@ class TestCustom:
         op.open.return_value = FakeResponse(b"d")
         with caplog.at_level("DEBUG"):
             make(CustomDownloader, root, "SECRET123").download(
-                "https://h/x", out, filename="a"
+                "https://h/x", out, filename="a.bin"
             )
         assert "SECRET123" not in caplog.text
 
@@ -692,7 +724,9 @@ class TestCivitAI:
             b"ab", status=200, headers={"Content-Length": "9"}
         )
         with pytest.raises(Exception, match="incomplete"):
-            make(CivitAIDownloader, root).download(CIVITAI_URL, out, filename="m")
+            make(CivitAIDownloader, root).download(
+                CIVITAI_URL, out, filename="m.safetensors"
+            )
         assert os.listdir(out) == []
 
     def test_interrupt_propagates_and_cleans(self, root, out, opener):
@@ -705,7 +739,7 @@ class TestCivitAI:
         d = make(CivitAIDownloader, root)
         with patch.object(d, "check_interrupt", side_effect=Interrupted):
             with pytest.raises(Interrupted):
-                d.download(CIVITAI_URL, out, filename="m")
+                d.download(CIVITAI_URL, out, filename="m.safetensors")
         assert os.listdir(out) == []
 
     @pytest.mark.parametrize("url", ["file:///etc/passwd", "ftp://civitai.com/x"])
@@ -729,7 +763,9 @@ class TestCivitAI:
         _, op = opener
         op.open.return_value = FakeResponse(b"d", status=200)
         make(CivitAIDownloader, root).download(
-            "https://civitai.com/models/5?modelVersionId=77", out, filename="m"
+            "https://civitai.com/models/5?modelVersionId=77",
+            out,
+            filename="m.safetensors",
         )
         assert op.open.call_args.args[0].full_url.endswith("/api/download/models/77")
 
@@ -738,7 +774,7 @@ class TestCivitAI:
         details = FakeResponse(json.dumps({"modelVersions": [{"id": 9}]}).encode())
         op.open.side_effect = [details, FakeResponse(b"d", status=200)]
         make(CivitAIDownloader, root).download(
-            "https://civitai.com/models/5/name", out, filename="m"
+            "https://civitai.com/models/5/name", out, filename="m.safetensors"
         )
         assert op.open.call_args.args[0].full_url.endswith("/api/download/models/9")
 
