@@ -717,7 +717,9 @@ class TestSavePathTraversal:
         # realpath both sides: Windows tmp dirs use 8.3 names (RUNNER~1)
         expected = os.path.join(str(out), "a", "b", "img_00003.png")
         assert os.path.realpath(full_path) == os.path.realpath(expected)
-        assert rel == os.path.join("a", "b")
+        # Separator follows the user's prefix ("a/b" on Windows too);
+        # ComfyUI's /view normalizes it, so compare normalized paths
+        assert os.path.normpath(rel) == os.path.join("a", "b")
 
     def test_inner_dotdot_that_stays_inside_allowed(self, tmp_path):
         out = tmp_path / "output"
