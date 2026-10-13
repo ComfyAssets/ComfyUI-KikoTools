@@ -371,14 +371,15 @@ app.registerExtension({
           });
 
           const timeAgo = this.formatTimeAgo(item.timestamp);
-          entryDiv.innerHTML = `
-            <div style="color: #fff; font-weight: bold; margin-bottom: 1px;">
-              🎲 ${item.seed}
-            </div>
-            <div style="color: #999; font-size: 8px;">
-              ⏰ ${timeAgo}
-            </div>
-          `;
+          // Build with textContent: history comes from localStorage and is untrusted
+          const seedDiv = document.createElement("div");
+          seedDiv.style.cssText = "color: #fff; font-weight: bold; margin-bottom: 1px;";
+          seedDiv.textContent = `🎲 ${Number(item.seed)}`;
+          const timeDiv = document.createElement("div");
+          timeDiv.style.cssText = "color: #999; font-size: 8px;";
+          timeDiv.textContent = `⏰ ${timeAgo}`;
+          entryDiv.appendChild(seedDiv);
+          entryDiv.appendChild(timeDiv);
 
           this.historyDisplay.appendChild(entryDiv);
         });
