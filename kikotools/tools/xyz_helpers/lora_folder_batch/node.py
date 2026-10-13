@@ -1,10 +1,13 @@
 """LoRA Folder Batch node for ComfyUI."""
 
 from typing import Tuple, Any, Dict
+import hashlib
+import json
 import logging
 from ....base.base_node import ComfyAssetsBaseNode
 from .logic import (
     scan_folder_for_loras,
+    get_lora_file_mtimes,
     filter_loras_by_pattern,
     parse_strength_string,
     create_lora_params,
@@ -282,10 +285,28 @@ class LoRAFolderBatchNode(ComfyAssetsBaseNode):
     @classmethod
     def IS_CHANGED(cls, **kwargs):
         """
-        Force re-execution when folder contents might have changed.
+        Re-execute only when the folder listing or the inputs change.
 
-        This ensures we always scan for the latest LoRAs.
+        Returns a hash of the matching files with their mtimes plus the
+        relevant inputs, so downstream nodes stay cached otherwise.
         """
-        import time
+        folder_path = str(kwargs.get("folder_path", "."))
+        files = get_lora_file_mtimes(folder_path)
+        if kwargs.get("include_pattern") or kwargs.get("exclude_pattern"):
+            keep = set(
+                filter_loras_by_pattern(
+                    [name for name, _ in files],
+                    kwargs.get("include_pattern", "") or "",
+                    kwargs.get("exclude_pattern", "") or "",
+                )
+            )
+            files = [(name, mtime) for name, mtime in files if name in keep]
 
-        return str(time.time())
+        payload = json.dumps(
+            {
+                "files": files,
+                "inputs": {k: repr(v) for k, v in sorted(kwargs.items())},
+            },
+            sort_keys=True,
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()

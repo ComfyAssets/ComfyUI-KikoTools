@@ -165,9 +165,7 @@ class TestLoRAFolderBatchLogic:
             # Mock the import
             import sys
 
-            sys.modules["folder_paths"] = mock_folder_paths
-
-            try:
+            with patch.dict(sys.modules, {"folder_paths": mock_folder_paths}):
                 # Test scanning from root - should find all .safetensors files
                 results = scan_folder_for_loras(".")
                 assert len(results) == 5
@@ -184,10 +182,6 @@ class TestLoRAFolderBatchLogic:
                 assert "flux/flux-lora.safetensors" in results
                 assert "flux/style/style-lora.safetensors" in results
                 assert "flux/character/char-lora.safetensors" in results
-            finally:
-                # Clean up the mock
-                if "folder_paths" in sys.modules:
-                    del sys.modules["folder_paths"]
 
 
 class TestLoRAFolderBatchNode:
@@ -274,14 +268,12 @@ class TestLoRAFolderBatchNode:
             "lora_count",
         )
 
-    def test_is_changed(self):
-        """Test IS_CHANGED method returns unique value."""
-        result1 = LoRAFolderBatchNode.IS_CHANGED()
-        import time
-
-        time.sleep(0.01)
-        result2 = LoRAFolderBatchNode.IS_CHANGED()
-        assert result1 != result2
+    def test_is_changed_is_stable_for_same_inputs(self):
+        """IS_CHANGED must not force re-execution when nothing changed."""
+        kwargs = dict(folder_path="x", strength="1.0", batch_mode="sequential")
+        assert LoRAFolderBatchNode.IS_CHANGED(**kwargs) == (
+            LoRAFolderBatchNode.IS_CHANGED(**kwargs)
+        )
 
     def test_create_lora_params_batched(self):
         """Test the batched LoRA params creation."""
