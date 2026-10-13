@@ -15,6 +15,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
+    "pytest-asyncio>=0.21.0",
     # Code quality
     "black>=23.0.0",
     "flake8>=6.0.0",
@@ -69,21 +70,12 @@ no_strict_optional = true
 files = ["kikotools"]
 exclude = ["tests"]
 
-[tool.pytest.ini_options]
-minversion = "7.0"
-testpaths = ["tests"]
-addopts = "-ra -q --strict-markers"
-markers = [
-    "unit: Unit tests",
-    "integration: Integration tests",
-    "slow: Slow tests"
-]
-
 [tool.coverage.run]
 source = ["kikotools"]
 omit = ["*/tests/*", "*/__init__.py"]
 
 [tool.coverage.report]
+fail_under = 85
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
