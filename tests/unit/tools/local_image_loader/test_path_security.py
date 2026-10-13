@@ -6,6 +6,7 @@ import pytest
 
 from kikotools.tools.local_image_loader.logic import (
     is_allowed_image_path,
+    is_too_broad_root,
     is_within_roots,
     list_subdirectories,
     resolve_path,
@@ -124,3 +125,38 @@ class TestListSubdirectories:
         got = list_subdirectories("/e")
         assert all(os.path.isdir(p) for p in got)
         assert all(p.startswith("/e") for p in got)
+
+
+class TestTooBroadRoot:
+    """Saved roots that would expose everything are refused."""
+
+    @pytest.fixture
+    def home(self, tmp_path):
+        home = tmp_path / "home" / "user"
+        home.mkdir(parents=True)
+        return str(home)
+
+    def test_filesystem_root(self, home):
+        assert is_too_broad_root(os.path.abspath(os.sep), home=home)
+
+    def test_home_itself(self, home):
+        assert is_too_broad_root(home, home=home)
+        assert is_too_broad_root(home + os.sep, home=home)
+
+    def test_ancestor_of_home(self, home):
+        assert is_too_broad_root(os.path.dirname(home), home=home)
+
+    def test_folder_inside_home_ok(self, home):
+        assert not is_too_broad_root(os.path.join(home, "Pictures"), home=home)
+
+    def test_unrelated_folder_ok(self, home, tmp_path):
+        assert not is_too_broad_root(str(tmp_path / "srv" / "media"), home=home)
+
+    def test_symlink_to_home_refused(self, home, tmp_path):
+        link = tmp_path / "link"
+        link.symlink_to(home)
+        assert is_too_broad_root(str(link), home=home)
+
+    @pytest.mark.parametrize("bad", [None, "", 5, "a\0b"])
+    def test_unusable_values_refused(self, home, bad):
+        assert is_too_broad_root(bad, home=home)

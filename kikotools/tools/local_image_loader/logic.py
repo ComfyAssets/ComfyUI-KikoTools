@@ -48,6 +48,25 @@ def is_within_roots(path: Any, roots: Iterable[Any]) -> bool:
     return False
 
 
+def is_too_broad_root(path: Any, home: Optional[str] = None) -> bool:
+    """Return True if path is unusable or too broad to be a saved root.
+
+    Refuses filesystem/drive roots, the home directory itself and any
+    ancestor of it (e.g. /home), since those would expose every media file
+    a user owns. Folders inside home are fine.
+    """
+    real = resolve_path(path)
+    if real is None:
+        return True
+    if os.path.dirname(real) == real:  # "/" or a drive root like "C:\\"
+        return True
+    real_home = os.path.realpath(home or os.path.expanduser("~"))
+    try:
+        return os.path.commonpath([real, real_home]) == real
+    except ValueError:  # different drives
+        return False
+
+
 def is_allowed_media_path(
     path: Any, roots: Iterable[Any], kinds: Iterable[str] = ("image",)
 ) -> bool:

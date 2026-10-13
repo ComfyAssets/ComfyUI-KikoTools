@@ -13,6 +13,7 @@ from .logic import (
     create_empty_tensor,
     is_allowed_image_path,
     is_allowed_media_path,
+    is_too_broad_root,
     is_within_roots,
     list_subdirectories,
     load_image_from_path,
@@ -82,7 +83,10 @@ def get_allowed_roots() -> List[str]:
     roots: List[str] = []
     saved = load_config().get("saved_paths", [])
     if isinstance(saved, list):
-        roots.extend(p for p in saved if isinstance(p, str) and p)
+        # Skip broad roots saved before save_paths refused them
+        roots.extend(
+            p for p in saved if isinstance(p, str) and p and not is_too_broad_root(p)
+        )
     try:
         import folder_paths
 
@@ -235,6 +239,13 @@ async def save_paths(request):
     paths = data.get("paths", []) if isinstance(data, dict) else None
     if not isinstance(paths, list) or not all(isinstance(p, str) for p in paths):
         return _error(400, "paths must be a list of strings.")
+    too_broad = [p for p in paths if is_too_broad_root(p)]
+    if too_broad:
+        return _error(
+            400,
+            f"Folder too broad to share: {', '.join(too_broad)}. "
+            "Pick a folder inside your home directory or another media folder.",
+        )
     config = load_config()
     config["saved_paths"] = paths
     save_config(config)

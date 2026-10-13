@@ -75,6 +75,16 @@ class TestAllowedRoots:
         with patch.dict("sys.modules", {"folder_paths": fp}):
             assert node_mod.get_allowed_roots() == []
 
+    def test_too_broad_saved_paths_ignored(self, tmp_path, monkeypatch):
+        # A "/" saved before the guard existed must not keep working.
+        monkeypatch.setattr(node_mod, "CONFIG_FILE", str(tmp_path / "c.json"))
+        monkeypatch.setenv("HOME", str(tmp_path))
+        node_mod.save_config(
+            {"saved_paths": [os.path.abspath(os.sep), str(tmp_path), "/saved"]}
+        )
+        with patch.dict("sys.modules", {"folder_paths": None}):
+            assert node_mod.get_allowed_roots() == ["/saved"]
+
     def test_non_list_saved_paths(self, tmp_path, monkeypatch):
         monkeypatch.setattr(node_mod, "CONFIG_FILE", str(tmp_path / "c.json"))
         node_mod.save_config({"saved_paths": "oops"})
@@ -334,6 +344,25 @@ class TestSelectionAndConfig:
     @pytest.mark.parametrize("payload", [{"paths": "x"}, {"paths": [1]}, [1]])
     def test_save_paths_bad_input_400(self, env, payload):
         assert run(node_mod.save_paths(req(body=payload))).status == 400
+
+    @pytest.mark.parametrize("broad", ["root", "home", "home_parent"])
+    def test_save_paths_refuses_too_broad_roots(
+        self, env, monkeypatch, tmp_path, broad
+    ):
+        home = tmp_path / "h" / "user"
+        home.mkdir(parents=True)
+        monkeypatch.setenv("HOME", str(home))
+        path = {
+            "root": os.path.abspath(os.sep),
+            "home": str(home),
+            "home_parent": str(home.parent),
+        }[broad]
+        node_mod.save_config({"saved_paths": ["/keep"]})
+        r = run(node_mod.save_paths(req(body={"paths": ["/ok", path]})))
+        assert r.status == 400
+        assert path in body(r)["error"]
+        # Nothing was saved
+        assert node_mod.load_config()["saved_paths"] == ["/keep"]
 
     def test_save_paths_bad_json_400(self, env):
         assert run(node_mod.save_paths(req(body=ValueError()))).status == 400
