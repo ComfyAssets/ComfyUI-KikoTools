@@ -1,42 +1,31 @@
 """HuggingFace downloader implementation"""
 
+import logging
 import os
-import sys
-import time
 import urllib.request
 import urllib.error
 from typing import Optional
 from urllib.parse import urlparse, quote
 
-from .base import BaseDownloader
+from .base import (
+    USER_AGENT,
+    BaseDownloader,
+    safe_server_filename,
+    validate_filename,
+    validate_url_scheme,
+)
 
-try:
-    import comfy.model_management
+logger = logging.getLogger(__name__)
 
-    COMFY_AVAILABLE = True
-    InterruptProcessingException = comfy.model_management.InterruptProcessingException
-except ImportError:
-    COMFY_AVAILABLE = False
-    # Fallback exception type that will never be raised
-    InterruptProcessingException = type(
-        "InterruptProcessingException", (Exception,), {}
-    )
-
-
-CHUNK_SIZE = 1638400
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+HTTP_ERROR_HINTS = {
+    401: "Authentication required. Please provide a valid HuggingFace token.",
+    403: "Access forbidden. The model might be gated or require special permissions.",
+    404: "File not found. The URL might be incorrect or the file was removed.",
+}
 
 
 class HuggingFaceDownloader(BaseDownloader):
     """Downloader for HuggingFace models"""
-
-    def __init__(self, token: Optional[str] = None):
-        """Initialize HuggingFace downloader
-
-        Args:
-            token: Optional HuggingFace API token
-        """
-        super().__init__(token)
 
     def _parse_huggingface_url(self, url: str) -> dict:
         """Parse HuggingFace URL to extract repo and file information
@@ -115,21 +104,23 @@ class HuggingFaceDownloader(BaseDownloader):
         """Download file from HuggingFace
 
         Args:
-            url: HuggingFace URL to download
-            output_path: Directory to save file
-            filename: Optional filename override
+            url: HuggingFace URL to download (http or https)
+            output_path: Directory to save file (must be inside models dir)
+            filename: Optional filename override (plain name, no path parts)
             force: Force re-download if file exists
 
         Returns:
             Path to downloaded file
 
         Raises:
+            ValueError: For bad scheme, filename or save path
             Exception: If download fails
         """
-        # Validate output path
-        self.validate_output_path(output_path)
+        validate_url_scheme(url)
+        if filename:
+            validate_filename(filename)
+        output_dir = self.resolve_output_dir(output_path)
 
-        # Parse URL to get file information
         url_info = self._parse_huggingface_url(url)
 
         # Convert blob URL to resolve URL if needed
@@ -137,135 +128,34 @@ class HuggingFaceDownloader(BaseDownloader):
             download_url = self._construct_download_url(
                 url_info["repo_id"], url_info["filename"], url_info["revision"]
             )
-            print(f"[HuggingFace] Converted URL to: {download_url}")
+            logger.info("Converted URL to: %s", download_url)
         else:
-            # Use original URL if parsing failed
             download_url = url
 
-        # Determine filename
         if not filename:
             if url_info["filename"]:
-                # Use just the basename from the URL
-                filename = os.path.basename(url_info["filename"])
+                name = os.path.basename(url_info["filename"])
             else:
-                filename = self.extract_filename(url, default="model.safetensors")
+                name = self.extract_filename(url, default="model.safetensors")
+            filename = safe_server_filename(name, "model.safetensors")
 
-        output_file = os.path.join(output_path, filename)
-
-        # Check if should download
+        output_file = os.path.join(output_dir, filename)
         if not self.should_download(output_file, force):
-            print(f"File already exists: {output_file}")
+            logger.info("File already exists: %s", output_file)
             return output_file
 
-        # Prepare headers
         headers = {"User-Agent": USER_AGENT}
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
-
-        # Create request with converted download URL
         request = urllib.request.Request(download_url, headers=headers)
 
         try:
-            response = urllib.request.urlopen(request)
+            response = self.open_url(request)
         except urllib.error.HTTPError as e:
-            if e.code == 401:
-                raise Exception(
-                    "Authentication required. Please provide a valid HuggingFace token."
-                )
-            elif e.code == 403:
-                raise Exception(
-                    "Access forbidden. The model might be gated or require special permissions."
-                )
-            elif e.code == 404:
-                raise Exception(
-                    "File not found. The URL might be incorrect or the file was removed."
-                )
-            elif e.code == 429:
-                raise Exception(
-                    "Rate limited. Please wait a moment before trying again."
-                )
-            else:
-                raise Exception(f"HTTP error {e.code}: {e.reason}")
+            self.raise_for_http_status(e.code, e.reason, HTTP_ERROR_HINTS)
         except urllib.error.URLError as e:
             raise Exception(f"Network error: {e.reason}")
 
-        # Get file size
-        total_size = response.getheader("Content-Length")
-        if total_size is not None:
-            total_size = int(total_size)
-
-        print(f"Downloading: {filename}")
-        print(f"Destination: {output_file}")
-        if total_size:
-            print(f"Size: {self.format_size(total_size)}")
-
-        # Download with progress
-        try:
-            with open(output_file, "wb") as f:
-                downloaded = 0
-                start_time = time.time()
-
-                while True:
-                    chunk_start_time = time.time()
-                    buffer = response.read(CHUNK_SIZE)
-                    chunk_end_time = time.time()
-
-                    if not buffer:
-                        break
-
-                    downloaded += len(buffer)
-                    f.write(buffer)
-                    chunk_time = chunk_end_time - chunk_start_time
-
-                    # Check for user cancellation
-                    self.check_interrupt()
-
-                    # Calculate speed
-                    speed = self.calculate_speed(len(buffer), chunk_time)
-
-                    # Report progress
-                    if total_size is not None:
-                        progress = downloaded / total_size
-                        sys.stdout.write(
-                            f'\r[{"=" * int(progress * 50):<50}] {progress * 100:.2f}% - {speed:.2f} MB/s'
-                        )
-                        sys.stdout.flush()
-                        self.report_progress(
-                            downloaded, total_size, f"{speed:.2f} MB/s"
-                        )
-                    else:
-                        sys.stdout.write(
-                            f"\rDownloaded: {self.format_size(downloaded)} - {speed:.2f} MB/s"
-                        )
-                        sys.stdout.flush()
-                        self.report_progress(downloaded, 0, f"{speed:.2f} MB/s")
-
-            end_time = time.time()
-            time_taken = end_time - start_time
-            hours, remainder = divmod(time_taken, 3600)
-            minutes, seconds = divmod(remainder, 60)
-
-            if hours > 0:
-                time_str = f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
-            elif minutes > 0:
-                time_str = f"{int(minutes)}m {int(seconds)}s"
-            else:
-                time_str = f"{int(seconds)}s"
-
-            sys.stdout.write("\n")
-            print(f"✓ Download completed in {time_str}")
-            print(f"✓ File saved as: {output_file}")
-
-            # Verify file size
-            actual_size = os.path.getsize(output_file)
-            if total_size and actual_size != total_size:
-                raise Exception(
-                    f"Download incomplete. Expected {total_size} bytes, got {actual_size} bytes"
-                )
-
-            return output_file
-        except InterruptProcessingException:
-            # Clean up partial download on interrupt
-            if os.path.exists(output_file):
-                os.remove(output_file)
-            raise
+        total_size = self.parse_content_length(response)
+        logger.info("Downloading %s to %s", filename, output_file)
+        return self.save_response(response, output_file, total_size)

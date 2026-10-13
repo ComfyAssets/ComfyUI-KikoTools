@@ -1,7 +1,11 @@
 """ComfyUI Model Downloader Node"""
 
+import logging
+
 from ...base import ComfyAssetsBaseNode
 from .detector import URLDetector
+
+logger = logging.getLogger(__name__)
 
 
 class ModelDownloaderNode(ComfyAssetsBaseNode):
@@ -101,15 +105,13 @@ class ModelDownloaderNode(ComfyAssetsBaseNode):
             detector = URLDetector()
             downloader_type = detector.detect(url)
 
-            print(
-                f"\n[Model Downloader] Detected downloader type: {downloader_type.value}"
-            )
-            print(f"[Model Downloader] URL: {url}")
-            print(f"[Model Downloader] Save path: {save_path}")
+            logger.info("Detected downloader type: %s", downloader_type.value)
+            logger.info("URL: %s", url)
+            logger.info("Save path: %s", save_path)
             if filename:
-                print(f"[Model Downloader] Filename: {filename}")
+                logger.info("Filename: %s", filename)
             if force_download:
-                print("[Model Downloader] Force download: enabled")
+                logger.info("Force download: enabled")
 
             # Get downloader instance
             downloader = detector.get_downloader(url, api_token=api_token)
@@ -120,18 +122,18 @@ class ModelDownloaderNode(ComfyAssetsBaseNode):
             )
 
             message = f"Successfully downloaded to {file_path}"
-            print(f"[Model Downloader] {message}")
+            logger.info(message)
 
             return {"ui": {"text": [message]}}
 
         except ValueError as e:
             error_msg = f"Invalid URL: {str(e)}"
-            print(f"[Model Downloader] Error: {error_msg}")
+            logger.error(error_msg)
             return {"ui": {"text": [error_msg]}}
 
         except Exception as e:
             error_msg = f"Download failed: {str(e)}"
-            print(f"[Model Downloader] Error: {error_msg}")
+            logger.error(error_msg)
             return {"ui": {"text": [error_msg]}}
 
     @classmethod
