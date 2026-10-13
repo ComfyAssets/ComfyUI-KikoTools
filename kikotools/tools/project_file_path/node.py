@@ -56,7 +56,6 @@ class ProjectFilePathNode(ComfyAssetsBaseNode):
         }
 
     RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("path",)
     FUNCTION = "generate_path"
     CATEGORY = "🫶 ComfyAssets/🛠️ Utils"
 

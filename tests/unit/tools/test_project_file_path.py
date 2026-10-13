@@ -138,7 +138,8 @@ class TestNode:
 
     def test_metadata(self):
         assert ProjectFilePathNode.RETURN_TYPES == ("STRING",)
-        assert ProjectFilePathNode.RETURN_NAMES == ("path",)
+        # No custom name: ComfyUI labels the output "STRING", like djz-nodes
+        assert not hasattr(ProjectFilePathNode, "RETURN_NAMES")
         assert ProjectFilePathNode.CATEGORY == "🫶 ComfyAssets/🛠️ Utils"
 
     def test_generate_path(self):
