@@ -1,12 +1,36 @@
 """Local Image Loader node for ComfyUI."""
 
-import os
+import io
 import json
+import logging
+import os
+from typing import Any, Dict, List, Tuple
+
 import torch
-from typing import Dict, Any, Tuple
 
 from ...base.base_node import ComfyAssetsBaseNode
-from .logic import load_image_from_path, create_empty_tensor
+from .logic import (
+    create_empty_tensor,
+    is_allowed_image_path,
+    is_allowed_media_path,
+    is_within_roots,
+    list_subdirectories,
+    load_image_from_path,
+    resolve_path,
+    scan_directory,
+)
+
+try:
+    from aiohttp import web
+except ImportError:  # pragma: no cover - aiohttp ships with ComfyUI
+    web = None
+
+logger = logging.getLogger(__name__)
+
+MEDIA_KINDS = ("image", "video", "audio")
+MAX_PER_PAGE = 200
+DEFAULT_PER_PAGE = 50
+MAX_DIRECTORY_SUGGESTIONS = 50
 
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))
 SELECTIONS_FILE = os.path.join(NODE_DIR, "selections.json")
@@ -30,7 +54,7 @@ def save_selections(data: Dict[str, Any]) -> None:
         with open(SELECTIONS_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e:
-        print(f"KikoLocalImageLoader: Error saving selections: {e}")
+        logger.error("Error saving selections: %s", e)
 
 
 def load_config() -> Dict[str, Any]:
@@ -50,7 +74,25 @@ def save_config(data: Dict[str, Any]) -> None:
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
     except Exception as e:
-        print(f"KikoLocalImageLoader: Error saving config: {e}")
+        logger.error("Error saving config: %s", e)
+
+
+def get_allowed_roots() -> List[str]:
+    """Directories whose contents may be served: saved paths + ComfyUI in/out."""
+    roots: List[str] = []
+    saved = load_config().get("saved_paths", [])
+    if isinstance(saved, list):
+        roots.extend(p for p in saved if isinstance(p, str) and p)
+    try:
+        import folder_paths
+
+        for getter in ("get_input_directory", "get_output_directory"):
+            value = getattr(folder_paths, getter)()
+            if isinstance(value, str) and value:
+                roots.append(value)
+    except Exception:  # folder_paths missing or misbehaving outside ComfyUI
+        pass
+    return roots
 
 
 class LocalImageLoaderNode(ComfyAssetsBaseNode):
@@ -102,228 +144,213 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
         image_selection = node_selections.get("image")
         if image_selection and image_selection.get("path"):
             image_path = image_selection["path"]
-            if os.path.exists(image_path):
+            if not is_allowed_image_path(image_path, get_allowed_roots()):
+                # selections.json may have been tampered with
+                logger.warning("Refusing to load disallowed path: %s", image_path)
+            elif os.path.exists(image_path):
                 try:
                     image_tensor, metadata = load_image_from_path(image_path)
                     info_string = json.dumps(metadata, indent=4, ensure_ascii=False)
                 except Exception as e:
-                    print(f"KikoLocalImageLoader: Error loading image: {e}")
+                    logger.error("Error loading image: %s", e)
 
         return (image_tensor, info_string)
 
 
-# Setup API routes
-try:
-    import server
-    from aiohttp import web
-    import urllib.parse
-    import io
-    from PIL import Image
-    from .logic import scan_directory
+# ---------------------------------------------------------------------------
+# API route handlers (module level so they can be tested without a server)
+# ---------------------------------------------------------------------------
 
-    prompt_server = server.PromptServer.instance
 
-    @prompt_server.routes.post("/kiko_local_image_loader/set_node_selection")
-    async def set_node_selection(request):
-        """API endpoint to set node selection."""
-        try:
-            data = await request.json()
-            node_id = str(data.get("node_id"))
-            path = data.get("path")
-            media_type = data.get("type")
+def _error(status: int, message: str):
+    return web.json_response({"status": "error", "error": message}, status=status)
 
-            if not all([node_id, path, media_type]):
-                return web.json_response(
-                    {"status": "error", "message": "Missing required data."}, status=400
-                )
 
-            selections = load_selections()
-            if node_id not in selections:
-                selections[node_id] = {}
+def _check_file(filepath: Any, kinds: Tuple[str, ...] = ("image",)):
+    """Validate a requested file. Returns (resolved_path, error_response)."""
+    if not isinstance(filepath, str) or not filepath or "\0" in filepath:
+        return None, web.Response(status=400)
+    real = resolve_path(filepath)
+    if not is_allowed_media_path(real, get_allowed_roots(), kinds):
+        return None, web.Response(status=403)
+    if not os.path.isfile(real):
+        return None, web.Response(status=404)
+    return real, None
 
-            selections[node_id][media_type] = {"path": path}
-            save_selections(selections)
 
-            return web.json_response({"status": "ok"})
-        except Exception as e:
-            return web.json_response({"status": "error", "message": str(e)}, status=500)
+def _parse_paging(query) -> Tuple[int, int]:
+    """Parse page/per_page; raises ValueError on garbage."""
+    page = int(query.get("page", 1))
+    per_page = int(query.get("per_page", DEFAULT_PER_PAGE))
+    if page < 1:
+        raise ValueError("page must be >= 1")
+    return page, max(1, min(per_page, MAX_PER_PAGE))
 
-    @prompt_server.routes.get("/kiko_local_image_loader/get_saved_paths")
-    async def get_saved_paths(request):
-        """API endpoint to get saved directory paths."""
-        config = load_config()
-        return web.json_response({"saved_paths": config.get("saved_paths", [])})
 
-    @prompt_server.routes.post("/kiko_local_image_loader/save_paths")
-    async def save_paths(request):
-        """API endpoint to save directory paths."""
-        try:
-            data = await request.json()
-            paths = data.get("paths", [])
-            config = load_config()
-            config["saved_paths"] = paths
-            save_config(config)
-            return web.json_response({"status": "ok"})
-        except Exception as e:
-            return web.json_response({"status": "error", "message": str(e)}, status=500)
+async def set_node_selection(request):
+    """Store the selected image for a node (image files in allowed roots only)."""
+    try:
+        data = await request.json()
+    except Exception:
+        return _error(400, "Invalid JSON.")
+    if not isinstance(data, dict):
+        return _error(400, "Invalid payload.")
 
-    @prompt_server.routes.get("/kiko_local_image_loader/images")
-    async def get_local_images(request):
-        """API endpoint to get images from a directory."""
-        directory = request.query.get("directory", "")
+    node_id = data.get("node_id")
+    path = data.get("path")
+    media_type = data.get("type")
+    if (
+        node_id is None
+        or not isinstance(path, str)
+        or not path
+        or "\0" in path
+        or not isinstance(media_type, str)
+        or not media_type
+    ):
+        return _error(400, "Missing required data.")
 
-        if not directory or not os.path.isdir(directory):
-            return web.json_response({"error": "Directory not found."}, status=404)
+    # The frontend also selects video/audio; load_media only ever reads images.
+    if not is_allowed_media_path(path, get_allowed_roots(), MEDIA_KINDS):
+        return _error(403, "Path not allowed.")
 
-        # Normalize path to remove trailing slashes and resolve relative paths
-        directory = os.path.normpath(directory)
+    selections = load_selections()
+    selections.setdefault(str(node_id), {})[media_type] = {"path": path}
+    save_selections(selections)
+    return web.json_response({"status": "ok"})
 
-        # Save last path
-        config = load_config()
-        config["last_path"] = directory
-        save_config(config)
 
-        show_videos = request.query.get("show_videos", "false").lower() == "true"
-        show_audio = request.query.get("show_audio", "false").lower() == "true"
-        hide_dot_folders = (
-            request.query.get("hide_dot_folders", "true").lower() == "true"
+async def get_saved_paths(request):
+    """Return saved directory paths."""
+    return web.json_response({"saved_paths": load_config().get("saved_paths", [])})
+
+
+async def save_paths(request):
+    """Persist the list of saved directory paths."""
+    try:
+        data = await request.json()
+    except Exception:
+        return _error(400, "Invalid JSON.")
+    paths = data.get("paths", []) if isinstance(data, dict) else None
+    if not isinstance(paths, list) or not all(isinstance(p, str) for p in paths):
+        return _error(400, "paths must be a list of strings.")
+    config = load_config()
+    config["saved_paths"] = paths
+    save_config(config)
+    return web.json_response({"status": "ok"})
+
+
+async def get_local_images(request):
+    """List images and sub-directories of a directory inside an allowed root."""
+    query = request.query
+    directory = query.get("directory", "")
+    if not directory or "\0" in directory:
+        return _error(400, "Directory is required.")
+    try:
+        page, per_page = _parse_paging(query)
+    except ValueError:
+        return _error(400, "Invalid page or per_page.")
+
+    if not is_within_roots(directory, get_allowed_roots()):
+        return _error(403, "Directory not allowed.")
+    real = resolve_path(directory)
+    if not os.path.isdir(real):
+        return _error(404, "Directory not found.")
+
+    # Normalize path (trailing slashes etc.) but keep the user-visible spelling
+    directory = os.path.normpath(directory)
+
+    config = load_config()
+    config["last_path"] = directory
+    save_config(config)
+
+    show_videos = query.get("show_videos", "false").lower() == "true"
+    show_audio = query.get("show_audio", "false").lower() == "true"
+    hide_dot_folders = query.get("hide_dot_folders", "true").lower() == "true"
+
+    try:
+        items = scan_directory(
+            directory,
+            show_videos,
+            show_audio,
+            query.get("sort_by", "name"),
+            query.get("sort_order", "asc"),
+            hide_dot_folders,
+        )
+    except Exception:
+        logger.exception("Error scanning directory %s", directory)
+        return _error(500, "Error reading directory.")
+
+    # Do not offer navigation above the allowed roots
+    parent_directory = os.path.dirname(directory)
+    if parent_directory == directory or not is_within_roots(
+        parent_directory, get_allowed_roots()
+    ):
+        parent_directory = None
+
+    start = (page - 1) * per_page
+    return web.json_response(
+        {
+            "items": items[start : start + per_page],
+            "total_pages": (len(items) + per_page - 1) // per_page,
+            "current_page": page,
+            "current_directory": directory,
+            "parent_directory": parent_directory,
+        }
+    )
+
+
+async def get_last_path(request):
+    """Return the last used directory path."""
+    return web.json_response({"last_path": load_config().get("last_path", "")})
+
+
+async def list_directories(request):
+    """List directory names for the folder-picker autocomplete.
+
+    Trade-off: this is how users browse to a location that is not yet a saved
+    root, so it is intentionally NOT restricted to the allowed roots. It only
+    ever returns directory paths (never files), capped at
+    MAX_DIRECTORY_SUGGESTIONS; file contents stay protected by the root and
+    extension checks on every other route.
+    """
+    path = request.query.get("path", "")
+    if "\0" in path:
+        return web.json_response({"directories": []})
+
+    try:
+        if not path:
+            if os.name == "nt":
+                import string
+
+                drives = [
+                    f"{d}:\\"
+                    for d in string.ascii_uppercase
+                    if os.path.exists(f"{d}:\\")
+                ]
+                return web.json_response({"directories": drives})
+            return web.json_response({"directories": [os.sep]})
+
+        dirs = list_subdirectories(os.path.expanduser(path), MAX_DIRECTORY_SUGGESTIONS)
+        return web.json_response({"directories": dirs})
+    except PermissionError:
+        return web.json_response({"directories": [], "error": "Permission denied"})
+    except Exception:
+        logger.exception("Error listing directories for %s", path)
+        return web.json_response(
+            {"directories": [], "error": "Error listing directories"}
         )
 
-        page = int(request.query.get("page", 1))
-        per_page = int(request.query.get("per_page", 50))
-        sort_by = request.query.get("sort_by", "name")
-        sort_order = request.query.get("sort_order", "asc")
 
-        try:
-            items = scan_directory(
-                directory,
-                show_videos,
-                show_audio,
-                sort_by,
-                sort_order,
-                hide_dot_folders,
-            )
+async def get_thumbnail(request):
+    """Return a thumbnail of an allowed image."""
+    real, error = _check_file(request.query.get("filepath"))
+    if error is not None:
+        return error
 
-            # Get parent directory
-            parent_directory = os.path.dirname(directory)
-            if parent_directory == directory:
-                parent_directory = None
+    try:
+        from PIL import Image
 
-            # Paginate results
-            start = (page - 1) * per_page
-            end = start + per_page
-            paginated_items = items[start:end]
-
-            return web.json_response(
-                {
-                    "items": paginated_items,
-                    "total_pages": (len(items) + per_page - 1) // per_page,
-                    "current_page": page,
-                    "current_directory": directory,
-                    "parent_directory": parent_directory,
-                }
-            )
-        except Exception as e:
-            return web.json_response({"error": str(e)}, status=500)
-
-    @prompt_server.routes.get("/kiko_local_image_loader/get_last_path")
-    async def get_last_path(request):
-        """API endpoint to get last used directory path."""
-        return web.json_response({"last_path": load_config().get("last_path", "")})
-
-    @prompt_server.routes.get("/kiko_local_image_loader/list_directories")
-    async def list_directories(request):
-        """API endpoint to list directories for autocomplete."""
-        path = request.query.get("path", "")
-
-        try:
-            # Handle empty path - show root or common starting points
-            if not path:
-                # Return filesystem root
-                if os.name == "nt":  # Windows
-                    import string
-
-                    drives = [
-                        f"{d}:\\"
-                        for d in string.ascii_uppercase
-                        if os.path.exists(f"{d}:\\")
-                    ]
-                    return web.json_response({"directories": drives})
-                else:  # Unix/Linux/Mac
-                    return web.json_response({"directories": ["/"]})
-
-            # Normalize the path
-            path = os.path.expanduser(path)  # Handle ~ for home directory
-
-            # If path ends with separator, list contents of that directory
-            if path.endswith(os.sep) or (os.name == "nt" and path.endswith("/")):
-                if os.path.isdir(path):
-                    try:
-                        entries = os.listdir(path)
-                        dirs = []
-                        for entry in entries:
-                            full_path = os.path.join(path, entry)
-                            if os.path.isdir(full_path):
-                                dirs.append(full_path)
-                        dirs.sort(key=lambda x: x.lower())
-                        return web.json_response(
-                            {"directories": dirs[:50]}
-                        )  # Limit results
-                    except PermissionError:
-                        return web.json_response(
-                            {"directories": [], "error": "Permission denied"}
-                        )
-                else:
-                    return web.json_response({"directories": []})
-
-            # Otherwise, find matching directories in parent
-            parent_dir = os.path.dirname(path)
-            basename = os.path.basename(path).lower()
-
-            if not parent_dir:
-                # Handle root level on Unix
-                if path.startswith("/"):
-                    parent_dir = "/"
-                    basename = path[1:].lower()
-                else:
-                    return web.json_response({"directories": []})
-
-            if os.path.isdir(parent_dir):
-                try:
-                    entries = os.listdir(parent_dir)
-                    dirs = []
-                    for entry in entries:
-                        full_path = os.path.join(parent_dir, entry)
-                        if os.path.isdir(full_path) and entry.lower().startswith(
-                            basename
-                        ):
-                            dirs.append(full_path)
-                    dirs.sort(key=lambda x: x.lower())
-                    return web.json_response(
-                        {"directories": dirs[:50]}
-                    )  # Limit results
-                except PermissionError:
-                    return web.json_response(
-                        {"directories": [], "error": "Permission denied"}
-                    )
-
-            return web.json_response({"directories": []})
-        except Exception as e:
-            return web.json_response({"directories": [], "error": str(e)})
-
-    @prompt_server.routes.get("/kiko_local_image_loader/thumbnail")
-    async def get_thumbnail(request):
-        """API endpoint to get image thumbnail."""
-        filepath = request.query.get("filepath")
-        if not filepath or ".." in filepath:
-            return web.Response(status=400)
-
-        filepath = urllib.parse.unquote(filepath)
-        if not os.path.exists(filepath):
-            return web.Response(status=404)
-
-        try:
-            img = Image.open(filepath)
+        with Image.open(real) as img:
             has_alpha = img.mode == "RGBA" or (
                 img.mode == "P" and "transparency" in img.info
             )
@@ -331,33 +358,39 @@ try:
             img.thumbnail([320, 320], Image.LANCZOS)
 
             buffer = io.BytesIO()
-            format, content_type = (
+            fmt, content_type = (
                 ("PNG", "image/png") if has_alpha else ("JPEG", "image/jpeg")
             )
-            img.save(buffer, format=format, quality=90 if format == "JPEG" else None)
-            buffer.seek(0)
+            img.save(buffer, format=fmt, quality=90 if fmt == "JPEG" else None)
+        return web.Response(body=buffer.getvalue(), content_type=content_type)
+    except Exception:
+        logger.exception("Error generating thumbnail for %s", real)
+        return web.Response(status=500)
 
-            return web.Response(body=buffer.read(), content_type=content_type)
-        except Exception as e:
-            print(f"KikoLocalImageLoader: Error generating thumbnail: {e}")
-            return web.Response(status=500)
 
-    @prompt_server.routes.get("/kiko_local_image_loader/view")
-    async def view_image(request):
-        """API endpoint to view full image."""
-        filepath = request.query.get("filepath")
-        if not filepath or ".." in filepath:
-            return web.Response(status=400)
+async def view_image(request):
+    """Serve a full-size allowed media file (image, video or audio)."""
+    real, error = _check_file(request.query.get("filepath"), MEDIA_KINDS)
+    if error is not None:
+        return error
+    return web.FileResponse(real)
 
-        filepath = urllib.parse.unquote(filepath)
-        if not os.path.exists(filepath):
-            return web.Response(status=404)
 
-        try:
-            return web.FileResponse(filepath)
-        except Exception:
-            return web.Response(status=500)
+# Setup API routes
+try:
+    import server
 
+    prompt_server = server.PromptServer.instance
+    _routes = prompt_server.routes
+    _prefix = "/kiko_local_image_loader"
+    _routes.post(f"{_prefix}/set_node_selection")(set_node_selection)
+    _routes.get(f"{_prefix}/get_saved_paths")(get_saved_paths)
+    _routes.post(f"{_prefix}/save_paths")(save_paths)
+    _routes.get(f"{_prefix}/images")(get_local_images)
+    _routes.get(f"{_prefix}/get_last_path")(get_last_path)
+    _routes.get(f"{_prefix}/list_directories")(list_directories)
+    _routes.get(f"{_prefix}/thumbnail")(get_thumbnail)
+    _routes.get(f"{_prefix}/view")(view_image)
 except ImportError:
     # Server not available during testing
     pass
