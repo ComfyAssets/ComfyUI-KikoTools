@@ -43,7 +43,7 @@ def get_next_counter(output_dir: str, prefix: str) -> int:
     counter = 0
     if os.path.exists(counter_file):
         try:
-            with open(counter_file, "r") as f:
+            with open(counter_file, "r", encoding="utf-8") as f:
                 content = f.read().strip()
                 counter = int(content) if content else 0
         except (ValueError, IOError):
@@ -55,7 +55,7 @@ def get_next_counter(output_dir: str, prefix: str) -> int:
 
     # Save updated counter
     try:
-        with open(counter_file, "w") as f:
+        with open(counter_file, "w", encoding="utf-8") as f:
             f.write(str(counter))
     except IOError:
         # If we can't write the counter file, continue anyway

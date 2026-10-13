@@ -19,7 +19,7 @@ class StateManager:
         """Load state from file."""
         if self.state_file.exists():
             try:
-                with open(self.state_file, "r") as f:
+                with open(self.state_file, "r", encoding="utf-8") as f:
                     return json.load(f)
             except (json.JSONDecodeError, IOError):
                 pass
@@ -28,7 +28,7 @@ class StateManager:
     def save_state(self, state: Dict[str, Any]):
         """Save state to file."""
         try:
-            with open(self.state_file, "w") as f:
+            with open(self.state_file, "w", encoding="utf-8") as f:
                 json.dump(state, f)
         except Exception as e:
             print(f"[BatchPrompts] Failed to save state: {e}")

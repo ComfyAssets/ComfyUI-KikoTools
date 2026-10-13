@@ -618,21 +618,27 @@ def get_model_recommendation(preset_name: str) -> str:
     return "Custom dimensions"
 
 
+def _console_safe(text: str) -> str:
+    """ASCII for console output: Windows legacy code pages can't print "×"."""
+    return text.replace("×", "x").encode("ascii", "replace").decode()
+
+
 def validate_preset_dimensions() -> bool:
     """Validate that all presets meet ComfyUI requirements."""
-    for preset_name, metadata in PRESET_METADATA.items():
+    for name, metadata in PRESET_METADATA.items():
+        preset_name = _console_safe(name)
         width, height = metadata.width, metadata.height
 
         # Check divisible by 8
         if width % 8 != 0 or height % 8 != 0:
             print(
-                f"ERROR: {preset_name} dimensions not divisible by 8: {width}×{height}"
+                f"ERROR: {preset_name} dimensions not divisible by 8: {width}x{height}"
             )
             return False
 
         # Check reasonable bounds
         if not (64 <= width <= 8192) or not (64 <= height <= 8192):
-            print(f"ERROR: {preset_name} dimensions out of bounds: {width}×{height}")
+            print(f"ERROR: {preset_name} dimensions out of bounds: {width}x{height}")
             return False
 
     return True
