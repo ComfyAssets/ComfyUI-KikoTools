@@ -63,7 +63,7 @@ Supports multiple prompt formats:
 - Video: Motion and temporal descriptions for video generation
 
 Requires Gemini API key (set GEMINI_API_KEY env var or provide in node).
-Install: pip install google-generativeai
+Install: pip install google-genai
 """
 
     def generate_prompt(

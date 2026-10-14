@@ -1067,7 +1067,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - **Test Coverage**: 100% (470+ comprehensive tests)
 - **Python Version**: 3.8+
 - **ComfyUI Compatibility**: Latest
-- **Dependencies**: Minimal (PyTorch, NumPy, Pillow, google-generativeai for Gemini)
+- **Dependencies**: Minimal (PyTorch, NumPy, Pillow, google-genai for Gemini)
 
 ## 🙏 Attribution
 

@@ -21,7 +21,7 @@ Get your free Gemini API key from [Google AI Studio](https://makersuite.google.c
 ### 2. Install Dependencies
 
 ```bash
-pip install google-generativeai
+pip install google-genai
 ```
 
 ### 3. Configure API Key
@@ -204,6 +204,6 @@ Errors are displayed in the prompt output for easy debugging.
 - Verify API key is valid
 - Image might be too large (resize if needed)
 
-**Import error for google-generativeai**:
-- Run `pip install google-generativeai` in your ComfyUI environment
+**Import error for google-genai**:
+- Run `pip install google-genai` in your ComfyUI environment
 - Restart ComfyUI after installation

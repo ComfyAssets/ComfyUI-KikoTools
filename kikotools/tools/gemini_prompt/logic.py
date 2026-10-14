@@ -115,30 +115,24 @@ def analyze_image_with_gemini(
     else:
         system_prompt = PROMPT_TEMPLATES.get(prompt_type, PROMPT_TEMPLATES["flux"])
 
-    # Here we would normally make the API call to Gemini
-    # For now, we'll import the google-generativeai library
     try:
-        import google.generativeai as genai
+        from google import genai
     except ImportError:
         return (
             "",
-            "google-generativeai library not installed. Please run: pip install google-generativeai",
+            "google-genai library not installed. Please run: pip install google-genai",
         )
 
     try:
-        # Configure Gemini
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
 
-        # Create model
-        model = genai.GenerativeModel(model_name)
-
-        # Generate content
-        response = model.generate_content(
-            [
+        response = client.models.generate_content(
+            model=model_name,
+            contents=[
                 system_prompt,
                 pil_image,
                 "Analyze this image and generate an appropriate prompt according to the instructions.",
-            ]
+            ],
         )
 
         # Extract text from response

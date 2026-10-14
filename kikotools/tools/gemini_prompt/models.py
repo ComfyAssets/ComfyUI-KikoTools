@@ -59,10 +59,10 @@ def _fetch_models_from_api(
         Tuple of (model_names_list, model_descriptions_dict)
     """
     try:
-        import google.generativeai as genai
+        from google import genai
     except ImportError:
         if not silent:
-            logger.error("google-generativeai not installed")
+            logger.error("google-genai not installed")
         return [], {}
 
     # Get API key
@@ -77,15 +77,15 @@ def _fetch_models_from_api(
         return [], {}
 
     try:
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
 
         models = []
         descriptions = {}
 
         # Fetch all models
-        for model in genai.list_models():
+        for model in client.models.list():
             # Only include models that support generateContent
-            if "generateContent" in model.supported_generation_methods:
+            if "generateContent" in (model.supported_actions or []):
                 # Remove "models/" prefix from name
                 model_name = model.name.replace("models/", "")
                 models.append(model_name)

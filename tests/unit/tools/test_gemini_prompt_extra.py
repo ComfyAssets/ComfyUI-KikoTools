@@ -24,15 +24,20 @@ def cache_file(tmp_path, monkeypatch):
 
 def fake_genai(model_specs):
     genai = MagicMock()
-    genai.list_models.return_value = [
+    genai.Client.return_value.models.list.return_value = [
         SimpleNamespace(
             name=f"models/{name}",
             display_name=display,
-            supported_generation_methods=methods,
+            supported_actions=methods,
         )
         for name, display, methods in model_specs
     ]
     return genai
+
+
+def sdk_modules(genai):
+    """sys.modules patch that makes `from google import genai` return genai."""
+    return {"google": MagicMock(genai=genai), "google.genai": genai}
 
 
 class TestSortModels:
@@ -111,27 +116,25 @@ class TestCache:
 
 class TestFetchModelsFromApi:
     def test_missing_sdk_returns_empty(self):
-        with patch.dict(sys.modules, {"google.generativeai": None, "google": None}):
+        with patch.dict(sys.modules, {"google.genai": None, "google": None}):
             assert models._fetch_models_from_api("k") == ([], {})
 
     def test_no_api_key_returns_empty(self):
         genai = fake_genai([])
-        google = MagicMock(generativeai=genai)
         with (
-            patch.dict(sys.modules, {"google": google, "google.generativeai": genai}),
+            patch.dict(sys.modules, sdk_modules(genai)),
             patch.object(logic, "get_api_key", return_value=None),
         ):
             assert models._fetch_models_from_api(None, silent=True) == ([], {})
 
     def test_api_key_taken_from_logic_when_not_given(self):
         genai = fake_genai([("gemini-2.5-pro", "Pro", ["generateContent"])])
-        google = MagicMock(generativeai=genai)
         with (
-            patch.dict(sys.modules, {"google": google, "google.generativeai": genai}),
+            patch.dict(sys.modules, sdk_modules(genai)),
             patch.object(logic, "get_api_key", return_value="envkey"),
         ):
             names, _ = models._fetch_models_from_api(None)
-        genai.configure.assert_called_once_with(api_key="envkey")
+        genai.Client.assert_called_once_with(api_key="envkey")
         assert names == ["gemini-2.5-pro"]
 
     def test_filters_to_generate_content_and_strips_prefix(self):
@@ -142,17 +145,15 @@ class TestFetchModelsFromApi:
                 ("gemini-2.5-flash", "Flash", ["generateContent", "countTokens"]),
             ]
         )
-        google = MagicMock(generativeai=genai)
-        with patch.dict(sys.modules, {"google": google, "google.generativeai": genai}):
+        with patch.dict(sys.modules, sdk_modules(genai)):
             names, desc = models._fetch_models_from_api("k")
         assert names == ["gemini-2.5-flash", "gemini-1.5-pro"]
         assert desc == {"gemini-1.5-pro": "Pro 1.5", "gemini-2.5-flash": "Flash"}
 
     def test_api_error_returns_empty(self):
         genai = MagicMock()
-        genai.list_models.side_effect = RuntimeError("boom")
-        google = MagicMock(generativeai=genai)
-        with patch.dict(sys.modules, {"google": google, "google.generativeai": genai}):
+        genai.Client.return_value.models.list.side_effect = RuntimeError("boom")
+        with patch.dict(sys.modules, sdk_modules(genai)):
             assert models._fetch_models_from_api("k") == ([], {})
 
 
@@ -205,20 +206,19 @@ class TestLogicExtra:
 
     def test_missing_sdk_reported(self):
         img = np.zeros((1, 4, 4, 3), dtype=np.float32)
-        with patch.dict(sys.modules, {"google.generativeai": None, "google": None}):
+        with patch.dict(sys.modules, {"google.genai": None, "google": None}):
             out, err = logic.analyze_image_with_gemini(img, "flux", api_key="k")
         assert out == "" and "not installed" in err
 
     def _run(self, response=None, error=None, **kwargs):
         genai = MagicMock()
-        model = genai.GenerativeModel.return_value
+        client_models = genai.Client.return_value.models
         if error:
-            model.generate_content.side_effect = error
+            client_models.generate_content.side_effect = error
         else:
-            model.generate_content.return_value = response
-        google = MagicMock(generativeai=genai)
+            client_models.generate_content.return_value = response
         img = np.zeros((1, 4, 4, 3), dtype=np.float32)
-        with patch.dict(sys.modules, {"google": google, "google.generativeai": genai}):
+        with patch.dict(sys.modules, sdk_modules(genai)):
             result = logic.analyze_image_with_gemini(img, "flux", api_key="k", **kwargs)
         return result, genai
 
@@ -227,24 +227,28 @@ class TestLogicExtra:
             SimpleNamespace(text="  hello \n"), model_name="gemini-x"
         )
         assert (out, err) == ("hello", None)
-        genai.configure.assert_called_once_with(api_key="k")
-        genai.GenerativeModel.assert_called_once_with("gemini-x")
+        genai.Client.assert_called_once_with(api_key="k")
+        call = genai.Client.return_value.models.generate_content.call_args
+        assert call.kwargs["model"] == "gemini-x"
 
     def test_custom_prompt_is_sent_as_system_prompt(self):
         (_, _), genai = self._run(SimpleNamespace(text="x"), custom_prompt="BE TERSE")
-        sent = genai.GenerativeModel.return_value.generate_content.call_args[0][0]
+        sent = genai.Client.return_value.models.generate_content.call_args.kwargs[
+            "contents"
+        ]
         assert sent[0] == "BE TERSE"
 
     def test_unknown_prompt_type_falls_back_to_flux_template(self):
         genai = MagicMock()
-        genai.GenerativeModel.return_value.generate_content.return_value = (
+        genai.Client.return_value.models.generate_content.return_value = (
             SimpleNamespace(text="x")
         )
-        google = MagicMock(generativeai=genai)
         img = np.zeros((1, 4, 4, 3), dtype=np.float32)
-        with patch.dict(sys.modules, {"google": google, "google.generativeai": genai}):
+        with patch.dict(sys.modules, sdk_modules(genai)):
             logic.analyze_image_with_gemini(img, "nonsense", api_key="k")
-        sent = genai.GenerativeModel.return_value.generate_content.call_args[0][0]
+        sent = genai.Client.return_value.models.generate_content.call_args.kwargs[
+            "contents"
+        ]
         assert sent[0] == logic.PROMPT_TEMPLATES["flux"]
 
     def test_empty_response(self):

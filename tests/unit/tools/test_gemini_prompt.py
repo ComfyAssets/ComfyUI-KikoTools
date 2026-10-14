@@ -187,10 +187,10 @@ class TestGeminiLogic:
         assert validate_prompt_type("") is False
         assert validate_prompt_type(None) is False
 
-    @pytest.mark.skip(reason="Requires google-generativeai library")
+    @pytest.mark.skip(reason="Requires google-genai library")
     def test_analyze_image_with_gemini_success(self):
         """Test successful image analysis with Gemini."""
-        pass  # Skipped as it requires google-generativeai
+        pass  # Skipped as it requires google-genai
 
     def test_analyze_image_no_api_key(self):
         """Test analysis without API key."""
@@ -204,10 +204,10 @@ class TestGeminiLogic:
         assert result == ""
         assert "API key not found" in error
 
-    @pytest.mark.skip(reason="Requires google-generativeai library")
+    @pytest.mark.skip(reason="Requires google-genai library")
     def test_analyze_image_with_custom_prompt(self):
         """Test analysis with custom prompt."""
-        pass  # Skipped as it requires google-generativeai
+        pass  # Skipped as it requires google-genai
 
 
 class TestPromptTemplates:
