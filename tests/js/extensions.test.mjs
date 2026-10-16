@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import { bindDimensionPresets, extractResolutionFromPreset, swapDimensions } from '../../web/ui/dimensions.js';
 
 function load(file, extra = {}) {
     const extensions = [];
@@ -19,8 +20,8 @@ function load(file, extra = {}) {
     return { extension: extensions[0], app, timers, context };
 }
 
-async function dimensionNode(preset, options = ['custom', '832×1216 - portrait', '1216×832 - landscape']) {
-    const { extension, app } = load('width_height_swap.js');
+async function dimensionNode(preset, options = ['custom', '832×1216 - portrait', '1216×832 - landscape'], file = 'width_height_swap.js') {
+    const { extension, app } = load(file, { bindDimensionPresets, extractResolutionFromPreset, swapDimensions, mountDimensionSwap() {} });
     let originalCreated = 0;
     class Node {
         constructor() {
@@ -33,15 +34,17 @@ async function dimensionNode(preset, options = ['custom', '832×1216 - portrait'
         }
         onNodeCreated() { originalCreated++; }
     }
-    await extension.beforeRegisterNodeDef(Node, { name: 'WidthHeightSelector' }, app);
+    await extension.beforeRegisterNodeDef(Node, { name: file === 'width_height_swap.js' ? 'WidthHeightSelector' : 'EmptyLatentBatch' }, app);
+    Node.prototype.createSwapButton = () => {};
     const node = new Node();
     node.onNodeCreated();
     assert.equal(originalCreated, 1);
     return node;
 }
 
-test('custom dimensions swap and callbacks receive the actual node', async () => {
-    const node = await dimensionNode('custom');
+for (const file of ['width_height_swap.js', 'empty_latent_batch_swap.js']) {
+test(`${file}: custom dimensions swap and callbacks receive the actual node`, async () => {
+    const node = await dimensionNode('custom', undefined, file);
     const calls = [];
     for (const widget of node.widgets.slice(1)) widget.callback = (value, canvas, owner) => calls.push({ value, owner });
     node.swapDimensions();
@@ -50,33 +53,82 @@ test('custom dimensions swap and callbacks receive the actual node', async () =>
     for (const call of calls) assert.equal(call.owner, node);
 });
 
-test('formatted preset swaps to its matching landscape preset without throwing', async () => {
-    const node = await dimensionNode('832×1216 - portrait');
+test(`${file}: formatted preset swaps to its matching landscape preset without throwing`, async () => {
+    const node = await dimensionNode('832×1216 - portrait', undefined, file);
     node.swapDimensions();
     assert.deepEqual(node.widgets.map(widget => widget.value), ['1216×832 - landscape', 1216, 832]);
 });
 
-test('a preset without a reverse switches to custom dimensions', async () => {
-    const node = await dimensionNode('832×1216 - portrait', ['custom', '832×1216 - portrait']);
+test(`${file}: a preset without a reverse switches to custom dimensions`, async () => {
+    const node = await dimensionNode('832×1216 - portrait', ['custom', '832×1216 - portrait'], file);
     node.swapDimensions();
     assert.deepEqual(node.widgets.map(widget => widget.value), ['custom', 1216, 832]);
 });
 
-test('preset changes preserve original callbacks and update both dimensions', async () => {
-    const node = await dimensionNode('custom');
+test(`${file}: preset changes preserve original callbacks and update both dimensions`, async () => {
+    const node = await dimensionNode('custom', undefined, file);
     node.widgets[0].callback('1216×832 - landscape', {}, node);
     assert.deepEqual(node.widgets.slice(1).map(widget => widget.value), [1216, 832]);
     assert.equal(node.extractResolutionFromPreset('custom'), null);
     assert.equal(node.originalPresetCalls, 1);
 });
 
-test('unrelated node definitions retain their lifecycle methods', async () => {
-    const { extension, app } = load('width_height_swap.js');
+test(`${file}: a preset swap notifies each dimension callback exactly once`, async () => {
+    const node = await dimensionNode('832×1216 - portrait', undefined, file);
+    const calls = [];
+    for (const widget of node.widgets.slice(1)) widget.callback = function (value, canvas, owner) { calls.push({ name: this.name, value, owner }); };
+    node.swapDimensions();
+    assert.deepEqual(calls.map(call => [call.name, call.value]), [['width', 1216], ['height', 832]]);
+    assert.equal(node.originalPresetCalls, 1);
+    for (const call of calls) assert.equal(call.owner, node);
+});
+
+test(`${file}: ASCII resolutions match reversed presets and unfamiliar formatted presets update dimensions`, async () => {
+    const node = await dimensionNode('832x1216 - portrait', ['custom', '832x1216 - portrait', '1216x832 - landscape'], file);
+    node.swapDimensions();
+    assert.deepEqual(node.widgets.map(widget => widget.value), ['1216x832 - landscape', 1216, 832]);
+    node.widgets[0].callback('2040×1080 - future preset', {}, node);
+    assert.deepEqual(node.widgets.slice(1).map(widget => widget.value), [2040, 1080]);
+});
+
+test(`${file}: malformed presets do not write invalid dimensions`, async () => {
+    const node = await dimensionNode('invalidx960', undefined, file);
+    node.swapDimensions();
+    assert.deepEqual(node.widgets.map(widget => widget.value), ['invalidx960', 832, 1216]);
+});
+
+test(`${file}: unrelated node definitions retain their lifecycle methods`, async () => {
+    const { extension, app } = load(file);
     class Node { onNodeCreated() {} }
     const original = Node.prototype.onNodeCreated;
     await extension.beforeRegisterNodeDef(Node, { name: 'OtherNode' }, app);
     assert.equal(Node.prototype.onNodeCreated, original);
 });
+
+test(`${file}: creation preserves hook arguments, results and existing canvas hooks`, async () => {
+    const { extension, app } = load(file, { bindDimensionPresets, extractResolutionFromPreset, swapDimensions, mountDimensionSwap() {} });
+    class Node {
+        constructor() { this.widgets = []; }
+        onNodeCreated(value) { this.received = value; return 'original result'; }
+        onDrawForeground() {}
+        onMouseDown() {}
+        onMouseMove() {}
+    }
+    const hooks = [Node.prototype.onDrawForeground, Node.prototype.onMouseDown, Node.prototype.onMouseMove];
+    await extension.beforeRegisterNodeDef(Node, { name: file === 'width_height_swap.js' ? 'WidthHeightSelector' : 'EmptyLatentBatch' }, app);
+    const node = new Node();
+    assert.equal(node.onNodeCreated('original argument'), 'original result');
+    assert.equal(node.received, 'original argument');
+    assert.deepEqual([Node.prototype.onDrawForeground, Node.prototype.onMouseDown, Node.prototype.onMouseMove], hooks);
+});
+
+test(`${file}: nodes without an existing creation hook initialize safely`, async () => {
+    const { extension, app } = load(file, { bindDimensionPresets, extractResolutionFromPreset, swapDimensions, mountDimensionSwap() {} });
+    class Node { constructor() { this.widgets = []; } }
+    await extension.beforeRegisterNodeDef(Node, { name: file === 'width_height_swap.js' ? 'WidthHeightSelector' : 'EmptyLatentBatch' }, app);
+    assert.equal(new Node().onNodeCreated(), undefined);
+});
+}
 
 test('Gemini repeated execution restores the user color and removal cancels its timer', async () => {
     const { extension, app, timers } = load('gemini_prompt_ui.js');

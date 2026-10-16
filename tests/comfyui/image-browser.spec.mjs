@@ -47,6 +47,88 @@ test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
     });
 });
 
+for (const name of ['WidthHeightSelector', 'EmptyLatentBatch']) {
+test(`${name}: shared swap survives renderers, zoom, themes and workflow reload`, async ({ page }, testInfo) => {
+    await page.evaluate(async name => {
+        const { app } = await import('/scripts/app.js');
+        const node = LiteGraph.createNode(name);
+        app.graph.add(node);
+        const preset = node.widgets.find(widget => widget.name === 'preset');
+        const options = typeof preset.options.values === 'function' ? preset.options.values() : preset.options.values;
+        preset.value = options.find(option => option.startsWith('832×1216'));
+        preset.callback(preset.value, app.canvas, node, [0, 0], null);
+        const batch = node.widgets.find(widget => widget.name === 'batch_size');
+        if (batch) batch.value = 3;
+        app.canvas.centerOnNode(node);
+    }, name);
+    const panel = page.locator('.ca-dimension-swap');
+    const button = panel.getByRole('button', { name: 'Swap width and height', exact: true });
+    await expect(button).toBeVisible();
+    for (const renderer of [false, true, false]) {
+        const before = await page.evaluate(async ({ name, renderer }) => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+            const node = app.graph._nodes.find(node => node.type === name);
+            app.canvas.ds.scale = .7;
+            app.canvas.centerOnNode(node);
+            return node.widgets.filter(widget => ['width', 'height'].includes(widget.name)).map(widget => widget.value);
+        }, { name, renderer });
+        await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        await expect(panel).toHaveCount(1);
+        await button.focus();
+        await page.keyboard.press('Enter');
+        expect(await page.evaluate(async name => {
+            const { app } = await import('/scripts/app.js');
+            return app.graph._nodes.find(node => node.type === name).widgets.filter(widget => ['width', 'height'].includes(widget.name)).map(widget => widget.value);
+        }, name)).toEqual([...before].reverse());
+    }
+    await page.evaluate(async name => {
+        const { app } = await import('/scripts/app.js');
+        const node = app.graph._nodes.find(node => node.type === name);
+        node.setSize([220, 280]);
+        app.canvas.ds.scale = 1;
+        app.canvas.centerOnNode(node);
+    }, name);
+    expect(await panel.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    const narrow = await button.boundingBox();
+    await page.evaluate(async name => {
+        const { app } = await import('/scripts/app.js');
+        app.graph._nodes.find(node => node.type === name).setSize([500, 300]);
+    }, name);
+    await expect.poll(async () => (await button.boundingBox()).width).toBeGreaterThan(narrow.width);
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(async theme => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.ColorPalette', theme);
+        }, theme);
+        await expect(panel).toHaveAttribute('data-ca-theme', theme);
+        await page.screenshot({ path: testInfo.outputPath(`${name}-${theme}.png`) });
+    }
+    const restored = await page.evaluate(async name => {
+        const { app } = await import('/scripts/app.js');
+        const workflow = app.graph.serialize();
+        const saved = workflow.nodes.find(node => node.type === name);
+        const nativeCount = name === 'EmptyLatentBatch' ? 4 : 3;
+        if (saved.widgets_values.slice(nativeCount).some(value => value !== '' && value != null)) throw new Error('Swap UI leaked into workflow values');
+        await app.loadGraphData(workflow);
+        const node = app.graph._nodes.find(node => node.type === name);
+        app.canvas.centerOnNode(node);
+        return { saved: saved.widgets_values.slice(0, nativeCount), restored: node.widgets.filter(widget => ['preset', 'width', 'height', 'batch_size'].includes(widget.name)).map(widget => widget.value), size: Array.from(node.size), savedSize: Array.from(saved.size) };
+    }, name);
+    expect(restored.restored).toEqual(restored.saved);
+    expect(restored.size).toEqual(restored.savedSize);
+    await expect(panel).toHaveCount(1);
+    await page.evaluate(async name => {
+        const { app } = await import('/scripts/app.js');
+        const node = app.graph._nodes.find(node => node.type === name);
+        window.removedSwap = node;
+        app.graph.remove(node);
+    }, name);
+    await expect(panel).toHaveCount(0);
+    expect(await page.evaluate(() => removedSwap.swapScope.signal.aborted)).toBe(true);
+});
+}
+
 test('workflow timer preserves appearance and elapsed time through renderer switching and settings', async ({ page }, testInfo) => {
     await page.evaluate(async () => {
         const { app } = await import('/scripts/app.js');

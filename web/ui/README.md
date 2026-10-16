@@ -86,3 +86,20 @@ The setting renderer reuses its control across value updates. Its dialog lives
 in the document body so those re-renders preserve focus and native slider
 interaction. Cleanup waits one microtask to distinguish synchronous reparenting
 from actually closing/removing the settings control.
+
+## Dimension swapping
+
+Width Height Selector and Empty Latent Batch share `dimension-swap.js` and
+`dimensions.js`. Both use the same native blue Swap W×H button with keyboard and
+touch behavior. The selector no longer adds canvas drawing or mouse hit areas.
+Repeated mounting reuses one control; node removal disposes its theme/listeners.
+
+The supplied preset labels determine dimensions, including Unicode `×`, ASCII
+`x` and formatted metadata. A matching reversed preset is retained; otherwise
+the node switches to custom dimensions. Custom values swap directly. Malformed
+preset dimensions leave the node unchanged. Each width/height callback receives
+the host context exactly once, and existing preset callback results are retained.
+
+The control does not change node dimensions, batch size, native input order or
+backend interfaces. Workflow persistence remains with ComfyUI's native widgets;
+the DOM control does not serialize its UI state.

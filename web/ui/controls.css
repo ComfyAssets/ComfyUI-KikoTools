@@ -164,6 +164,8 @@
 .ca-color-dialog button.ca-color-preset[aria-pressed="true"] { outline: 2px solid var(--ca-focus); outline-offset: 2px; }
 .ca-color-done { align-self: end; }
 @media (pointer: coarse) { .ca-color-dialog button.ca-color-preset { min-block-size: 40px; } }
+.ca-dimension-swap { box-sizing: border-box; inline-size: 100%; block-size: 100%; display: flex; align-items: center; padding-block: 3px; }
+.ca-dimension-swap button { inline-size: 100%; }
 @media (forced-colors: active) {
     .ca-tools { --ca-accent: Highlight; --ca-focus: Highlight; --ca-border: ButtonText; --ca-line: CanvasText; }
     .ca-tools .ca-switch input:checked::before { background: HighlightText; }
