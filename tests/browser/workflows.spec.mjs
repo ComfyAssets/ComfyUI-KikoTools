@@ -1,7 +1,8 @@
 import { test, expect } from '../../tools/testing/node_modules/@playwright/test/index.mjs';
+import { isFixtureURL } from '../../tools/testing/network-policy.mjs';
 import { startCoverage, saveCoverage } from '../../tools/testing/browser-coverage.mjs';
 
-test.beforeEach(async ({ page, request, context, browserName }) => {
+test.beforeEach(async ({ page, request, context, browserName, baseURL }) => {
     await startCoverage(page, browserName);
     await expect(await request.post('/__test__/reset')).toBeOK();
     page.errors = [];
@@ -9,7 +10,7 @@ test.beforeEach(async ({ page, request, context, browserName }) => {
     page.on('response', response => { if (response.status() >= 500) page.errors.push(`${response.status()} ${response.url()}`); });
     await context.route('**/*', route => {
         const url = new URL(route.request().url());
-        if (url.hostname === '127.0.0.1') return route.continue();
+        if (isFixtureURL(url.href, baseURL)) return route.continue();
         page.errors.push(`Unexpected external request: ${url.origin}`);
         return route.abort();
     });
