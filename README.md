@@ -561,7 +561,7 @@ Time: 150.0ms
 ### 🔧 Architecture Highlights
 
 - **Modular Design**: Each tool is self-contained and independently testable
-- **Test-Driven Development**: 100% test coverage with comprehensive unit tests
+- **Test-Driven Development**: Regression tests for Python logic, JavaScript extensions, and browser workflows
 - **Clean Interfaces**: Standardized input/output patterns across all tools
 - **Separation of Concerns**: Clear distinction between logic, UI, and integration layers
 - **SOLID Principles**: Extensible architecture following software engineering best practices
@@ -1025,8 +1025,8 @@ Following **Test-Driven Development (TDD)**:
 # Test structure
 tests/
 ├── unit/                    # Individual component tests
-├── integration/            # ComfyUI workflow tests
-└── fixtures/              # Test data and workflows
+├── js/                      # Extension and coverage-gate regression tests
+└── browser/                 # Browser workflows and disposable host fixtures
 ```
 
 ### Adding New Tools
@@ -1086,7 +1086,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - **Presets**: 26 curated resolution presets
 - **Interactive Features**: 8+ (swap buttons, history UI, popup viewers, parameter visualization)
 - **AI Integration**: Gemini API with 40+ model support
-- **Test Coverage**: 100% (470+ comprehensive tests)
+- **Test Coverage**: Enforced 85% Python statement/branch coverage and per-file frontend coverage floors
 - **Python Version**: 3.8+
 - **ComfyUI Compatibility**: Latest
 - **Dependencies**: Minimal (PyTorch, NumPy, Pillow, google-genai for Gemini)
@@ -1115,3 +1115,8 @@ All adaptations maintain compatibility while adding new features and optimizatio
 [⭐ Star this repo](https://github.com/ComfyAssets/ComfyUI-KikoTools) • [🐛 Report Bug](https://github.com/ComfyAssets/ComfyUI-KikoTools/issues) • [💡 Request Feature](https://github.com/ComfyAssets/ComfyUI-KikoTools/issues)
 
 </div>
+
+## Automated testing
+
+See [TESTING.md](TESTING.md) for Python and JavaScript tests, cross-browser
+workflows, coverage gates, CI reports, and required merge checks.

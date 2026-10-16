@@ -1,0 +1,28 @@
+# Files excluded from the Comfy Registry archive (gitignore syntax).
+# Everything here is development-only; the published node needs
+# __init__.py, kikotools/, web/, examples/, README, LICENSE, pyproject.toml.
+
+# Test suite and tooling
+tests/
+scripts/
+.github/
+Makefile
+pytest.ini
+mypy.ini
+.flake8
+.pre-commit-config.yaml
+.secrets.baseline
+requirements-dev.txt
+
+# Reference / scratch code not imported by the node
+example.py
+
+# Agent and contributor docs
+CLAUDE.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+
+tools/
+coverage/
+TESTING.md
+AGENTS.md
