@@ -102,6 +102,9 @@ and scrolling on resize, palettes, saved history/node dimensions, serialization
 and polling cleanup on removal.
 Workflow Timer covers execution events, Classic/Nodes 2.0 switching, themes,
 custom node colors, persisted time/dimensions and the actual settings picker.
+Both dimension swap nodes cover keyboard swaps across renderers and zoom,
+responsive button sizing, palettes, native workflow values/saved sizes and
+removal cleanup. Latent batch size is preserved.
 Screenshots/traces appear in
 `tools/testing/test-results/comfyui/`. This opt-in smoke suite is separate from
 the required fixture CI job; fully provisioned, pinned ComfyUI CI and testing

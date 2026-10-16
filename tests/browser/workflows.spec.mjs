@@ -144,16 +144,71 @@ test('actual swap handlers preserve preset values and custom dimensions', async 
     const id = await createNode(page, 'WidthHeightSelector', { preset: '832×1216 - portrait', width: 832, height: 1216 });
     const swapped = await page.evaluate(id => {
         const node = kikoHost.nodes.get(String(id));
-        node.onMouseDown({ canvasX: 475, canvasY: 140 });
-        return node.widgets.map(widget => widget.value);
+        node.swapDimensions();
+        return node.widgets.filter(widget => ['preset', 'width', 'height'].includes(widget.name)).map(widget => widget.value);
     }, id);
     expect(swapped).toEqual(['1216×832 - landscape', '1216', '832']);
     await createNode(page, 'EmptyLatentBatch', { preset: 'custom', width: 640, height: 960 });
-    await page.getByRole('button', { name: /Swap W/ }).click();
     const latent = page.locator('[data-node="EmptyLatentBatch"]');
-    await expect(latent.getByLabel('width')).toHaveValue('960');
-    await expect(latent.getByLabel('height')).toHaveValue('640');
+    await latent.getByRole('button', { name: /Swap/ }).click();
+    await expect(latent.getByLabel('width', { exact: true })).toHaveValue('960');
+    await expect(latent.getByLabel('height', { exact: true })).toHaveValue('640');
 });
+
+for (const name of ['WidthHeightSelector', 'EmptyLatentBatch']) {
+test(`${name}: shared swap supports keyboard, callbacks and live themes`, async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, name, { preset: '832×1216 - portrait', width: 832, height: 1216, batch_size: 3 });
+    await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        node.element.style.width = '220px';
+        window.swapNotifications = [];
+        for (const widget of node.widgets.filter(widget => ['width', 'height'].includes(widget.name))) {
+            widget.callback = function (value, canvas, owner) { swapNotifications.push({ name: this.name, value, canvas: canvas === kikoHost.app.canvas, owner: owner === node }); };
+        }
+    }, id);
+    const panel = page.locator('.ca-dimension-swap');
+    const button = panel.getByRole('button', { name: 'Swap width and height', exact: true });
+    await expect(button).toHaveCSS('background-color', 'rgb(8, 119, 187)');
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(theme => document.body.style.setProperty('--bg-color', theme === 'light' ? '#fff' : '#202020'), theme);
+        await expect(panel).toHaveAttribute('data-ca-theme', theme);
+    }
+    await button.focus();
+    await page.keyboard.press('Enter');
+    expect(await page.evaluate(() => swapNotifications)).toEqual([
+        { name: 'width', value: '1216', canvas: true, owner: true },
+        { name: 'height', value: '832', canvas: true, owner: true },
+    ]);
+    await page.keyboard.press('Space');
+    const node = page.locator(`[data-node="${name}"]`);
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('832');
+    await expect(node.getByLabel('height', { exact: true })).toHaveValue('1216');
+    await expect(node.getByLabel('batch_size', { exact: true })).toHaveValue('3');
+    expect(await panel.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
+test(`${name}: swap mounting is idempotent and removal disposes its control`, async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, name, { preset: 'custom', width: 640, height: 960 });
+    await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        node.createSwapButton();
+        node.createSwapButton();
+    }, id);
+    await expect(page.locator('.ca-dimension-swap')).toHaveCount(1);
+    await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        window.detachedSwap = node.swapButtonWidget.element;
+        window.swapTheme = detachedSwap.dataset.caTheme;
+        window.removedSwapNode = kikoHost.removeNode(id);
+        detachedSwap.querySelector('button').click();
+        document.body.style.setProperty('--bg-color', swapTheme === 'light' ? '#202020' : '#fff');
+    }, id);
+    expect(await page.evaluate(() => ({ aborted: removedSwapNode.swapScope.signal.aborted, theme: detachedSwap.dataset.caTheme, width: removedSwapNode.widgets.find(widget => widget.name === 'width').value, removed: removedSwapNode.removed }))).toEqual({ aborted: true, theme: await page.evaluate(() => swapTheme), width: '640', removed: true });
+    await expect(page.locator('.ca-dimension-swap')).toHaveCount(0);
+});
+}
 
 test('local image selection persists and the real node loads the selected PNG tensor', async ({ page, request }) => {
     await openHost(page);

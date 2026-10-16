@@ -12,10 +12,10 @@
     "statements": 71
   },
   "empty_latent_batch_swap.js": {
-    "lines": 41,
-    "branches": 91,
-    "functions": 64,
-    "statements": 41
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
   },
   "gemini_prompt_ui.js": {
     "lines": 52,
@@ -89,6 +89,18 @@
     "functions": 98,
     "statements": 98
   },
+  "ui/dimension-swap.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 48,
+    "statements": 98
+  },
+  "ui/dimensions.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
+  },
   "ui/floating-window.js": {
     "lines": 93,
     "branches": 80,
@@ -114,9 +126,9 @@
     "statements": 98
   },
   "width_height_swap.js": {
-    "lines": 60,
-    "branches": 79,
-    "functions": 73,
-    "statements": 60
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
   }
 }
