@@ -20,8 +20,29 @@ class TestResolveRunDir:
             str(tmp_path), "model_compare", "illustrious"
         )
 
-    @pytest.mark.parametrize("bad", ["", "../escape", "/abs/path", "a/../../b"])
-    def test_rejects_names_that_leave_the_output_dir(self, tmp_path, bad):
+    def test_nested_run_names_are_allowed(self, tmp_path):
+        assert resolve_run_dir(str(tmp_path), "proj/2026-10-15/sweep") == os.path.join(
+            str(tmp_path), "model_compare", "proj", "2026-10-15", "sweep"
+        )
+
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            "",
+            "../escape",
+            "/abs/path",
+            "a/../../b",
+            "..\\escape",
+            "a\\..\\..\\b",
+            "C:\\abs",
+            ".",
+            "./x",
+            "a/./b",
+            "a//b",
+            "x/..",
+        ],
+    )
+    def test_rejects_names_that_leave_model_compare(self, tmp_path, bad):
         with pytest.raises(ValueError, match="run_name"):
             resolve_run_dir(str(tmp_path), bad)
 

@@ -18,11 +18,22 @@ LABEL_COLOR = (235, 235, 235)
 
 
 def resolve_run_dir(output_dir: str, run_name: str) -> str:
-    """Directory for one compare run, always inside output/model_compare."""
-    if not run_name or os.path.isabs(run_name) or ".." in run_name.split("/"):
+    """Directory for one compare run, always strictly inside output/model_compare.
+
+    run_name may be nested ("project/date/sweep"). Every segment must be a plain
+    name: no empty, "." or ".." parts, on either separator, and the resolved
+    path must stay below model_compare even after symlinks are followed.
+    """
+    parts = re.split(r"[\\/]", run_name)
+    if not run_name or os.path.isabs(run_name) or ":" in run_name:
         raise ValueError(f"Invalid run_name: {run_name!r}")
-    run_dir = os.path.join(output_dir, "model_compare", run_name)
-    if not is_within(run_dir, output_dir):
+    if any(part in ("", ".", "..") for part in parts):
+        raise ValueError(f"Invalid run_name: {run_name!r}")
+    base = os.path.join(output_dir, "model_compare")
+    run_dir = os.path.join(base, *parts)
+    if not is_within(run_dir, base) or os.path.realpath(run_dir) == os.path.realpath(
+        base
+    ):
         raise ValueError(f"Invalid run_name: {run_name!r}")
     return run_dir
 
