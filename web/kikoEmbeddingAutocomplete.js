@@ -1,10 +1,17 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { ComfyWidgets } from "../../scripts/widgets.js";
+import { createScope } from './ui/core.js';
+import { createSuggestionView } from './ui/autocomplete-suggestions.js';
+import { watchRendererTextareas } from './ui/text-widget-adapter.js';
+import { createAutocompleteLauncher } from './views/autocomplete-settings.js';
 
 // KikoEmbeddingAutocomplete - Provides autocomplete for embeddings and LoRAs in text widgets
 class KikoEmbeddingAutocomplete {
     constructor() {
+        this.scope = createScope();
+        this.widgetCleanups = new Set();
+        this.pendingFrames = new Set();
         this.embeddings = [];
         this.loras = [];
         this.customWords = [];
@@ -50,39 +57,42 @@ class KikoEmbeddingAutocomplete {
         this.currentWidget = null;
 
         // Cleanup on page unload
-        window.addEventListener('beforeunload', () => this.cleanup());
+        this.scope.listen(window, 'beforeunload', () => this.cleanup());
+        this.scope.listen(window, 'resize', () => this.hideSuggestions());
+        this.scope.listen(window, 'scroll', () => this.hideSuggestions());
+        watchRendererTextareas(this.scope, app.graph, this);
     }
 
     debounce(func, wait) {
         let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
+        const debounced = (...args) => {
             clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
+            timeout = setTimeout(() => { if (!this.scope.signal.aborted) func(...args); }, wait);
         };
+        debounced.cancel = () => clearTimeout(timeout);
+        return debounced;
+    }
+
+    nextFrame(callback) {
+        if (this.scope.signal.aborted) return;
+        const frame = requestAnimationFrame(() => {
+            this.pendingFrames.delete(frame);
+            if (!this.scope.signal.aborted) callback();
+        });
+        this.pendingFrames.add(frame);
     }
 
     cleanup() {
-        // Cancel all pending fetches
-        this.pendingFetches.forEach(controller => {
-            try {
-                controller.abort();
-            } catch (e) {
-                // Ignore abort errors
-            }
-        });
+        this.fetchResourcesDebounced.cancel();
+        for (const frame of this.pendingFrames) cancelAnimationFrame(frame);
+        this.pendingFrames.clear();
+        this.settingsDialog?.close('removed');
+        for (const cleanup of [...this.widgetCleanups]) cleanup();
+        for (const controller of this.pendingFetches) controller.abort();
         this.pendingFetches.clear();
-
-        // Clean up suggestion container
-        if (this.suggestionContainer && this.suggestionContainer.parentNode) {
-            this.suggestionContainer.parentNode.removeChild(this.suggestionContainer);
-            this.suggestionContainer = null;
-        }
-
-        // Note: WeakMap and WeakSet will automatically clean up when widgets are garbage collected
+        this.scope.dispose();
+        this.suggestionContainer = null;
+        this.suggestionView = null;
     }
 
     loadSettings() {
@@ -99,8 +109,10 @@ class KikoEmbeddingAutocomplete {
     saveSettings() {
         try {
             localStorage.setItem("kikotools.embedding_autocomplete.settings", JSON.stringify(this.settings));
+            return true;
         } catch (error) {
             console.error("[KikoTools] Error saving autocomplete settings:", error);
+            return false;
         }
     }
 
@@ -387,36 +399,37 @@ class KikoEmbeddingAutocomplete {
 
     createSuggestionContainer() {
         if (this.suggestionContainer) return;
+        this.suggestionView = createSuggestionView(this.scope, app.ui.settings);
+        this.suggestionContainer = this.suggestionView.element;
+    }
 
-        this.suggestionContainer = document.createElement("div");
-        this.suggestionContainer.className = "kikotools-autocomplete-suggestions";
-        this.suggestionContainer.style.cssText = `
-            position: absolute;
-            z-index: 10000;
-            background: var(--comfy-menu-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            max-height: 200px;
-            overflow-y: auto;
-            display: none;
-            min-width: 200px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        `;
-        document.body.appendChild(this.suggestionContainer);
+    hideSuggestions() {
+        this.currentWidget?.inputEl.removeAttribute('aria-activedescendant');
+        this.suggestionView?.hide();
+        this.currentWidget = null;
     }
 
     attachToWidget(widget, node) {
-        if (!widget.inputEl || this.activeWidgets.has(widget)) {
+        if (this.scope.signal.aborted || !widget.inputEl || widget.inputEl.readOnly || widget.inputEl.disabled || this.activeWidgets.has(widget)) {
             return;
         }
 
+        if (node.graph === null || (node.graph?._nodes && !node.graph._nodes.includes(node))) return;
         this.activeWidgets.add(widget);
         const textarea = widget.inputEl;
+        const widgetScope = createScope();
+        let blurFrame;
+        widgetScope.cleanup(() => cancelAnimationFrame(blurFrame));
+        const attributes = new Map(['aria-controls', 'aria-autocomplete', 'aria-haspopup', 'aria-activedescendant'].map(name => [name, textarea.getAttribute(name)]));
 
         // Create suggestion container if it doesn't exist
         if (!this.suggestionContainer) {
             this.createSuggestionContainer();
         }
+
+        textarea.setAttribute('aria-controls', this.suggestionContainer.id);
+        textarea.setAttribute('aria-autocomplete', 'list');
+        textarea.setAttribute('aria-haspopup', 'listbox');
 
         // Store widget-specific state
         const widgetState = {
@@ -429,118 +442,28 @@ class KikoEmbeddingAutocomplete {
         // Event handler functions
         const handlers = {
             hideSuggestions: () => {
-                if (this.suggestionContainer) {
-                    this.suggestionContainer.style.display = "none";
-                    this.suggestionContainer.innerHTML = "";
-                }
+                if (this.currentWidget === widget) this.hideSuggestions();
                 widgetState.selectedIndex = -1;
                 widgetState.currentSuggestions = [];
-                this.currentWidget = null;
             },
 
-            showSuggestions: (suggestions, x, y) => {
-                if (!suggestions.length) {
-                    handlers.hideSuggestions();
-                    return;
-                }
-
-                if (!this.suggestionContainer) {
-                    this.createSuggestionContainer();
-                }
-
+            showSuggestions: (suggestions) => {
+                if (!suggestions.length) { handlers.hideSuggestions(); return; }
+                if (this.currentWidget !== widget) this.hideSuggestions();
                 this.currentWidget = widget;
-                this.suggestionContainer.innerHTML = "";
-
-                suggestions.forEach((item, index) => {
-                    const div = document.createElement("div");
-                    div.className = "kikotools-autocomplete-item";
-                    div.style.cssText = `
-                        padding: 5px 10px;
-                        cursor: pointer;
-                        color: var(--fg-color);
-                        ${index === widgetState.selectedIndex ? "background: var(--comfy-input-bg);" : ""}
-                    `;
-
-                    // Add type indicator
-                    const typeSpan = document.createElement("span");
-                    let typeColor = "#2196F3";
-                    let typeText = "[LORA]";
-
-                    if (item.type === "embedding") {
-                        typeColor = "#4CAF50";
-                        typeText = "[EMB]";
-                    } else if (item.type === "custom") {
-                        typeColor = "#FFA500";
-                        typeText = "[TAG]";
-                    }
-
-                    typeSpan.style.cssText = `
-                        display: inline-block;
-                        width: 60px;
-                        color: ${typeColor};
-                        font-size: 0.9em;
-                    `;
-                    typeSpan.textContent = typeText;
-
-                    const nameSpan = document.createElement("span");
-                    if (item.type === "embedding" && item.fullPath && item.fullPath.includes('/')) {
-                        const parts = item.fullPath.split('/');
-                        const dir = parts.slice(0, -1).join('/');
-                        const file = parts[parts.length - 1];
-
-                        const dirSpan = document.createElement("span");
-                        dirSpan.style.cssText = "color: #888; font-size: 0.9em;";
-                        dirSpan.textContent = dir + "/";
-
-                        const fileSpan = document.createElement("span");
-                        fileSpan.textContent = file;
-
-                        nameSpan.appendChild(dirSpan);
-                        nameSpan.appendChild(fileSpan);
-                    } else {
-                        nameSpan.textContent = item.name;
-                    }
-
-                    div.appendChild(typeSpan);
-                    div.appendChild(nameSpan);
-
-                    div.addEventListener("mouseenter", () => {
-                        widgetState.selectedIndex = index;
-                        handlers.updateSelection();
-                    });
-
-                    div.addEventListener("click", () => {
-                        handlers.insertSuggestion(item);
-                    });
-
-                    this.suggestionContainer.appendChild(div);
-                });
-
-                // Position the suggestions
-                const rect = textarea.getBoundingClientRect();
-                this.suggestionContainer.style.left = Math.min(x, rect.right - 200) + "px";
-                this.suggestionContainer.style.top = y + "px";
-                this.suggestionContainer.style.display = "block";
+                if (widgetState.selectedIndex >= suggestions.length) widgetState.selectedIndex = -1;
+                this.suggestionView.render(suggestions, index => {
+                    widgetState.selectedIndex = index;
+                    handlers.updateSelection();
+                }, handlers.insertSuggestion);
+                handlers.updateSelection();
+                this.suggestionView.position(textarea.getBoundingClientRect());
             },
 
             updateSelection: () => {
-                const items = this.suggestionContainer.querySelectorAll(".kikotools-autocomplete-item");
-                items.forEach((item, index) => {
-                    item.style.background = index === widgetState.selectedIndex ? "var(--comfy-input-bg)" : "";
-                });
-
-                // Auto-scroll to keep selected item visible
-                if (widgetState.selectedIndex >= 0 && items[widgetState.selectedIndex]) {
-                    const selectedItem = items[widgetState.selectedIndex];
-                    const containerRect = this.suggestionContainer.getBoundingClientRect();
-                    const itemRect = selectedItem.getBoundingClientRect();
-
-                    if (itemRect.bottom > containerRect.bottom) {
-                        this.suggestionContainer.scrollTop += itemRect.bottom - containerRect.bottom + 5;
-                    } else if (itemRect.top < containerRect.top) {
-                        this.suggestionContainer.scrollTop -= containerRect.top - itemRect.top + 5;
-                    }
-                }
+                const id = this.suggestionView.select(widgetState.selectedIndex);
+                if (id) textarea.setAttribute('aria-activedescendant', id);
+                else textarea.removeAttribute('aria-activedescendant');
             },
 
             insertSuggestion: (suggestion) => {
@@ -606,6 +529,7 @@ class KikoEmbeddingAutocomplete {
                     }
                 }
 
+                textarea.focus({ preventScroll: true });
                 textarea.value = before + finalInsertText + after;
                 textarea.selectionStart = textarea.selectionEnd = widgetState.prefixStart + finalInsertText.length;
 
@@ -741,18 +665,18 @@ class KikoEmbeddingAutocomplete {
             },
 
             onInput: (e) => {
-                if (!this.settings.enabled) {
+                if (!this.settings.enabled || textarea.readOnly || textarea.disabled || e.isComposing) {
                     handlers.hideSuggestions();
                     return;
                 }
 
                 const triggerType = handlers.findPrefix();
+                widgetState.selectedIndex = -1;
                 if (triggerType) {
                     widgetState.currentSuggestions = handlers.getSuggestions(widgetState.currentPrefix, triggerType);
 
                     if (widgetState.currentSuggestions.length > 0) {
-                        const rect = textarea.getBoundingClientRect();
-                        handlers.showSuggestions(widgetState.currentSuggestions, rect.left, rect.bottom);
+                        handlers.showSuggestions(widgetState.currentSuggestions);
                     } else {
                         handlers.hideSuggestions();
                     }
@@ -762,38 +686,39 @@ class KikoEmbeddingAutocomplete {
             },
 
             onKeydown: (e) => {
-                if (!this.suggestionContainer || this.suggestionContainer.style.display === "none" || this.currentWidget !== widget) {
+                if (e.isComposing || e.keyCode === 229 || !this.suggestionContainer || this.suggestionContainer.hidden || this.currentWidget !== widget) {
                     return;
                 }
 
                 if (e.key === "ArrowDown") {
                     e.preventDefault();
+                    e.stopPropagation();
                     widgetState.selectedIndex = Math.min(widgetState.selectedIndex + 1, widgetState.currentSuggestions.length - 1);
                     handlers.updateSelection();
                 } else if (e.key === "ArrowUp") {
                     e.preventDefault();
+                    e.stopPropagation();
                     widgetState.selectedIndex = Math.max(widgetState.selectedIndex - 1, 0);
                     handlers.updateSelection();
                 } else if ((e.key === "Enter" && this.settings.insertOnEnter) ||
                            (e.key === "Tab" && this.settings.insertOnTab)) {
                     if (widgetState.selectedIndex >= 0 && widgetState.selectedIndex < widgetState.currentSuggestions.length) {
                         e.preventDefault();
+                        e.stopPropagation();
                         handlers.insertSuggestion(widgetState.currentSuggestions[widgetState.selectedIndex]);
                     }
                 } else if (e.key === "Escape") {
                     e.preventDefault();
+                    e.stopPropagation();
                     handlers.hideSuggestions();
                 }
             },
 
             onBlur: () => {
-                // Use requestAnimationFrame to allow click events to fire first
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        if (this.currentWidget === widget) {
-                            handlers.hideSuggestions();
-                        }
-                    });
+                cancelAnimationFrame(blurFrame);
+                blurFrame = requestAnimationFrame(() => {
+                    blurFrame = null;
+                    if (!widgetScope.signal.aborted && document.activeElement !== textarea && this.currentWidget === widget) handlers.hideSuggestions();
                 });
             },
 
@@ -805,291 +730,33 @@ class KikoEmbeddingAutocomplete {
             }
         };
 
-        // Add event listeners
-        textarea.addEventListener("input", handlers.onInput);
-        textarea.addEventListener("keydown", handlers.onKeydown);
-        textarea.addEventListener("blur", handlers.onBlur);
-        textarea.addEventListener("scroll", handlers.onScroll);
-
-        // Store cleanup function
+        for (const [event, handler] of [['input', handlers.onInput], ['keydown', handlers.onKeydown], ['blur', handlers.onBlur], ['scroll', handlers.onScroll]]) widgetScope.listen(textarea, event, handler);
         const cleanup = () => {
-            textarea.removeEventListener("input", handlers.onInput);
-            textarea.removeEventListener("keydown", handlers.onKeydown);
-            textarea.removeEventListener("blur", handlers.onBlur);
-            textarea.removeEventListener("scroll", handlers.onScroll);
+            if (widgetScope.signal.aborted) return;
             handlers.hideSuggestions();
+            widgetScope.dispose();
+            for (const [name, value] of attributes) {
+                if (value === null) textarea.removeAttribute(name);
+                else textarea.setAttribute(name, value);
+            }
             this.activeWidgets.delete(widget);
             this.widgetCleanupMap.delete(widget);
+            this.widgetCleanups.delete(cleanup);
         };
-
-        this.widgetCleanupMap.set(widget, cleanup);
-
-        // Handle widget removal
-        if (widget.onRemoved) {
-            const originalOnRemoved = widget.onRemoved;
-            widget.onRemoved = () => {
-                cleanup();
-                originalOnRemoved.call(widget);
-            };
-        } else {
-            widget.onRemoved = cleanup;
+        for (const [owner, name] of [[widget, 'onRemoved'], [widget, 'onRemove'], [node, 'onRemoved']]) {
+            const original = owner[name];
+            const wrapped = function (...args) { cleanup(); return original?.apply(this, args); };
+            owner[name] = wrapped;
+            widgetScope.cleanup(() => { if (owner[name] === wrapped) owner[name] = original; });
         }
+        this.widgetCleanupMap.set(widget, cleanup);
+        this.widgetCleanups.add(cleanup);
     }
 
     detachFromWidget(widget) {
         const cleanup = this.widgetCleanupMap.get(widget);
         if (cleanup) {
             cleanup();
-        }
-    }
-}
-
-// Settings Dialog
-class KikoEmbeddingAutocompleteDialog {
-    constructor(autocompleteInstance) {
-        this.autocomplete = autocompleteInstance;
-        this.element = null;
-    }
-
-    createDialog() {
-        // Create dialog backdrop
-        const backdrop = document.createElement("div");
-        backdrop.className = "kiko-dialog-backdrop";
-        backdrop.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 99998;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
-
-        // Create dialog container
-        const dialog = document.createElement("div");
-        dialog.className = "kiko-dialog";
-        dialog.style.cssText = `
-            background: var(--comfy-menu-bg, #202020);
-            border: 1px solid var(--border-color, #4e4e4e);
-            border-radius: 8px;
-            width: 600px;
-            max-width: 90vw;
-            max-height: 80vh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            color: var(--fg-color, #ffffff);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        `;
-
-        // Header
-        const header = document.createElement("div");
-        header.style.cssText = `
-            padding: 20px;
-            border-bottom: 1px solid var(--border-color, #4e4e4e);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        `;
-
-        const title = document.createElement("h2");
-        title.textContent = "🫶 Embedding Autocomplete Settings";
-        title.style.cssText = `
-            margin: 0;
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--fg-color, #ffffff);
-        `;
-
-        const closeBtn = document.createElement("button");
-        closeBtn.innerHTML = "✕";
-        closeBtn.style.cssText = `
-            background: transparent;
-            border: none;
-            color: var(--fg-color, #ffffff);
-            font-size: 24px;
-            cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.7;
-            transition: opacity 0.2s;
-        `;
-        closeBtn.onmouseover = () => closeBtn.style.opacity = "1";
-        closeBtn.onmouseout = () => closeBtn.style.opacity = "0.7";
-
-        header.appendChild(title);
-        header.appendChild(closeBtn);
-
-        // Content
-        const content = document.createElement("div");
-        content.style.cssText = `
-            padding: 20px;
-            overflow-y: auto;
-            flex: 1;
-        `;
-
-        // Create settings sections (simplified for brevity - same as original)
-        content.innerHTML = `
-            <div class="kiko-settings-section">
-                <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; font-weight: 600;">General Settings</h3>
-
-                <div class="kiko-setting-row" style="margin-bottom: 15px;">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" id="kiko-enabled" style="margin-right: 10px;">
-                        <span>Enable Autocomplete</span>
-                    </label>
-                </div>
-
-                <div class="kiko-setting-row" style="margin-bottom: 15px;">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" id="kiko-show-embeddings" style="margin-right: 10px;">
-                        <span>Show Embeddings</span>
-                    </label>
-                </div>
-
-                <div class="kiko-setting-row" style="margin-bottom: 15px;">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" id="kiko-show-loras" style="margin-right: 10px;">
-                        <span>Show LoRAs</span>
-                    </label>
-                </div>
-
-                <div class="kiko-setting-row" style="margin-bottom: 15px;">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" id="kiko-show-custom" style="margin-right: 10px;">
-                        <span>Show Custom Words</span>
-                    </label>
-                </div>
-            </div>
-        `;
-
-        // Footer
-        const footer = document.createElement("div");
-        footer.style.cssText = `
-            padding: 15px 20px;
-            border-top: 1px solid var(--border-color, #4e4e4e);
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        `;
-
-        const saveBtn = document.createElement("button");
-        saveBtn.textContent = "Save Settings";
-        saveBtn.style.cssText = `
-            padding: 8px 20px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: background 0.2s;
-        `;
-        saveBtn.onmouseover = () => saveBtn.style.background = "#45a049";
-        saveBtn.onmouseout = () => saveBtn.style.background = "#4CAF50";
-
-        const cancelBtn = document.createElement("button");
-        cancelBtn.textContent = "Cancel";
-        cancelBtn.style.cssText = `
-            padding: 8px 20px;
-            background: var(--comfy-input-bg, #1a1a1a);
-            color: var(--fg-color, #ffffff);
-            border: 1px solid var(--border-color, #4e4e4e);
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.2s;
-        `;
-
-        footer.appendChild(cancelBtn);
-        footer.appendChild(saveBtn);
-
-        // Assemble dialog
-        dialog.appendChild(header);
-        dialog.appendChild(content);
-        dialog.appendChild(footer);
-        backdrop.appendChild(dialog);
-
-        // Event handlers
-        closeBtn.onclick = () => this.close();
-        cancelBtn.onclick = () => this.close();
-        backdrop.onclick = (e) => {
-            if (e.target === backdrop) this.close();
-        };
-
-        saveBtn.onclick = () => this.save();
-
-        this.element = backdrop;
-        this.dialog = dialog;
-
-        return backdrop;
-    }
-
-    loadSettings() {
-        if (!this.autocomplete) return;
-
-        const settings = this.autocomplete.settings;
-
-        // Set values (simplified for brevity)
-        const elements = {
-            enabled: document.getElementById("kiko-enabled"),
-            showEmbeddings: document.getElementById("kiko-show-embeddings"),
-            showLoras: document.getElementById("kiko-show-loras"),
-            showCustom: document.getElementById("kiko-show-custom")
-        };
-
-        if (elements.enabled) elements.enabled.checked = settings.enabled !== false;
-        if (elements.showEmbeddings) elements.showEmbeddings.checked = settings.showEmbeddings !== false;
-        if (elements.showLoras) elements.showLoras.checked = settings.showLoras !== false;
-        if (elements.showCustom) elements.showCustom.checked = settings.showCustomWords !== false;
-    }
-
-    save() {
-        if (!this.autocomplete) return;
-
-        // Gather settings
-        const newSettings = {
-            ...this.autocomplete.settings,
-            enabled: document.getElementById("kiko-enabled").checked,
-            showEmbeddings: document.getElementById("kiko-show-embeddings").checked,
-            showLoras: document.getElementById("kiko-show-loras").checked,
-            showCustomWords: document.getElementById("kiko-show-custom").checked
-        };
-
-        // Update autocomplete settings
-        Object.assign(this.autocomplete.settings, newSettings);
-        this.autocomplete.saveSettings();
-
-        // Refresh resources if needed
-        if (newSettings.showEmbeddings || newSettings.showLoras) {
-            this.autocomplete.fetchResourcesDebounced();
-        }
-
-        // Close dialog
-        this.close();
-    }
-
-    show() {
-        if (!this.element) {
-            this.createDialog();
-        }
-        document.body.appendChild(this.element);
-
-        // Load settings after adding to DOM
-        setTimeout(() => this.loadSettings(), 10);
-    }
-
-    close() {
-        if (this.element && this.element.parentNode) {
-            this.element.parentNode.removeChild(this.element);
         }
     }
 }
@@ -1109,6 +776,7 @@ app.registerExtension({
 
         // Create new autocomplete instance
         autocompleteInstance = new KikoEmbeddingAutocomplete();
+        const instance = autocompleteInstance;
 
         // Store reference for debugging (but not in global window to avoid conflicts)
         if (!window.kikotools) {
@@ -1123,44 +791,7 @@ app.registerExtension({
             tooltip: "Configure autocomplete settings",
             category: ["kikotools", "🫶 Embedding Autocomplete Configuration"],
             defaultValue: null,
-            type: () => {
-                const tr = document.createElement("tr");
-                tr.className = "kikotools-settings-row";
-
-                const tdLabel = document.createElement("td");
-                tdLabel.innerHTML = `<div style="display: flex; align-items: center;">
-                    <span style="font-size: 20px; margin-right: 8px;">🫶</span>
-                    <span>Embedding Autocomplete Configuration</span>
-                </div>`;
-
-                const tdButton = document.createElement("td");
-                const button = document.createElement("button");
-                button.textContent = "Open Settings";
-                button.className = "kiko-settings-button";
-                button.style.cssText = `
-                    padding: 8px 20px;
-                    background: #4CAF50;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    font-weight: 500;
-                    transition: background 0.2s;
-                `;
-                button.onmouseover = () => button.style.background = "#45a049";
-                button.onmouseout = () => button.style.background = "#4CAF50";
-                button.onclick = () => {
-                    const dialog = new KikoEmbeddingAutocompleteDialog(autocompleteInstance);
-                    dialog.show();
-                };
-
-                tdButton.appendChild(button);
-                tr.appendChild(tdLabel);
-                tr.appendChild(tdButton);
-
-                return tr;
-            }
+            type: () => createAutocompleteLauncher(autocompleteInstance, app.ui.settings, app.canvas.canvas)
         });
 
         // Override STRING widget creation
@@ -1168,31 +799,31 @@ app.registerExtension({
             originalStringWidget = ComfyWidgets.STRING;
         }
 
-        ComfyWidgets.STRING = function(node, inputName, inputData, app) {
+        const wrappedStringWidget = function(node, inputName, inputData, app) {
             const widget = originalStringWidget.apply(this, arguments);
 
             // Only attach to multiline text widgets (prompts)
-            if (inputData[1]?.multiline && widget.inputEl) {
+            const entry = widget.widget || widget;
+            if (inputData[1]?.multiline && entry.inputEl) {
                 // Use requestAnimationFrame to ensure DOM is ready
-                requestAnimationFrame(() => {
-                    if (autocompleteInstance) {
-                        autocompleteInstance.attachToWidget(widget, node);
-                    }
-                });
+                instance.nextFrame(() => instance.attachToWidget(entry, node));
             }
 
             return widget;
         };
 
+        ComfyWidgets.STRING = wrappedStringWidget;
+        instance.scope.cleanup(() => { if (ComfyWidgets.STRING === wrappedStringWidget) ComfyWidgets.STRING = originalStringWidget; });
+
         // Attach to existing multiline widgets
         const attachToExistingWidgets = () => {
-            if (!autocompleteInstance) return;
+            if (instance.scope.signal.aborted) return;
 
             app.graph._nodes.forEach(node => {
                 if (node.widgets) {
                     node.widgets.forEach(widget => {
-                        if (widget.inputEl && widget.inputEl.tagName === "TEXTAREA" && !autocompleteInstance.activeWidgets.has(widget)) {
-                            autocompleteInstance.attachToWidget(widget, node);
+                        if (widget.inputEl && widget.inputEl.tagName === "TEXTAREA" && !instance.activeWidgets.has(widget)) {
+                            instance.attachToWidget(widget, node);
                         }
                     });
                 }
@@ -1200,19 +831,17 @@ app.registerExtension({
         };
 
         // Wait for graph to be ready
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                attachToExistingWidgets();
-            });
-        });
+        instance.nextFrame(() => instance.nextFrame(attachToExistingWidgets));
 
         // Re-attach when new nodes are added
         const originalAddNode = app.graph.add;
-        app.graph.add = function(...args) {
+        const wrappedAddNode = function(...args) {
             const result = originalAddNode.apply(this, args);
-            requestAnimationFrame(() => attachToExistingWidgets());
+            instance.nextFrame(attachToExistingWidgets);
             return result;
         };
+        app.graph.add = wrappedAddNode;
+        instance.scope.cleanup(() => { if (app.graph.add === wrappedAddNode) app.graph.add = originalAddNode; });
     },
 
     async beforeUnload() {

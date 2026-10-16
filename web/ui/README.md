@@ -141,3 +141,27 @@ Legacy widget values remain readable: converted input prefixes, prompt header
 pairs, native Display Any modes and all saved output chunks are recognized.
 The new output DOM widget does not serialize presentation state into native
 widget values. Node removal disposes the view, its listeners and theme observers.
+
+## Embedding Autocomplete
+
+`autocomplete-suggestions.js` supplies the shared themed listbox, type badges,
+selected state and viewport placement. The controller retains resource fetching,
+matching, sorting, triggers and insertion preferences. Focus stays in the native
+textarea; arrow keys select suggestions, configured Enter/Tab keys insert, and
+Escape dismisses. New input clears the previous selection. Completion names are
+rendered as text, including directory names, without interpreting markup.
+
+`text-widget-adapter.js` binds editable Nodes 2.0 replacement textareas through
+their node ID and associated label. It leaves the original widget/input intact,
+cleans up disconnected replacements, and preserves Classic behavior when switching
+back. Read-only and disabled fields are excluded. Each widget owns its listeners,
+blur work and temporary accessibility attributes; removing a different widget
+does not dismiss the active list. Page cleanup cancels pending refresh work.
+
+`../views/autocomplete-settings.js` uses the shared native dialog and switches.
+Only Save updates the existing `kikotools.embedding_autocomplete.settings` key;
+Cancel/Escape discards edits. All advanced saved preferences are retained.
+Storage failures keep the dialog open and restore the previous live preferences.
+The settings launcher owns dialog cleanup, tolerates synchronous reparenting and
+returns keyboard focus when the modal closes. The shared modal shell contains
+pointer events so nested dialogs do not dismiss ComfyUI's parent settings panel.

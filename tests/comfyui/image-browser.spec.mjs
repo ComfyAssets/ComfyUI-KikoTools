@@ -17,7 +17,7 @@ test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
         const request = route.request();
         const url = new URL(request.url());
         const path = url.pathname.replace(/^\/api\//, '/');
-        if (path.startsWith('/kiko_local_image_loader/') || path === '/view') {
+        if (path.startsWith('/kiko_local_image_loader/') || path.startsWith('/kikotools/autocomplete/') || path === '/view') {
             const response = await route.fetch({ url: `${fixture}${path}${url.search}` });
             return route.fulfill({ response });
         }
@@ -35,6 +35,7 @@ test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
         }
         return route.continue();
     });
+    await page.addInitScript(() => localStorage.setItem('kikotools.embedding_autocomplete.settings', JSON.stringify({ showCustomWords: false, customWordsUrl: '' })));
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('status', { name: 'Loading ComfyUI' })).toBeHidden({ timeout: 30000 });
     await page.waitForFunction(async () => {
@@ -562,3 +563,94 @@ for (const name of ['DisplayText', 'DisplayAny']) {
         expect(await page.evaluate(() => window.removedDisplay.displayOutput.scope.signal.aborted)).toBe(true);
     });
 }
+
+
+test('embedding suggestions survive real renderers, zoom, themes and workflow reload', async ({ page }, testInfo) => {
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = LiteGraph.createNode('TextInput');
+        app.graph.add(node);
+        node.setSize([550, 350]);
+        app.canvas.centerOnNode(node);
+    });
+    await expect.poll(() => page.evaluate(() => window.kikotools.autocomplete.embeddings.length)).toBe(2);
+    const prompt = page.locator('textarea:visible');
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    for (const [renderer, zoom] of [[false, .65], [true, 1.1], [false, .9]]) {
+        await page.evaluate(async ({ renderer, zoom }) => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+            app.canvas.ds.scale = zoom;
+            app.canvas.centerOnNode(app.graph._nodes[0]);
+        }, { renderer, zoom });
+        await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        await prompt.fill('embedding:ca');
+        await expect(list).toBeVisible();
+        await prompt.press('ArrowDown');
+        await expect(list.getByRole('option', { selected: true })).toHaveCount(1);
+        await expect(prompt).toBeFocused();
+        const box = await list.boundingBox();
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.y).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(1600);
+        expect(box.y + box.height).toBeLessThanOrEqual(1100);
+        await prompt.press('Enter');
+        await expect(prompt).toHaveValue('embedding:portraits/cat, ');
+        await prompt.fill('<lora:in');
+        await list.getByRole('option').click();
+        await expect(prompt).toHaveValue('<lora:styles/ink:1.0>, ');
+    }
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        await app.loadGraphData(app.graph.serialize());
+        app.canvas.centerOnNode(app.graph._nodes[0]);
+    });
+    await expect(prompt).toHaveValue('<lora:styles/ink:1.0>, ');
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(async theme => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.ColorPalette', theme);
+        }, theme);
+        await prompt.fill('em');
+        await prompt.press('ArrowDown');
+        await expect(list).toHaveAttribute('data-ca-theme', theme);
+        await page.screenshot({ path: testInfo.outputPath(`suggestions-${theme}.png`) });
+        await prompt.press('Escape');
+    }
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = app.graph._nodes[0];
+        window.removedCompletionWidget = node.widgets.find(widget => widget.inputEl);
+        app.graph.remove(node);
+    });
+    await expect(list).toBeHidden();
+    expect(await page.evaluate(() => window.kikotools.autocomplete.activeWidgets.has(window.removedCompletionWidget))).toBe(false);
+});
+
+test('embedding settings use the real host launcher and preserve preferences', async ({ page }, testInfo) => {
+    await page.getByRole('button', { name: 'Settings (Ctrl + ,)', exact: true }).click();
+    const search = page.getByPlaceholder(/search/i);
+    await search.fill('Embedding Autocomplete');
+    const trigger = page.getByRole('button', { name: 'Open Settings', exact: true });
+    await trigger.click();
+    const dialog = page.getByRole('dialog', { name: 'Embedding Autocomplete Settings', exact: true });
+    await expect(dialog).toBeVisible();
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(async theme => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.ColorPalette', theme);
+        }, theme);
+        await expect(dialog).toHaveAttribute('data-ca-theme', theme);
+        await page.screenshot({ path: testInfo.outputPath(`settings-${theme}.png`) });
+    }
+    await dialog.getByRole('switch', { name: 'Show LoRAs', exact: true }).uncheck();
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('kikotools.embedding_autocomplete.settings')).showLoras)).toBe(false);
+    await trigger.click();
+    await expect(dialog.getByRole('switch', { name: 'Show LoRAs', exact: true })).not.toBeChecked();
+    await dialog.getByRole('switch', { name: 'Show LoRAs', exact: true }).check();
+    await page.keyboard.press('Escape');
+    expect(await page.evaluate(() => window.kikotools.autocomplete.settings.showLoras)).toBe(false);
+});

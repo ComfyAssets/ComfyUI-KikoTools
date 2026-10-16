@@ -42,6 +42,7 @@ export function createDialog({ title, settings, fallbackFocus, onCancel }) {
     });
     scope.listen(element, 'keydown', event => event.stopPropagation());
     scope.listen(element, 'keyup', event => event.stopPropagation());
+    for (const event of ['pointerdown', 'mousedown', 'click']) scope.listen(element, event, event => event.stopPropagation());
     return {
         element, scope, body, actions,
         close: element.close,
