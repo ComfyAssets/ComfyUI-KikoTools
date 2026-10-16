@@ -315,6 +315,148 @@ test('real image save output opens a preview, closes, and reuses the viewer on e
     await expect(viewer.locator('.kiko-viewer-container')).toBeHidden();
 });
 
+async function savedImageResult(page, request, count = 1) {
+    const id = await createNode(page, 'KikoSaveImage', { format: 'PNG', quality: 90 });
+    const response = await request.post('/__test__/execute/KikoSaveImage', { data: { filename_prefix: 'Window test' } });
+    await expect(response).toBeOK();
+    const message = (await response.json()).ui;
+    message.kiko_enhanced = Array.from({ length: count }, () => ({ ...message.kiko_enhanced[0] }));
+    await page.evaluate(({ id, message }) => kikoHost.nodes.get(String(id)).onExecuted(message), { id, message });
+    return { id, message };
+}
+
+test('shared saved-image window follows themes and supports keyboard close and reopen', async ({ page, request }) => {
+    await openHost(page);
+    const { id } = await savedImageResult(page, request);
+    const viewer = page.getByRole('dialog', { name: 'Saved images', exact: true });
+    await expect(viewer).toBeVisible();
+    await page.evaluate(() => document.body.style.setProperty('--bg-color', '#fafafa'));
+    await expect(viewer).toHaveAttribute('data-ca-theme', 'light');
+    await viewer.getByTitle('Minimize', { exact: true }).click();
+    await expect(viewer.locator('.kiko-viewer-container')).toBeHidden();
+    await viewer.getByTitle('Restore', { exact: true }).click();
+    await expect(viewer.locator('.kiko-viewer-container')).toBeVisible();
+    await viewer.getByTitle('Close', { exact: true }).focus();
+    await page.keyboard.press('Escape');
+    await expect(viewer).toBeHidden();
+    await page.locator(`[data-node="KikoSaveImage"]`).getByRole('button', { name: 'Show images', exact: true }).click();
+    await expect(viewer).toBeVisible();
+    expect(await page.evaluate(id => kikoHost.nodes.get(String(id)).kikoViewer.isConnected, id)).toBe(true);
+});
+
+test('saved-image ownership transfers safely and deletion cleans up only the owner window', async ({ page, request }) => {
+    await openHost(page);
+    const first = await savedImageResult(page, request);
+    const second = await savedImageResult(page, request);
+    expect(await page.evaluate(id => Boolean(kikoHost.nodes.get(String(id)).kikoViewer), second.id)).toBe(true);
+    await page.evaluate(id => kikoHost.removeNode(id), first.id);
+    await expect(page.locator('kiko-image-viewer')).toBeVisible();
+    await page.evaluate(id => kikoHost.removeNode(id), second.id);
+    await expect(page.locator('kiko-image-viewer')).toHaveCount(0);
+});
+
+test('saved-image window moves and resizes by keyboard and remains inside a shrinking viewport', async ({ page, request }) => {
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await openHost(page);
+    await savedImageResult(page, request);
+    const viewer = page.locator('kiko-image-viewer');
+    const move = viewer.getByRole('button', { name: 'Move image viewer with arrow keys', exact: true });
+    await move.focus();
+    const before = await viewer.boundingBox();
+    await page.keyboard.press('ArrowLeft');
+    expect((await viewer.boundingBox()).x).toBeLessThan(before.x);
+    const resize = viewer.getByRole('button', { name: 'Resize image viewer with arrow keys', exact: true });
+    await resize.focus();
+    await page.keyboard.press('ArrowRight');
+    expect((await viewer.boundingBox()).width).toBeGreaterThan(before.width);
+    const imageBefore = await viewer.locator('img').boundingBox();
+    await page.keyboard.press('ArrowDown');
+    expect((await viewer.locator('img').boundingBox()).height).toBeGreaterThan(imageBefore.height);
+    const info = await viewer.locator('.kiko-image-info').boundingBox();
+    const content = await viewer.locator('.kiko-viewer-container').boundingBox();
+    expect(info.y + info.height).toBeLessThanOrEqual(content.y + content.height);
+    await page.setViewportSize({ width: 360, height: 500 });
+    await expect.poll(async () => {
+        const rect = await viewer.boundingBox();
+        return rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= 361 && rect.y + rect.height <= 501;
+    }).toBe(true);
+});
+
+test('saved-image batch selection downloads and resets for new execution results', async ({ page, request }) => {
+    await openHost(page);
+    const { id, message } = await savedImageResult(page, request, 2);
+    const viewer = page.locator('kiko-image-viewer');
+    const choices = viewer.getByRole('checkbox');
+    await expect(choices).toHaveCount(2);
+    await choices.first().check();
+    await expect(viewer.locator('.selected-count')).toHaveText('1');
+    await viewer.getByRole('button', { name: 'Select all', exact: true }).click();
+    await expect(choices.nth(1)).toBeChecked();
+    const download = page.waitForEvent('download');
+    await viewer.getByRole('button', { name: /Download image 1:/ }).click();
+    expect((await download).suggestedFilename()).toBe(message.kiko_enhanced[0].filename);
+    await page.evaluate(({ id, message }) => kikoHost.nodes.get(String(id)).onExecuted(message), { id, message: { kiko_enhanced: [message.kiko_enhanced[0]] } });
+    expect(await viewer.evaluate(element => element.selectedImages.size)).toBe(0);
+    await expect(viewer.getByRole('checkbox')).toHaveCount(0);
+});
+
+test('saved-image window pointer handles drag resize and cancel without losing reachability', async ({ page, request }) => {
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await openHost(page);
+    await savedImageResult(page, request);
+    const viewer = page.locator('kiko-image-viewer');
+    const before = await viewer.boundingBox();
+    const handle = await viewer.locator('[data-window-move]').boundingBox();
+    await page.mouse.move(handle.x + 20, handle.y + 15);
+    await page.mouse.down();
+    await page.mouse.move(handle.x - 100, handle.y + 35, { steps: 4 });
+    await page.mouse.up();
+    const moved = await viewer.boundingBox();
+    expect(moved.x).toBeLessThan(before.x);
+    await expect(viewer).not.toHaveClass(/ca-dragging/);
+    const resize = await viewer.locator('[data-window-resize]').boundingBox();
+    await page.mouse.move(resize.x + 12, resize.y + 12);
+    await page.mouse.down();
+    await page.mouse.move(resize.x + 60, resize.y + 15, { steps: 4 });
+    await page.mouse.up();
+    expect((await viewer.boundingBox()).width).toBeGreaterThan(moved.width);
+    const next = await viewer.locator('[data-window-move]').boundingBox();
+    await page.mouse.move(next.x + 20, next.y + 15);
+    await page.mouse.down();
+    await viewer.dispatchEvent('pointercancel');
+    await expect(viewer).not.toHaveClass(/ca-dragging/);
+    await page.mouse.up();
+});
+
+test('delayed selected-image opens stop on close replacement and owner removal', async ({ page, request }) => {
+    await openHost(page);
+    const { id, message } = await savedImageResult(page, request, 2);
+    await page.clock.install();
+    await page.evaluate(() => {
+        window.openedImages = [];
+        window.open = url => { window.openedImages.push(url); return {}; };
+        const viewer = document.querySelector('kiko-image-viewer');
+        viewer.handleBulkAction('select-all');
+        viewer.handleBulkAction('open-all');
+    });
+    await page.clock.runFor(200);
+    expect(await page.evaluate(() => window.openedImages.length)).toBe(2);
+    for (const action of ['close', 'replace', 'remove']) {
+        await page.evaluate(({ id, message, action }) => {
+            const node = kikoHost.nodes.get(String(id));
+            node.onExecuted(message);
+            const viewer = document.querySelector('kiko-image-viewer');
+            viewer.handleBulkAction('select-all');
+            viewer.handleBulkAction('open-all');
+            if (action === 'close') viewer.close();
+            if (action === 'replace') node.onExecuted(message);
+            if (action === 'remove') kikoHost.removeNode(id);
+        }, { id, message, action });
+        await page.clock.runFor(500);
+        expect(await page.evaluate(() => window.openedImages.length)).toBe(2);
+    }
+});
+
 test('Display Any renders real multiline output and restores serialized values without duplicate widgets', async ({ page, request }) => {
     await openHost(page);
     const id = await createNode(page, 'DisplayAny');
