@@ -778,7 +778,7 @@ test('Custom Colors preserves node colors across renderers and workflow reload',
     await expect(page.locator('dialog.ca-color-dialog')).toHaveCount(0);
 });
 
-test('Follow Execution honors live settings and host menus in both renderers', async ({ page }) => {
+test('Follow Execution honors live settings and host menus in both renderers', async ({ page }, testInfo) => {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.evaluate(async () => {
@@ -793,6 +793,18 @@ test('Follow Execution honors live settings and host menus in both renderers', a
             await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
         }, renderer);
         await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            app.graph._nodes[0].pos[0] += 10000;
+            await app.ui.settings.setSettingValue('kikotools.follow_execution.enabled', true);
+        });
+        const canvas = page.locator('#graph-canvas');
+        await canvas.click({ button: 'right', position: { x: 800, y: 500 } });
+        await expect(page.getByText('🫶 Follow execution', { exact: true })).toBeVisible();
+        await expect(page.getByText('🫶 Go to node', { exact: true })).toBeVisible();
+        await page.screenshot({ path: testInfo.outputPath(renderer ? 'follow-execution-nodes2.png' : 'follow-execution-classic.png') });
+        await canvas.click({ position: { x: 100, y: 800 } });
+        await expect(page.getByText('🫶 Follow execution', { exact: true })).toBeHidden();
         const result = await page.evaluate(async () => {
             const { app } = await import('/scripts/app.js');
             const { api } = await import('/scripts/api.js');

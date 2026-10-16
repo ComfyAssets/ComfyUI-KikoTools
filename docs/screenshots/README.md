@@ -15,6 +15,7 @@ Classic and Nodes 2.0, renderer switching, saved workflows and cleanup.
 | Display Any | [Dark](display-output/any-dark.png), [Light](display-output/any-light.png) |
 | Embedding Autocomplete | [Suggestions dark](embedding-autocomplete/suggestions-dark.png), [Suggestions light](embedding-autocomplete/suggestions-light.png), [Settings dark](embedding-autocomplete/settings-dark.png), [Settings light](embedding-autocomplete/settings-light.png) |
 | Custom Colors | [Dark](custom-colors/dark.png), [Light](custom-colors/light.png) |
+| Follow Execution | [Classic](follow-execution/classic.png), [Nodes 2.0](follow-execution/nodes2.png) |
 
 Screenshots record the tested appearance at capture time. Updated Playwright
 captures are temporary test artifacts until copied into this directory and
