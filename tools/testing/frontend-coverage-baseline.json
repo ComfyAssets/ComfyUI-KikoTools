@@ -42,10 +42,10 @@
     "statements": 60
   },
   "kiko_local_image_loader.js": {
-    "lines": 72,
-    "branches": 69,
-    "functions": 40,
-    "statements": 72
+    "lines": 77,
+    "branches": 73,
+    "functions": 70,
+    "statements": 77
   },
   "kiko_save_image_ui.js": {
     "lines": 66,
@@ -70,6 +70,18 @@
     "branches": 58,
     "functions": 56,
     "statements": 63
+  },
+  "ui/core.js": {
+    "lines": 98,
+    "branches": 91,
+    "functions": 98,
+    "statements": 98
+  },
+  "views/image-browser.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
   },
   "width_height_swap.js": {
     "lines": 60,

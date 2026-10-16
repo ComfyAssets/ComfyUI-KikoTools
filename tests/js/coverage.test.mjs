@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 const sourceRoot = join(process.cwd(), 'web');
-import { checkCoverage } from '../../tools/testing/frontend-coverage.mjs';
+import { checkCoverage, discoverSources } from '../../tools/testing/frontend-coverage.mjs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 const metrics = value => Object.fromEntries(['lines', 'branches', 'functions', 'statements'].map(key => [key, { pct: value }]));
 const summary = { total: metrics(90), [join(sourceRoot, 'a.js')]: metrics(85) };
 const baseline = { 'a.js': { lines: 80, branches: 80, functions: 80, statements: 80 } };
@@ -19,4 +21,15 @@ test('coverage gate rejects absent source files and unreviewed new files', () =>
 test('coverage gate rejects invalid baselines and missing metrics', () => {
     assert.throws(() => checkCoverage(summary, { 'a.js': { lines: -1 } }, sourceRoot, ['a.js']), /baseline/i);
     assert.match(checkCoverage({ total: metrics(100), [join(sourceRoot, 'a.js')]: {} }, baseline, sourceRoot, ['a.js']).join('\n'), /lines/);
+});
+
+test('source discovery includes nested UI modules in the coverage gate', () => {
+    const root = mkdtempSync(join(tmpdir(), 'kiko-coverage-'));
+    try {
+        mkdirSync(join(root, 'ui'));
+        writeFileSync(join(root, 'entry.js'), '');
+        writeFileSync(join(root, 'ui/core.js'), '');
+        writeFileSync(join(root, 'ui/theme.css'), '');
+        assert.deepEqual(discoverSources(root), ['entry.js', 'ui/core.js']);
+    } finally { rmSync(root, { recursive: true, force: true }); }
 });

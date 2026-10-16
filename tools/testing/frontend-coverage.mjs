@@ -5,6 +5,12 @@ import { spawnSync } from 'node:child_process';
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 const metrics = ['lines', 'branches', 'functions', 'statements'];
+export function discoverSources(root) {
+    return readdirSync(root, { recursive: true, withFileTypes: true })
+        .filter(entry => entry.isFile() && /\.(?:js|mjs)$/.test(entry.name))
+        .map(entry => relative(root, join(entry.parentPath, entry.name)).replaceAll('\\', '/'))
+        .sort();
+}
 export function checkCoverage(summary, baseline, sourceRoot, files) {
     const failures = [];
     for (const file of files) {
@@ -35,7 +41,7 @@ async function main() {
     const reportRoot = join(repositoryRoot, 'coverage/js');
     const raw = join(reportRoot, 'raw');
     const sourceRoot = join(repositoryRoot, 'web');
-    const files = readdirSync(sourceRoot).filter(file => file.endsWith('.js')).sort();
+    const files = discoverSources(sourceRoot);
     rmSync(reportRoot, { recursive: true, force: true });
     mkdirSync(raw, { recursive: true });
     const tests = readdirSync(join(repositoryRoot, 'tests/js')).filter(file => file.endsWith('.test.mjs')).map(file => `tests/js/${file}`);
@@ -44,7 +50,7 @@ async function main() {
     run([playwright, 'test', '--config', join(tools, 'playwright.config.mjs'),
         '--project', 'chromium', '--project', 'touch'], { KIKO_JS_COVERAGE: raw });
     run([join(tools, 'node_modules/c8/bin/c8.js'), 'report', '--all', '--src', sourceRoot,
-        '--include', 'web/*.js', '--temp-directory', raw, '--reports-dir', reportRoot,
+        '--include', 'web/**/*.js', '--include', 'web/**/*.mjs', '--temp-directory', raw, '--reports-dir', reportRoot,
         '--reporter', 'text', '--reporter', 'json-summary', '--reporter', 'html']);
     const summary = JSON.parse(readFileSync(join(reportRoot, 'coverage-summary.json'), 'utf8'));
     const baselinePath = join(tools, 'frontend-coverage-baseline.json');
