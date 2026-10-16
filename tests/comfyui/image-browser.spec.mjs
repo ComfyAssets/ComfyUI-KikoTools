@@ -17,7 +17,7 @@ test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
         const request = route.request();
         const url = new URL(request.url());
         const path = url.pathname.replace(/^\/api\//, '/');
-        if (path.startsWith('/kiko_local_image_loader/')) {
+        if (path.startsWith('/kiko_local_image_loader/') || path === '/view') {
             const response = await route.fetch({ url: `${fixture}${path}${url.search}` });
             return route.fulfill({ response });
         }
@@ -45,6 +45,54 @@ test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
         const { app } = await import('/scripts/app.js');
         app.graph.clear();
     });
+});
+
+test('saved-image window survives real renderer switching and is removed with its owner', async ({ page, request }, testInfo) => {
+    const result = await request.post(`${fixture}/__test__/execute/KikoSaveImage`, { data: { filename_prefix: 'Real host viewer' } });
+    await expect(result).toBeOK();
+    const message = (await result.json()).ui;
+    const id = await page.evaluate(async message => {
+        const { app } = await import('/scripts/app.js');
+        const node = LiteGraph.createNode('KikoSaveImage');
+        app.graph.add(node);
+        node.onExecuted(message);
+        app.canvas.centerOnNode(node);
+        return node.id;
+    }, message);
+    const viewer = page.getByRole('dialog', { name: 'Saved images', exact: true });
+    await expect(viewer).toBeVisible();
+    await expect.poll(() => viewer.locator('img').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+    for (const renderer of [false, true, false]) {
+        await page.evaluate(async renderer => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+        }, renderer);
+        await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        await expect(viewer).toHaveCount(1);
+        await viewer.getByTitle('Close', { exact: true }).click();
+        await page.getByRole('button', { name: 'Show images', exact: true }).click();
+        await expect(viewer).toBeVisible();
+        expect(await page.evaluate(async id => {
+            const { app } = await import('/scripts/app.js');
+            return app.graph.serialize().nodes.find(node => String(node.id) === String(id)).widgets_values.includes('Show images');
+        }, id)).toBe(false);
+    }
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(async theme => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.ColorPalette', theme);
+        }, theme);
+        await expect(viewer).toHaveAttribute('data-ca-theme', theme);
+        const info = await viewer.locator('.kiko-image-info').boundingBox();
+        const content = await viewer.locator('.kiko-viewer-container').boundingBox();
+        expect(info.y + info.height).toBeLessThanOrEqual(content.y + content.height);
+        await page.screenshot({ path: testInfo.outputPath(`viewer-${theme}.png`) });
+    }
+    await page.evaluate(async id => {
+        const { app } = await import('/scripts/app.js');
+        app.graph.remove(app.graph.getNodeById(id));
+    }, id);
+    await expect(viewer).toHaveCount(0);
 });
 
 test('actual host preserves the widget through renderer changes, theme changes and save/reload', async ({ page, request }, testInfo) => {

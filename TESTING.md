@@ -93,7 +93,11 @@ so user settings, saved workflows and selections are not written to the live
 server. It does not execute a workflow or download models.
 
 Checks cover Classic/Nodes 2.0/live switching, theme changes, workflow save/reload
-and removal. Screenshots/traces appear in
+and removal for the loader. Save Image additionally checks real image output,
+window close/reopen through the node control across renderer switches, theme
+changes, exclusion of the launcher from serialized values and owner removal.
+Its `/view` requests also use disposable fixture output rather than live files.
+Screenshots/traces appear in
 `tools/testing/test-results/comfyui/`. This opt-in smoke suite is separate from
 the required fixture CI job; fully provisioned, pinned ComfyUI CI and testing
 alongside other node packs remain follow-up work in issue #81.

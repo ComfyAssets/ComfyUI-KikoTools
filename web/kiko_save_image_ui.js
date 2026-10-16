@@ -4,387 +4,15 @@
  */
 
 import { app } from "../../scripts/app.js";
+import { createButton, createScope, mountTheme } from "./ui/core.js";
+import { mountFloatingWindow } from "./ui/floating-window.js";
 
-// CSS styles for enhanced image previews and web component
-const KIKO_SAVE_IMAGE_STYLES = `
-/* Custom Web Component Styles - Floating Draggable Window */
-kiko-image-viewer {
-    position: fixed;
-    top: 100px;
-    right: 20px;
-    width: 420px;
-    max-width: 90vw;
-    max-height: 80vh;
-    background: #2a2a2a;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    border: 1px solid #444;
-    z-index: 10000;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    resize: both;
-    min-width: 300px;
-    min-height: 200px;
-    transition: background 0.3s ease, box-shadow 0.3s ease, border 0.3s ease;
-}
-
-kiko-image-viewer.rolled-up {
-    background: transparent;
-    box-shadow: none;
-    border: none;
-    overflow: visible;
-    resize: none;
-    min-height: auto;
-}
-
-kiko-image-viewer.dragging {
-    transition: none;
-    z-index: 10001;
-}
-
-kiko-image-viewer.dragging .kiko-viewer-header {
-    background: linear-gradient(135deg, #388E3C, #2E7D32);
-}
-
-.kiko-viewer-container {
-    padding: 12px;
-    max-height: calc(80vh - 80px);
-    overflow-y: auto;
-    overflow-x: hidden;
-    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.3s ease;
-}
-
-kiko-image-viewer.rolled-up .kiko-viewer-container {
-    max-height: 0;
-    padding: 0 12px;
-    opacity: 0;
-    overflow: hidden;
-}
-
-.kiko-viewer-header {
-    background: linear-gradient(135deg, #4CAF50, #45a049);
-    padding: 12px 16px;
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    border-bottom: 1px solid #555;
-    cursor: move;
-    user-select: none;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: relative;
-}
-
-.kiko-viewer-header::after {
-    content: '';
-    position: absolute;
-    bottom: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 30px;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 2px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-kiko-image-viewer.rolled-up .kiko-viewer-header::after {
-    opacity: 1;
-}
-
-kiko-image-viewer.rolled-up .kiko-viewer-header {
-    border-bottom: none;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-}
-
-.kiko-viewer-title {
-    flex: 1;
-}
-
-.kiko-viewer-controls {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.kiko-control-btn {
-    background: rgba(255,255,255,0.2);
-    border: none;
-    color: white;
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    transition: background 0.2s ease;
-}
-
-.kiko-control-btn:hover {
-    background: rgba(255,255,255,0.3);
-}
-
-.kiko-minimize-btn:hover {
-    background: rgba(255,193,7,0.8);
-}
-
-.kiko-close-btn:hover {
-    background: rgba(244,67,54,0.8);
-}
-
-.kiko-image-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
-    margin-top: 8px;
-}
-
-.kiko-image-item {
-    position: relative;
-    background: #1a1a1a;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 2px solid transparent;
-    cursor: default;
-}
-
-.kiko-image-item:hover {
-    border-color: #4CAF50;
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
-}
-
-.kiko-image-item img {
-    width: 100%;
-    height: 120px;
-    display: block;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.kiko-image-item:hover img {
-    transform: scale(1.05);
-}
-
-.kiko-image-actions {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    display: flex;
-    gap: 6px;
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-}
-
-.kiko-image-item:hover .kiko-image-actions {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.kiko-action-btn {
-    background: rgba(0,0,0,0.8);
-    border: none;
-    color: white;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    transition: all 0.2s ease;
-    backdrop-filter: blur(10px);
-}
-
-.kiko-action-btn:hover {
-    background: rgba(76, 175, 80, 0.9);
-    transform: scale(1.1);
-}
-
-.kiko-action-btn.download:hover {
-    background: rgba(33, 150, 243, 0.9);
-}
-
-.kiko-action-btn.copy:hover {
-    background: rgba(156, 39, 176, 0.9);
-}
-
-.kiko-image-selector {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    width: 24px;
-    height: 24px;
-    background: rgba(0,0,0,0.8);
-    border: 2px solid white;
-    border-radius: 4px;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.kiko-image-item:hover .kiko-image-selector {
-    opacity: 1;
-}
-
-.kiko-image-selector.selected {
-    background: #4CAF50;
-    border-color: #4CAF50;
-    opacity: 1;
-}
-
-.kiko-image-selector.selected::after {
-    content: '✓';
-    color: white;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.kiko-image-info {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(transparent, rgba(0,0,0,0.9));
-    color: white;
-    padding: 8px 6px 4px;
-    font-size: 10px;
-    line-height: 1.2;
-}
-
-.kiko-image-filename {
-    font-weight: bold;
-    margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.kiko-image-details {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 4px;
-}
-
-.kiko-format-badge {
-    display: inline-block;
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-size: 9px;
-    font-weight: bold;
-    text-transform: uppercase;
-}
-
-.kiko-format-png { background-color: #2196F3; }
-.kiko-format-jpeg { background-color: #FF9800; }
-.kiko-format-webp { background-color: #4CAF50; }
-
-.kiko-image-stats {
-    font-size: 9px;
-    opacity: 0.8;
-}
-
-.kiko-click-hint {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 9px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.kiko-image-item:hover .kiko-click-hint {
-    opacity: 1;
-}
-
-.kiko-bulk-btn {
-    background: #444;
-    border: 1px solid #666;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 10px;
-    transition: all 0.2s ease;
-}
-
-.kiko-bulk-btn:hover {
-    background: #4CAF50;
-    border-color: #4CAF50;
-    transform: translateY(-1px);
-}
-
-/* Legacy styles for fallback */
-.kiko-save-image-preview {
-    position: relative;
-    display: inline-block;
-    margin: 4px;
-    border: 2px solid #333;
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.kiko-save-image-preview:hover {
-    border-color: #555;
-    transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
-.kiko-format-indicator {
-    display: inline-block;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: bold;
-    margin-left: 4px;
-}
-
-.kiko-quality-preview {
-    font-size: 11px;
-    color: #888;
-    margin-top: 2px;
-}
-`;
-
-// Inject CSS styles
 function injectStyles() {
-    if (!document.getElementById('kiko-save-image-styles')) {
-        const style = document.createElement('style');
-        style.id = 'kiko-save-image-styles';
-        style.textContent = KIKO_SAVE_IMAGE_STYLES;
-        document.head.appendChild(style);
-    }
-}
-
-// Escape a value for safe interpolation into HTML text or attribute contexts
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+    const url = new URL('./ui/window.css', import.meta.url).href;
+    if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(link => link.href === url)) return;
+    const link = document.createElement('link');
+    Object.assign(link, { rel: 'stylesheet', href: url });
+    document.head.append(link);
 }
 
 // Build a ComfyUI /api/view URL with every parameter encoded
@@ -407,19 +35,11 @@ function formatFileSize(bytes) {
 }
 
 // Open image in new tab
-function openImageInTab(imagePath, subfolder = '', enablePopup = true) {
+function openImageInTab(imagePath, subfolder = '', enablePopup = true, type = 'output') {
     // Note: enablePopup parameter is kept for compatibility but not used
     // since popup now controls viewer visibility, not individual image clicks
 
-    const basePath = window.location.origin;
-
-    // Construct proper image URL handling subfolder
-    let fullPath;
-    if (subfolder && subfolder.trim()) {
-        fullPath = `${basePath}/api/view?filename=${encodeURIComponent(imagePath)}&subfolder=${encodeURIComponent(subfolder)}&type=output`;
-    } else {
-        fullPath = `${basePath}/api/view?filename=${encodeURIComponent(imagePath)}&type=output`;
-    }
+    const fullPath = buildViewUrl(imagePath, subfolder, type);
 
     // Extract clean filename for window name (remove timestamp and batch number)
     const cleanName = imagePath.split('_').slice(0, -2).join('_') || 'KikoSaveImage';
@@ -443,494 +63,254 @@ class KikoImageViewer extends HTMLElement {
         super();
         this.imageData = [];
         this.selectedImages = new Set();
-        this.isDragging = false;
         this.isMinimized = false;
         this.isRolledUp = false;
-        this.dragOffset = { x: 0, y: 0 };
-        this.lastHeaderClick = 0;
-
-        // Bind document-level drag handlers once so they can be removed later
-        this.boundHandleDrag = this.handleDrag.bind(this);
-        this.boundEndDrag = this.endDrag.bind(this);
-
-        // Always start at default position
+        this.openTimers = new Set();
+        this.viewerId = `kiko-viewer-${Math.random().toString(36).slice(2)}`;
     }
 
-    static get observedAttributes() {
-        return ['data'];
-    }
+    static get observedAttributes() { return ['data']; }
 
     connectedCallback() {
-        document.addEventListener('mousemove', this.boundHandleDrag);
-        document.addEventListener('mouseup', this.boundEndDrag);
+        this.classList.add('ca-tools', 'ca-floating-window');
+        this.setAttribute('role', 'dialog');
+        this.setAttribute('aria-label', 'Saved images');
+        this.activate();
     }
 
     disconnectedCallback() {
-        document.removeEventListener('mousemove', this.boundHandleDrag);
-        document.removeEventListener('mouseup', this.boundEndDrag);
+        this.scope?.dispose();
+        this.cancelOpens();
+    }
+
+    activate() {
+        if (this.scope && !this.scope.signal.aborted) return;
+        this.scope = createScope();
+        mountTheme(this, app.ui.settings, this.scope);
+        this.windowController = mountFloatingWindow(this, this.scope, () => this.close());
+        this.scope.listen(this, 'click', event => {
+            const button = event.target.closest('button[data-action]');
+            if (!button) return;
+            event.stopPropagation();
+            const action = button.dataset.action;
+            if (action === 'close') this.close();
+            else if (action === 'minimize') this.toggleMinimize();
+            else if (button.hasAttribute('data-index')) this.handleActionButton(action, Number(button.dataset.index));
+            else this.handleBulkAction(action);
+        });
+        this.scope.listen(this, 'change', event => {
+            if (event.target.matches('input[data-index]')) this.toggleImageSelection(Number(event.target.dataset.index));
+        });
+        this.scope.listen(this, 'dblclick', event => {
+            if (event.target.closest('[data-window-move]')) this.toggleRollUp();
+        });
+        this.scope.cleanup(() => this.cancelOpens());
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
-        if (name === 'data' && newValue) {
-            try {
-                this.imageData = JSON.parse(newValue);
-                this.autoUnrollOnNewImages();
-                this.render();
-            } catch (e) {
-                console.error('KikoImageViewer: Failed to parse image data:', e);
-            }
-        }
+        if (name !== 'data' || !newValue || oldValue === newValue) return;
+        try { this.setImageData(JSON.parse(newValue)); }
+        catch (error) { console.error('KikoImageViewer: Invalid image data', error); }
     }
 
     setImageData(data) {
+        if (!Array.isArray(data)) return;
+        this.cancelOpens();
         this.imageData = data;
-        this.autoUnrollOnNewImages();
+        this.classList.toggle('ca-single-image', data.length === 1);
+        this.selectedImages.clear();
+        this.isMinimized = false;
+        this.isRolledUp = false;
+        this.classList.remove('ca-minimized', 'rolled-up');
         this.render();
-        this.setupEventListeners();
     }
 
-    setupEventListeners() {
-        // Window dragging and double-click functionality
-        const header = this.querySelector('.kiko-viewer-header');
-        if (header) {
-            header.addEventListener('mousedown', this.startDrag.bind(this));
-            header.addEventListener('dblclick', this.handleHeaderDoubleClick.bind(this));
-        }
-
-        // Control buttons
-        const minimizeBtn = this.querySelector('.kiko-minimize-btn');
-        const closeBtn = this.querySelector('.kiko-close-btn');
-
-        if (minimizeBtn) {
-            minimizeBtn.addEventListener('click', this.toggleMinimize.bind(this));
-        }
-
-        if (closeBtn) {
-            closeBtn.addEventListener('click', this.close.bind(this));
-        }
-
-        // Image selection checkboxes
-        const selectors = this.querySelectorAll('.kiko-image-selector');
-        selectors.forEach((selector, index) => {
-            selector.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleImageSelection(index);
-            });
-        });
-
-        // Action buttons
-        const actionButtons = this.querySelectorAll('.kiko-action-btn');
-        actionButtons.forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const action = btn.dataset.action;
-                const index = parseInt(btn.dataset.index);
-                this.handleActionButton(action, index);
-            });
-        });
-
-        // Bulk action buttons
-        const bulkButtons = this.querySelectorAll('.kiko-bulk-btn');
-        bulkButtons.forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const action = btn.dataset.action;
-                this.handleBulkAction(action);
-            });
-        });
-
-        // Document-level drag listeners are managed in connectedCallback/disconnectedCallback
-    }
-
-    startDrag(e) {
-        // Don't start dragging if clicking on control buttons
-        if (e.target.closest('.kiko-viewer-controls')) {
-            return;
-        }
-
-        this.isDragging = true;
-        const rect = this.getBoundingClientRect();
-        this.dragOffset = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-        };
-
-        // Prevent text selection while dragging
-        e.preventDefault();
-
-        // Add dragging class for visual feedback
-        this.classList.add('dragging');
-    }
-
-    handleDrag(e) {
-        if (!this.isDragging) return;
-
-        e.preventDefault();
-
-        const x = e.clientX - this.dragOffset.x;
-        const y = e.clientY - this.dragOffset.y;
-
-        // Keep window within viewport bounds
-        const maxX = window.innerWidth - this.offsetWidth;
-        const maxY = window.innerHeight - this.offsetHeight;
-
-        const boundedX = Math.max(0, Math.min(x, maxX));
-        const boundedY = Math.max(0, Math.min(y, maxY));
-
-        this.style.left = boundedX + 'px';
-        this.style.top = boundedY + 'px';
-        this.style.right = 'auto'; // Override CSS right positioning
-    }
-
-    endDrag(e) {
-        if (!this.isDragging) return;
-
-        this.isDragging = false;
-        this.classList.remove('dragging');
-    }
-
-    handleHeaderDoubleClick(e) {
-        // Don't toggle if clicking on control buttons
-        if (e.target.closest('.kiko-viewer-controls')) {
-            return;
-        }
-
-        this.toggleRollUp();
-    }
-
-    autoUnrollOnNewImages() {
-        // Auto-unroll if currently rolled up and we have new image data
-        if (this.isRolledUp && this.imageData && this.imageData.length > 0) {
-            this.isRolledUp = false;
-            this.classList.remove('rolled-up');
-        }
-    }
-
-    toggleRollUp() {
-        this.isRolledUp = !this.isRolledUp;
-
-        if (this.isRolledUp) {
-            this.classList.add('rolled-up');
-        } else {
-            this.classList.remove('rolled-up');
-        }
+    cancelOpens() {
+        this.openTimers.forEach(timer => clearTimeout(timer));
+        this.openTimers.clear();
     }
 
     toggleMinimize() {
         this.isMinimized = !this.isMinimized;
-        const container = this.querySelector('.kiko-viewer-container');
-        const minimizeBtn = this.querySelector('.kiko-minimize-btn');
-
-        if (container && minimizeBtn) {
-            if (this.isMinimized) {
-                container.style.display = 'none';
-                minimizeBtn.textContent = '+';
-                minimizeBtn.title = 'Restore';
-            } else {
-                container.style.display = 'block';
-                minimizeBtn.textContent = '−';
-                minimizeBtn.title = 'Minimize';
-            }
-        }
+        this.isRolledUp = this.isMinimized;
+        this.classList.toggle('ca-minimized', this.isMinimized);
+        this.classList.toggle('rolled-up', this.isMinimized);
+        this.querySelector('.kiko-viewer-container').hidden = this.isMinimized;
+        this.querySelector('[data-window-resize]').hidden = this.isMinimized;
+        this.querySelector('.ca-window-status').hidden = this.isMinimized;
+        const button = this.querySelector('.kiko-minimize-btn');
+        button.textContent = this.isMinimized ? '+' : '−';
+        button.title = this.isMinimized ? 'Restore' : 'Minimize';
+        button.setAttribute('aria-label', `${button.title} image viewer`);
+        button.setAttribute('aria-expanded', String(!this.isMinimized));
+        this.windowController?.fit();
     }
+
+    toggleRollUp() { this.toggleMinimize(); }
 
     close() {
-        this.style.display = 'none';
+        const restoreFocus = this.contains(document.activeElement);
+        this.hidden = true;
+        this.scope?.dispose();
+        this.ownerNode?.updateViewerButton();
+        if (restoreFocus && this.returnFocus?.isConnected) this.returnFocus.focus();
     }
 
-    show() {
-        this.style.display = 'block';
+    show(focus = false) {
+        if (focus && !this.contains(document.activeElement)) this.returnFocus = document.activeElement;
+        this.hidden = false;
+        if (this.isConnected) this.activate();
+        this.windowController?.fit();
+        this.ownerNode?.updateViewerButton();
+        if (focus) this.querySelector('[data-window-move]')?.focus();
     }
 
     toggleImageSelection(index) {
-        const selector = this.querySelector(`[data-index="${index}"].kiko-image-selector`);
-        if (!selector) return;
-
-        if (this.selectedImages.has(index)) {
-            this.selectedImages.delete(index);
-            selector.classList.remove('selected');
-        } else {
-            this.selectedImages.add(index);
-            selector.classList.add('selected');
-        }
-
-        this.updateBulkActionsVisibility();
-        this.updateSelectedCount();
+        const checkbox = this.querySelector(`input[data-index="${index}"]`);
+        if (!checkbox) return;
+        if (checkbox.checked) this.selectedImages.add(index);
+        else this.selectedImages.delete(index);
+        this.updateSelection();
     }
 
-    updateBulkActionsVisibility() {
-        const bulkActions = this.querySelector('.kiko-bulk-actions');
-        if (bulkActions) {
-            bulkActions.style.display = this.selectedImages.size > 0 ? 'block' : 'none';
-        }
-    }
-
-    updateSelectedCount() {
-        const countSpan = this.querySelector('.selected-count');
-        if (countSpan) {
-            countSpan.textContent = this.selectedImages.size;
-        }
+    updateSelection() {
+        this.querySelectorAll('input[data-index]').forEach(input => { input.checked = this.selectedImages.has(Number(input.dataset.index)); });
+        const count = this.querySelector('.selected-count');
+        if (count) count.textContent = this.selectedImages.size;
+        this.querySelectorAll('[data-action="open-all"], [data-action="download-all"], [data-action="clear-selection"]').forEach(button => { button.disabled = this.selectedImages.size === 0; });
     }
 
     handleActionButton(action, index) {
-        const imageData = this.imageData[index];
-        if (!imageData) return;
-
-        switch (action) {
-            case 'download':
-                this.downloadImage(imageData);
-                break;
-        }
+        const image = this.imageData[index];
+        if (!image) return;
+        if (action === 'download') this.downloadImage(image);
+        else if (action === 'open') openImageInTab(image.filename, image.subfolder || '', true, image.type);
     }
 
     handleBulkAction(action) {
-        switch (action) {
-            case 'open-all':
-                this.openAllImagesWithDelay();
-                break;
-            case 'download-all':
-                this.selectedImages.forEach(index => {
-                    const imageData = this.imageData[index];
-                    if (imageData) {
-                        this.downloadImage(imageData);
-                    }
-                });
-                break;
-            case 'select-all':
-                this.imageData.forEach((_, index) => {
-                    this.selectedImages.add(index);
-                    const selector = this.querySelector(`[data-index="${index}"].kiko-image-selector`);
-                    if (selector) {
-                        selector.classList.add('selected');
-                    }
-                });
-                this.updateBulkActionsVisibility();
-                this.updateSelectedCount();
-                break;
-            case 'clear-selection':
-                this.selectedImages.clear();
-                this.querySelectorAll('.kiko-image-selector.selected').forEach(selector => {
-                    selector.classList.remove('selected');
-                });
-                this.updateBulkActionsVisibility();
-                this.updateSelectedCount();
-                break;
-        }
+        if (action === 'select-all') this.imageData.forEach((_, index) => this.selectedImages.add(index));
+        else if (action === 'clear-selection') this.selectedImages.clear();
+        else if (action === 'open-all') this.openAllImagesWithDelay();
+        else if (action === 'download-all') this.selectedImages.forEach(index => this.downloadImage(this.imageData[index]));
+        this.updateSelection();
     }
 
     openAllImagesWithDelay() {
-        const selectedIndices = Array.from(this.selectedImages);
-        if (selectedIndices.length === 0) {
-            return;
-        }
-
-        // Open images with 150ms delay between each to prevent popup blocking
-        selectedIndices.forEach((index, i) => {
-            setTimeout(() => {
-                const imageData = this.imageData[index];
-                if (imageData) {
-                    openImageInTab(imageData.filename, imageData.subfolder || '');
-                }
-            }, i * 150);
+        this.cancelOpens();
+        [...this.selectedImages].forEach((index, offset) => {
+            const image = this.imageData[index];
+            const timer = setTimeout(() => {
+                this.openTimers.delete(timer);
+                openImageInTab(image.filename, image.subfolder || '', true, image.type);
+            }, offset * 150);
+            this.openTimers.add(timer);
         });
     }
 
-    downloadImage(imageData) {
-        // Construct proper image URL handling subfolder
-        const imageUrl = buildViewUrl(imageData.filename, imageData.subfolder, imageData.type);
-
-        // Create temporary link and trigger download
+    downloadImage(image) {
         const link = document.createElement('a');
-        link.href = imageUrl;
-        link.download = imageData.filename;
-        link.style.display = 'none';
-        document.body.appendChild(link);
+        link.href = buildViewUrl(image.filename, image.subfolder, image.type);
+        link.download = image.filename;
+        document.body.append(link);
         link.click();
-        document.body.removeChild(link);
+        link.remove();
     }
 
-
     render() {
-        if (!this.imageData || this.imageData.length === 0) {
-            this.innerHTML = `
-                <div class="kiko-viewer-header">
-                    <div class="kiko-viewer-title">No images to display</div>
-                    <div class="kiko-viewer-controls">
-                        <button class="kiko-control-btn kiko-close-btn" title="Close">×</button>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        const header = this.imageData.length === 1
-            ? `Saved Image (${escapeHtml(this.imageData[0].format)})`
-            : `Saved Images (${this.imageData.length} files)`;
-
-        const containerStyle = this.isMinimized ? 'style="display: none;"' : '';
-
-        this.innerHTML = `
-            <div class="kiko-viewer-header">
-                <div class="kiko-viewer-title">${header}</div>
-                <div class="kiko-viewer-controls">
-                    <button class="kiko-control-btn kiko-minimize-btn" title="Minimize">−</button>
-                    <button class="kiko-control-btn kiko-close-btn" title="Close">×</button>
-                </div>
-            </div>
-            <div class="kiko-viewer-container" ${containerStyle}>
-                <div class="kiko-image-grid">
-                    ${this.imageData.map((data, index) => this.createImageItem(data, index)).join('')}
-                </div>
-                ${this.imageData.length > 1 ? this.createBulkActions() : ''}
-            </div>
-        `;
-
-        // Add all event handlers
-        this.addClickHandlers();
+        this.innerHTML = '<header class="ca-window-header kiko-viewer-header"><div class="kiko-viewer-controls"></div></header><div class="kiko-viewer-container"><div class="kiko-image-grid"></div></div><footer class="ca-window-status"></footer>';
+        const header = this.querySelector('header');
+        const move = createButton(this.imageData.length === 1 ? 'Saved image' : `Saved images · ${this.imageData.length}`, 'ca-window-handle');
+        move.setAttribute('data-window-move', '');
+        move.setAttribute('aria-label', 'Move image viewer with arrow keys');
+        move.title = 'Drag to move · Double-click to minimize';
+        header.prepend(move);
+        const brand = document.createElement('span');
+        brand.className = 'ca-window-brand';
+        brand.textContent = 'ComfyAssets';
+        move.after(brand);
+        const controls = this.querySelector('.kiko-viewer-controls');
+        const minimize = createButton('−', 'kiko-control-btn kiko-minimize-btn');
+        minimize.dataset.action = 'minimize';
+        minimize.title = 'Minimize';
+        minimize.setAttribute('aria-label', 'Minimize image viewer');
+        minimize.setAttribute('aria-expanded', 'true');
+        const close = createButton('×', 'kiko-control-btn kiko-close-btn ca-danger');
+        close.dataset.action = 'close';
+        close.title = 'Close';
+        close.setAttribute('aria-label', 'Close image viewer');
+        controls.append(minimize, close);
+        this.querySelector('.kiko-image-grid').append(...this.imageData.map((image, index) => this.createImageItem(image, index)));
+        if (this.imageData.length > 1) this.createBulkActions();
+        const resize = createButton('◢', 'ca-window-resize');
+        resize.setAttribute('data-window-resize', '');
+        resize.setAttribute('aria-label', 'Resize image viewer with arrow keys');
+        this.append(resize);
+        this.querySelector('footer').textContent = this.imageData.length ? `${this.imageData.length} saved ${this.imageData.length === 1 ? 'image' : 'images'} · Click a preview to open` : 'No images to display';
+        this.updateSelection();
     }
 
     createBulkActions() {
-        return `
-            <div class="kiko-bulk-actions" style="margin-top: 12px; padding: 8px; background: #333; border-radius: 6px; display: none;">
-                <div style="font-size: 11px; color: #ccc; margin-bottom: 6px;">
-                    <span class="selected-count">0</span> selected
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="kiko-bulk-btn" data-action="open-all">📂 Open All</button>
-                    <button class="kiko-bulk-btn" data-action="download-all">💾 Download All</button>
-                    <button class="kiko-bulk-btn" data-action="select-all">☑️ Select All</button>
-                    <button class="kiko-bulk-btn" data-action="clear-selection">❌ Clear</button>
-                </div>
-            </div>
-        `;
-    }
-
-    createImageItem(data, index) {
-        // Construct proper image URL handling subfolder
-        // ComfyUI expects subfolder to be passed separately
-        const imageUrl = buildViewUrl(data.filename, data.subfolder, data.type);
-
-        const formatClass = `kiko-format-${String(data.format ?? '').toLowerCase().replace(/[^a-z0-9_-]/g, '')}`;
-
-        // Format file size
-        const fileSize = data.file_size ? formatFileSize(data.file_size) : 'Unknown';
-
-        // Build quality info
-        let qualityInfo = '';
-        if (data.format === 'PNG' && data.compress_level !== undefined) {
-            qualityInfo = `C${data.compress_level}`;
-        } else if ((data.format === 'JPEG' || data.format === 'WEBP') && data.quality !== undefined) {
-            if (data.format === 'WEBP' && data.lossless) {
-                qualityInfo = 'Lossless';
-            } else {
-                qualityInfo = `Q${data.quality}`;
-            }
+        const toolbar = document.createElement('div');
+        toolbar.className = 'kiko-bulk-actions';
+        toolbar.innerHTML = '<span class="selected-count">0</span> selected<div class="kiko-bulk-buttons"></div>';
+        for (const [action, text] of [['select-all', 'Select all'], ['clear-selection', 'Clear selection'], ['open-all', 'Open selected'], ['download-all', 'Download selected']]) {
+            const button = createButton(text, `kiko-bulk-btn${action === 'download-all' ? ' ca-primary' : ''}`);
+            button.dataset.action = action;
+            toolbar.querySelector('div').append(button);
         }
-
-        return `
-            <div class="kiko-image-item" data-index="${index}">
-                <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(data.filename)}" loading="lazy" />
-
-                ${this.imageData.length > 1 ? `
-                    <div class="kiko-image-selector" data-index="${index}" title="Select image"></div>
-                ` : ''}
-
-                <div class="kiko-image-actions">
-                    <button class="kiko-action-btn download" data-action="download" data-index="${index}" title="Download">💾</button>
-                </div>
-
-                <div class="kiko-image-info">
-                    <div class="kiko-image-filename" title="${escapeHtml(data.filename)}">
-                        ${escapeHtml(data.filename)}
-                    </div>
-                    <div class="kiko-image-details">
-                        <div class="kiko-image-stats">
-                            <span class="kiko-format-badge ${formatClass}">${escapeHtml(data.format)}</span>
-                            ${escapeHtml(data.dimensions || 'Unknown')} • ${escapeHtml(fileSize)}
-                            ${qualityInfo ? ` • ${escapeHtml(qualityInfo)}` : ''}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+        this.querySelector('.kiko-viewer-container').append(toolbar);
     }
 
-    addClickHandlers() {
-        const items = this.querySelectorAll('.kiko-image-item');
-        items.forEach((item, index) => {
-            const data = this.imageData[index];
-            if (data) {
-                item.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    openImageInTab(data.filename, data.subfolder || '');
-                });
-            }
-        });
+    createImageItem(image, index) {
+        const item = document.createElement('div');
+        item.className = 'kiko-image-item';
+        const open = createButton('', 'kiko-image-open');
+        open.dataset.action = 'open';
+        open.dataset.index = index;
+        open.setAttribute('aria-label', `Open image ${index + 1}: ${image.filename}`);
+        const img = document.createElement('img');
+        Object.assign(img, { src: buildViewUrl(image.filename, image.subfolder, image.type), alt: image.filename, loading: 'lazy' });
+        open.append(img);
+        const actions = document.createElement('div');
+        actions.className = 'kiko-image-actions';
+        if (this.imageData.length > 1) {
+            const label = document.createElement('label');
+            label.className = 'kiko-image-selector';
+            const checkbox = document.createElement('input');
+            Object.assign(checkbox, { type: 'checkbox', id: `${this.viewerId}-select-${index}` });
+            checkbox.dataset.index = index;
+            checkbox.setAttribute('aria-label', `Select image ${index + 1}: ${image.filename}`);
+            label.htmlFor = checkbox.id;
+            label.append(checkbox, document.createTextNode('Select'));
+            actions.append(label);
+        }
+        const download = createButton('↓ Download', 'kiko-action-btn ca-primary');
+        download.dataset.action = 'download';
+        download.dataset.index = index;
+        download.title = 'Download';
+        download.setAttribute('aria-label', `Download image ${index + 1}: ${image.filename}`);
+        actions.append(download);
+        const info = document.createElement('div');
+        info.className = 'kiko-image-info';
+        const filename = document.createElement('div');
+        filename.className = 'kiko-image-filename';
+        filename.textContent = image.filename;
+        const stats = document.createElement('div');
+        stats.className = 'kiko-image-stats';
+        let quality = '';
+        if (image.format === 'PNG' && image.compress_level !== undefined) quality = ` · C${image.compress_level}`;
+        else if (image.format === 'WEBP' && image.lossless) quality = ' · Lossless';
+        else if (image.quality !== undefined) quality = ` · Q${image.quality}`;
+        stats.textContent = `${image.format || 'PNG'} · ${image.dimensions || 'Unknown'} · ${formatFileSize(image.file_size || 0)}${quality}`;
+        info.append(filename, stats);
+        item.append(open, actions, info);
+        return item;
     }
 }
 
 // Register the custom element
 if (!customElements.get('kiko-image-viewer')) {
     customElements.define('kiko-image-viewer', KikoImageViewer);
-}
-
-// Create enhanced image preview element
-function createImagePreview(imageData) {
-    const container = document.createElement('div');
-    container.className = 'kiko-save-image-preview';
-
-    // Create image element
-    const img = document.createElement('img');
-    img.src = buildViewUrl(imageData.filename, imageData.subfolder, imageData.type);
-    img.alt = imageData.filename;
-
-    // Create info overlay
-    const info = document.createElement('div');
-    info.className = 'kiko-save-image-info';
-
-    const formatSpan = document.createElement('span');
-    formatSpan.className = 'kiko-save-image-format';
-    formatSpan.textContent = imageData.format || 'PNG';
-
-    const sizeSpan = document.createElement('span');
-    sizeSpan.className = 'kiko-save-image-size';
-    sizeSpan.textContent = ` • ${imageData.dimensions || 'Unknown'}`;
-
-    const fileSizeSpan = document.createElement('span');
-    fileSizeSpan.className = 'kiko-save-image-size';
-    fileSizeSpan.textContent = ` • ${formatFileSize(imageData.file_size || 0)}`;
-
-    info.appendChild(formatSpan);
-    info.appendChild(sizeSpan);
-    info.appendChild(fileSizeSpan);
-
-    // Add quality info for JPEG/WebP
-    if (imageData.quality && (imageData.format === 'JPEG' || imageData.format === 'WEBP')) {
-        const qualitySpan = document.createElement('span');
-        qualitySpan.className = 'kiko-save-image-quality';
-        let qualityText = ` • Q${imageData.quality}`;
-        if (imageData.format === 'WEBP' && imageData.lossless) {
-            qualityText = ' • Lossless';
-        }
-        qualitySpan.textContent = qualityText;
-        info.appendChild(qualitySpan);
-    } else if (imageData.compress_level !== undefined && imageData.format === 'PNG') {
-        const compressSpan = document.createElement('span');
-        compressSpan.className = 'kiko-save-image-quality';
-        compressSpan.textContent = ` • C${imageData.compress_level}`;
-        info.appendChild(compressSpan);
-    }
-
-    container.appendChild(img);
-    container.appendChild(info);
-
-    // Add click handler to open in new tab
-    container.addEventListener('click', () => {
-        openImageInTab(imageData.filename, imageData.subfolder || '');
-    });
-
-    return container;
 }
 
 // Add format indicator to widget
@@ -968,10 +348,10 @@ app.registerExtension({
             const onNodeCreated = nodeType.prototype.onNodeCreated;
 
             nodeType.prototype.onNodeCreated = function() {
-                // Call original onNodeCreated
-                if (onNodeCreated) {
-                    onNodeCreated.apply(this, arguments);
-                }
+                const result = onNodeCreated?.apply(this, arguments);
+
+                this.kikoViewerScope = createScope();
+                this.createToggleButton();
 
                 // Add format indicator to format widget
                 const formatWidget = this.widgets?.find(w => w.name === "format");
@@ -980,6 +360,7 @@ app.registerExtension({
 
                     // Store update function for later use
                     this.updateFormatIndicator = updateIndicator;
+                    this.kikoViewerScope.cleanup(() => indicator.remove());
                 }
 
                 // Add quality preview for quality widget
@@ -996,7 +377,9 @@ app.registerExtension({
 
                     // Store preview element for updates
                     this.qualityPreview = preview;
+                    this.kikoViewerScope.cleanup(() => preview.remove());
                 }
+                return result;
             };
 
             // Override onWidgetChange to update indicators
@@ -1035,106 +418,61 @@ app.registerExtension({
                 }
             };
 
-            // Add method to create custom image viewer
-            nodeType.prototype.createCustomImageViewer = function(imageData) {
-                // Check if popup is enabled for any image (use first image's popup setting)
-                const popupEnabled = imageData.length > 0 ? imageData[0].popup : true;
-
-                if (!popupEnabled) {
-                    return;
-                }
-
-                // Check if viewer already exists
-                let existingViewer = document.querySelector('kiko-image-viewer');
-                if (existingViewer) {
-                    // Update existing viewer with new data
-                    existingViewer.setImageData(imageData);
-                    existingViewer.show(); // Make sure it's visible
-                    return;
-                }
-
-                // Create toggle button in node if it doesn't exist
-                if (!this.kikoToggleButton) {
-                    this.createToggleButton();
-                }
-
-                // Create new viewer - always visible on workflow execution
-                const viewer = document.createElement('kiko-image-viewer');
-                viewer.setImageData(imageData);
-
-                // Store reference for toggle button
-                this.kikoViewer = viewer;
-
-                // Update toggle button text
-                if (this.kikoToggleButton) {
-                    this.kikoToggleButton.textContent = '👁️ Hide Images';
-                }
-
-                // Append to body (floating window) - always visible
-                document.body.appendChild(viewer);
+            const originalOnRemoved = nodeType.prototype.onRemoved;
+            nodeType.prototype.onRemoved = function () {
+                this.kikoViewerScope?.dispose();
+                if (this.kikoViewer?.ownerNode === this) this.kikoViewer.remove();
+                this.kikoViewer = null;
+                return originalOnRemoved?.apply(this, arguments);
             };
 
-            // Add method to create toggle button
-            nodeType.prototype.createToggleButton = function() {
-                // Find the node element to add button to
-                let nodeElement = null;
+            nodeType.prototype.updateViewerButton = function () {
+                if (!this.kikoToggleButton) return;
+                const visible = this.kikoViewer?.isConnected && this.kikoViewer.ownerNode === this && !this.kikoViewer.hidden;
+                this.kikoToggleButton.disabled = !this.kikoLastImages?.length;
+                this.kikoToggleButton.textContent = visible ? 'Hide images' : 'Show images';
+                this.kikoToggleButton.setAttribute('aria-expanded', String(Boolean(visible)));
+            };
 
-                if (this.domElement) {
-                    nodeElement = this.domElement;
-                } else if (this.widgets && this.widgets[0] && this.widgets[0].element) {
-                    nodeElement = this.widgets[0].element.closest('.litegraph-node');
-                } else {
-                    // Find by node title
-                    const allNodes = document.querySelectorAll('.litegraph-node');
-                    for (const node of allNodes) {
-                        if (node.textContent && node.textContent.includes('Kiko Save Image')) {
-                            nodeElement = node;
-                            break;
-                        }
-                    }
-                }
+            nodeType.prototype.createCustomImageViewer = function (imageData) {
+                if (!Array.isArray(imageData) || !imageData.length) return;
+                this.kikoLastImages = imageData;
+                this.updateViewerButton();
+                if (!imageData[0].popup) return;
+                let viewer = document.querySelector('kiko-image-viewer');
+                const previousOwner = viewer?.ownerNode;
+                if (!viewer) viewer = document.createElement('kiko-image-viewer');
+                viewer.ownerNode = this;
+                this.kikoViewer = viewer;
+                viewer.setImageData(imageData);
+                if (!viewer.isConnected) document.body.append(viewer);
+                viewer.show();
+                previousOwner?.updateViewerButton();
+                this.updateViewerButton();
+            };
 
-                if (!nodeElement) return;
-
-                // Create toggle button
-                const toggleButton = document.createElement('button');
-                toggleButton.textContent = '👁️ Show Images';
-                toggleButton.className = 'kiko-toggle-viewer-btn';
-                toggleButton.style.cssText = `
-                    margin: 4px;
-                    padding: 4px 8px;
-                    background: #4CAF50;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 11px;
-                    font-family: inherit;
-                `;
-
-                toggleButton.addEventListener('click', () => {
-                    if (this.kikoViewer) {
-                        const isHidden = this.kikoViewer.style.display === 'none';
-                        if (isHidden) {
-                            this.kikoViewer.show();
-                            toggleButton.textContent = '👁️ Hide Images';
-                        } else {
-                            this.kikoViewer.close();
-                            toggleButton.textContent = '👁️ Show Images';
-                        }
+            nodeType.prototype.createToggleButton = function () {
+                const container = document.createElement('div');
+                container.className = 'ca-tools ca-viewer-launcher';
+                const button = createButton('Show images', 'ca-primary kiko-toggle-viewer-btn');
+                button.disabled = true;
+                button.setAttribute('aria-expanded', 'false');
+                container.append(button);
+                mountTheme(container, app.ui.settings, this.kikoViewerScope);
+                this.addDOMWidget('kiko_saved_image_controls', 'div', container, {
+                    serialize: false, hideOnZoom: false,
+                    getMinHeight: () => 38, getMaxHeight: () => 38,
+                });
+                this.kikoToggleButton = button;
+                this.kikoViewerScope.cleanup(() => container.remove());
+                this.kikoViewerScope.listen(button, 'click', () => {
+                    if (!this.kikoLastImages?.length) return;
+                    if (this.kikoViewer?.ownerNode === this && this.kikoViewer.isConnected && !this.kikoViewer.hidden) this.kikoViewer.close();
+                    else {
+                        this.createCustomImageViewer(this.kikoLastImages.map(image => ({ ...image, popup: true })));
+                        this.kikoViewer.show(true);
                     }
                 });
-
-                // Add hover effects
-                toggleButton.addEventListener('mouseenter', () => {
-                    toggleButton.style.background = '#45a049';
-                });
-                toggleButton.addEventListener('mouseleave', () => {
-                    toggleButton.style.background = '#4CAF50';
-                });
-
-                nodeElement.appendChild(toggleButton);
-                this.kikoToggleButton = toggleButton;
             };
 
             // Legacy method kept for compatibility (not used with web component)
@@ -1157,7 +495,7 @@ window.kikoResetViewer = function() {
     const toggleButtons = document.querySelectorAll('.kiko-toggle-viewer-btn');
     toggleButtons.forEach(btn => {
         btn.textContent = '👁️ Show Images';
-        btn.style.background = '#4CAF50';
+
     });
 
     console.log('✨ Reset complete! Run your workflow to create a new viewer!');
@@ -1178,8 +516,3 @@ window.kikoForceViewer = function() {
     console.log('⚠️ No existing viewer found. Run your KikoSaveImage workflow to create a real viewer with actual images!');
     alert('⚠️ No viewer found! Run your KikoSaveImage workflow to create a viewer with real images.');
 };
-
-console.log('🎉 KikoSaveImage: Extension loaded!');
-console.log('💡 Helper functions available:');
-console.log('   📞 kikoResetViewer() - Remove existing viewer windows');
-console.log('   🚀 kikoForceViewer() - Show demo viewer');

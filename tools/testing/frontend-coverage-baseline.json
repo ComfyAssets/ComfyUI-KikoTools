@@ -48,10 +48,10 @@
     "statements": 77
   },
   "kiko_save_image_ui.js": {
-    "lines": 66,
-    "branches": 49,
-    "functions": 57,
-    "statements": 66
+    "lines": 84,
+    "branches": 74,
+    "functions": 78,
+    "statements": 84
   },
   "kiko_workflow_timer_ui.js": {
     "lines": 44,
@@ -73,9 +73,15 @@
   },
   "ui/core.js": {
     "lines": 98,
-    "branches": 91,
+    "branches": 92,
     "functions": 98,
     "statements": 98
+  },
+  "ui/floating-window.js": {
+    "lines": 93,
+    "branches": 80,
+    "functions": 98,
+    "statements": 93
   },
   "views/image-browser.js": {
     "lines": 98,

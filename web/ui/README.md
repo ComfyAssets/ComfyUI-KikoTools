@@ -24,3 +24,20 @@ of `ui/`; add abstractions only as demonstrated by the next consumer.
 Architecture and control organization were inspired by
 [Pixaroma](https://github.com/pixaroma/ComfyUI-Pixaroma). This implementation and
 styling are original; none of his toolkit code or assets are vendored.
+
+## Floating windows
+
+`floating-window.js` owns pointer capture, keyboard movement/resizing, viewport
+bounds and observer cleanup. `window.css` consumes the same control tokens as the
+loader. Kiko Save Image is its first consumer; the controller has no node, API or
+gallery dependencies.
+
+Drag the title or bottom-right resize handle. Focus either handle and use arrow
+keys (Shift for larger steps). Escape closes the focused window. The viewer stays
+nonmodal so the canvas remains usable. Window position and size survive new
+results and minimize/reopen within the session; they are not written into a
+workflow or persisted across browser reloads.
+
+The owning node controls removal. Another node may take over the shared viewer,
+but deleting the previous owner must not remove it. Closing or deleting a viewer,
+or replacing its results, cancels delayed bulk-open actions.
