@@ -4,7 +4,7 @@ import math
 import os
 import re
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -55,9 +55,42 @@ def list_tiles(run_dir: str) -> List[str]:
     names = [
         f
         for f in os.listdir(run_dir)
-        if f.lower().endswith(".png") and f not in (GRID_FILENAME, PREVIEW_FILENAME)
+        if f.lower().endswith(".png")
+        and f not in (GRID_FILENAME, PREVIEW_FILENAME)
+        and os.path.isfile(os.path.join(run_dir, f))
     ]
     return [os.path.join(run_dir, f) for f in natural_sort(names)]
+
+
+def replace_index_tiles(
+    run_dir: str, index: int, staged_dir: str, names: List[str]
+) -> None:
+    """Publish one index's staged tiles, restoring old files on a rename failure."""
+    previous_dir = os.path.join(staged_dir, "previous")
+    os.mkdir(previous_dir)
+    prefix = f"{index:02d}_"
+    old_tiles = [
+        path
+        for path in list_tiles(run_dir)
+        if os.path.basename(path).startswith(prefix)
+    ]
+    moved: List[Tuple[str, str]] = []
+    published: List[str] = []
+    try:
+        for path in old_tiles:
+            backup = os.path.join(previous_dir, os.path.basename(path))
+            os.replace(path, backup)
+            moved.append((path, backup))
+        for name in names:
+            destination = os.path.join(run_dir, name)
+            os.replace(os.path.join(staged_dir, name), destination)
+            published.append(destination)
+    except OSError:
+        for path in published:
+            os.remove(path)
+        for original, backup in reversed(moved):
+            os.replace(backup, original)
+        raise
 
 
 def archive_previous_sweep(run_dir: str) -> Optional[str]:

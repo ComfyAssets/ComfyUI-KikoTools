@@ -2,7 +2,8 @@
 
 import json
 import os
-from typing import Dict, Optional
+from tempfile import TemporaryDirectory
+from typing import Any, Dict, Optional
 
 import numpy as np
 import torch
@@ -17,6 +18,7 @@ from .logic import (
     build_contact_sheet,
     list_tiles,
     preview_of,
+    replace_index_tiles,
     resolve_run_dir,
     tile_filename,
 )
@@ -67,27 +69,36 @@ class ModelCompareSheetNode(ComfyAssetsBaseNode):
         font_size: int,
         prompt: Optional[Dict] = None,
         extra_pnginfo: Optional[Dict] = None,
-    ):
+    ) -> Dict[str, Any]:
         import folder_paths
+
+        if images.shape[0] == 0:
+            raise ValueError("images must contain at least one image")
 
         output_dir = folder_paths.get_output_directory()
         run_dir = resolve_run_dir(output_dir, run_name)
-        if index == 0:
-            archived = archive_previous_sweep(run_dir)
-            if archived:
-                self.log_info(f"New sweep: previous tiles moved to {archived}")
-        os.makedirs(run_dir, exist_ok=True)
-
         metadata = PngInfo()
         if prompt is not None:
             metadata.add_text("prompt", json.dumps(prompt))
         for key, value in (extra_pnginfo or {}).items():
             metadata.add_text(key, json.dumps(value))
 
-        for i, image in enumerate(images):
-            array = (image.cpu().numpy().clip(0, 1) * 255).round().astype(np.uint8)
-            name = tile_filename(index, label, i, images.shape[0])
-            Image.fromarray(array).save(os.path.join(run_dir, name), pnginfo=metadata)
+        parent = os.path.dirname(run_dir)
+        os.makedirs(parent, exist_ok=True)
+        with TemporaryDirectory(prefix=".model-compare-", dir=parent) as staging:
+            names = []
+            for i, image in enumerate(images):
+                array = (image.cpu().numpy().clip(0, 1) * 255).round().astype(np.uint8)
+                name = tile_filename(index, label, i, images.shape[0])
+                with Image.fromarray(array) as tile:
+                    tile.save(os.path.join(staging, name), pnginfo=metadata)
+                names.append(name)
+            if index == 0:
+                archived = archive_previous_sweep(run_dir)
+                if archived:
+                    self.log_info(f"New sweep: previous tiles moved to {archived}")
+            os.makedirs(run_dir, exist_ok=True)
+            replace_index_tiles(run_dir, index, staging, names)
 
         sheet = build_contact_sheet(list_tiles(run_dir), columns, tile_width, font_size)
         sheet.save(os.path.join(run_dir, GRID_FILENAME))

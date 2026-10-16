@@ -46,6 +46,18 @@ class TestResolveRunDir:
         with pytest.raises(ValueError, match="run_name"):
             resolve_run_dir(str(tmp_path), bad)
 
+    def test_rejects_symlink_escape_into_another_output_folder(self, tmp_path):
+        base = tmp_path / "model_compare"
+        base.mkdir()
+        outside = tmp_path / "unrelated"
+        outside.mkdir()
+        try:
+            (base / "link").symlink_to(outside, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"Directory symlinks unavailable: {exc}")
+        with pytest.raises(ValueError, match="run_name"):
+            resolve_run_dir(str(tmp_path), "link/run")
+
 
 class TestTileFilename:
     def test_single_image_run(self):
