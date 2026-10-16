@@ -188,3 +188,16 @@
 .ca-dialog-error:empty { display: none; }
 .ca-dialog input[aria-invalid="true"] { border-color: var(--ca-error); }
 @media (max-width: 360px) { .ca-dimension-fields { grid-template-columns: minmax(0, 1fr); } }
+
+.ca-text-output { display: flex; flex-direction: column; gap: 10px; inline-size: 100%; block-size: 100%; min-block-size: 180px; padding: 12px; border-radius: 6px; contain: size; overflow: auto; box-sizing: border-box; }
+.ca-text-output > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block-end: 8px; border-block-end: 1px solid var(--ca-line); }
+.ca-text-output h2 { font-size: 13px; font-weight: 550; margin: 0; }
+.ca-text-output > header span { color: var(--ca-muted); font-size: 10px; }
+.ca-output-content { display: flex; flex-direction: column; flex: 1; gap: 12px; min-block-size: 0; overflow: auto; }
+.ca-output-section { display: flex; flex-direction: column; flex: 1 0 110px; gap: 6px; min-inline-size: 0; }
+.ca-output-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+.ca-output-toolbar label { font-size: 12px; font-weight: 550; }
+.ca-text-output textarea { inline-size: 100%; flex: 1; min-block-size: 64px; resize: none; opacity: 1; }
+.ca-text-output[data-output-kind="any"] textarea { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.ca-text-output > p { font-size: 11px; color: var(--ca-muted); min-block-size: 17px; margin: 0; }
+.ca-text-output > p[data-error="true"] { color: var(--ca-error-text); }

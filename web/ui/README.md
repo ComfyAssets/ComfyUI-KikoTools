@@ -123,3 +123,21 @@ an immediate `close()` method. OK/Enter supplies the dialog and input/select
 values; Cancel/Escape invokes cancellation once. Manual `close()` dismisses
 without invoking cancellation. New views should build DOM through shared
 factories rather than pass HTML to this compatibility helper.
+
+## Display Text and Display Any
+
+Both nodes use `../views/text-output.js` for labelled, selectable read-only text
+areas and shared Copy buttons. Display Text detects paired positive/negative
+prompts and offers a copy action for each. Display Any preserves the complete
+formatted output in one scrollable monospace field instead of separate chunks.
+The view fills the available node area; updating output preserves node size.
+Copy success and failure appear in a polite status area. Replacement and removal
+cancel delayed feedback and ignore pending clipboard results from the old view.
+
+`../controllers/display-node.js` preserves native input/mode widgets and existing
+lifecycle hook arguments, context and return values. Complete output, including
+empty text, is saved in a `kikoDisplay: { version: 1, text }` workflow snapshot.
+Legacy widget values remain readable: converted input prefixes, prompt header
+pairs, native Display Any modes and all saved output chunks are recognized.
+The new output DOM widget does not serialize presentation state into native
+widget values. Node removal disposes the view, its listeners and theme observers.

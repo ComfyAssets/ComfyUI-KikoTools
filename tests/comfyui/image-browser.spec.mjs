@@ -465,3 +465,100 @@ test('Node Dimensions applies and persists across Classic and Nodes 2.0', async 
     });
     await expect(dialog).toHaveCount(0);
 });
+
+for (const name of ['DisplayText', 'DisplayAny']) {
+    test(`${name}: shared output persists through renderers, themes and legacy reload`, async ({ page }, testInfo) => {
+        const output = name === 'DisplayText'
+            ? 'Positive prompt: A blue cabin beside a quiet lake, soft morning light, detailed reflections.\nNegative prompt: blur, noise, watermark'
+            : Array.from({ length: 45 }, (_, index) => `Line ${index}: tensor / diagnostic output`).join('\n');
+        await page.evaluate(async ({ name, output }) => {
+            const { app } = await import('/scripts/app.js');
+            const node = LiteGraph.createNode(name);
+            app.graph.add(node);
+            node.setSize([560, 520]);
+            const mode = node.widgets.find(widget => widget.name === 'mode');
+            if (mode) mode.value = 'tensor shape';
+            node.onExecuted({ text: [output] });
+            app.canvas.centerOnNode(node);
+            window.displayCopies = [];
+            Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => window.displayCopies.push(text) } });
+        }, { name, output });
+        const panel = page.locator('.ca-text-output');
+        await expect(panel).toHaveCount(1);
+        for (const renderer of [false, true, false]) {
+            await page.evaluate(async renderer => {
+                const { app } = await import('/scripts/app.js');
+                await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+                app.canvas.ds.scale = .85;
+                app.canvas.centerOnNode(app.graph._nodes[0]);
+            }, renderer);
+            await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+            await expect(panel).toBeVisible();
+            await expect(panel).toHaveCount(1);
+            await panel.getByRole('button', { name: name === 'DisplayText' ? 'Copy negative' : 'Copy value', exact: true }).focus();
+            await page.keyboard.press('Enter');
+            await expect(panel.getByRole('status')).toHaveText('Copied.');
+        }
+        expect(await page.evaluate(() => window.displayCopies)).toEqual(Array(3).fill(name === 'DisplayText' ? 'blur, noise, watermark' : output));
+        const restored = await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            const workflow = app.graph.serialize();
+            const saved = workflow.nodes[0];
+            await app.loadGraphData(workflow);
+            app.canvas.centerOnNode(app.graph._nodes[0]);
+            return { snapshot: saved.kikoDisplay, size: Array.from(app.graph._nodes[0].size), mode: app.graph._nodes[0].widgets.find(widget => widget.name === 'mode')?.value };
+        });
+        expect(restored.snapshot).toEqual({ version: 1, text: output });
+        expect(restored.size).toEqual([560, 520]);
+        if (name === 'DisplayAny') {
+            expect(restored.mode).toBe('tensor shape');
+            await expect(panel.getByLabel('Value output', { exact: true })).toHaveValue(output);
+        } else {
+            await expect(panel.getByLabel('Positive prompt', { exact: true })).toHaveValue('A blue cabin beside a quiet lake, soft morning light, detailed reflections.');
+            await expect(panel.getByLabel('Negative prompt', { exact: true })).toHaveValue('blur, noise, watermark');
+        }
+        for (const theme of ['light', 'dark']) {
+            await page.evaluate(async theme => {
+                const { app } = await import('/scripts/app.js');
+                await app.ui.settings.setSettingValue('Comfy.ColorPalette', theme);
+            }, theme);
+            await expect(panel).toHaveAttribute('data-ca-theme', theme);
+            await page.screenshot({ path: testInfo.outputPath(`${name}-${theme}.png`) });
+        }
+        await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            app.graph._nodes[0].setSize([280, 520]);
+            app.canvas.centerOnNode(app.graph._nodes[0]);
+        });
+        expect(await panel.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+        await page.evaluate(async name => {
+            const { app } = await import('/scripts/app.js');
+            const workflow = app.graph.serialize();
+            delete workflow.nodes[0].kikoDisplay;
+            workflow.nodes[0].widgets_values = name === 'DisplayText'
+                ? ['✓ Positive Prompt', 'legacy positive', null, '✗ Negative Prompt', 'legacy negative', null]
+                : ['tensor shape', 'legacy first', 'legacy second', null];
+            await app.loadGraphData(workflow);
+            app.canvas.centerOnNode(app.graph._nodes[0]);
+        }, name);
+        await expect(panel).toHaveCount(1);
+        if (name === 'DisplayText') {
+            await expect(panel.getByLabel('Positive prompt', { exact: true })).toHaveValue('legacy positive');
+            await expect(panel.getByLabel('Negative prompt', { exact: true })).toHaveValue('legacy negative');
+        } else {
+            await expect(panel.getByLabel('Value output', { exact: true })).toHaveValue('legacy first\nlegacy second');
+            expect(await page.evaluate(async () => {
+                const { app } = await import('/scripts/app.js');
+                return app.graph._nodes[0].widgets.find(widget => widget.name === 'mode').value;
+            })).toBe('tensor shape');
+        }
+        await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            const node = app.graph._nodes[0];
+            window.removedDisplay = node;
+            app.graph.remove(node);
+        });
+        await expect(panel).toHaveCount(0);
+        expect(await page.evaluate(() => window.removedDisplay.displayOutput.scope.signal.aborted)).toBe(true);
+    });
+}

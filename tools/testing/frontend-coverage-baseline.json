@@ -1,15 +1,21 @@
 {
+  "controllers/display-node.js": {
+    "lines": 98,
+    "branches": 95,
+    "functions": 86,
+    "statements": 98
+  },
   "display_any.js": {
-    "lines": 84,
-    "branches": 66,
-    "functions": 83,
-    "statements": 84
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
   },
   "display_text.js": {
-    "lines": 71,
-    "branches": 74,
-    "functions": 42,
-    "statements": 71
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
   },
   "empty_latent_batch_swap.js": {
     "lines": 98,
@@ -134,6 +140,12 @@
   "views/seed-history.js": {
     "lines": 98,
     "branches": 98,
+    "functions": 98,
+    "statements": 98
+  },
+  "views/text-output.js": {
+    "lines": 98,
+    "branches": 94,
     "functions": 98,
     "statements": 98
   },
