@@ -116,6 +116,23 @@
     .ca-image-browser .ca-sort select { inline-size: 100%; }
 }
 @media (pointer: coarse) { .ca-tools :where(button, select), .ca-tools .ca-segments label > span, .ca-tools .ca-switch { min-block-size: 40px; } }
+.ca-seed-history { inline-size: 100%; block-size: 100%; min-block-size: 200px; display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--ca-line); border-radius: 6px; overflow: auto; contain: size; }
+.ca-seed-history [hidden] { display: none; }
+.ca-seed-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-block-end: 1px solid var(--ca-line); padding-block-end: 6px; }
+.ca-seed-header h3 { margin: 0; font-size: 13px; font-weight: 550; }
+.ca-seed-header > span { font-size: 10px; color: var(--ca-muted); }
+.ca-seed-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+.ca-seed-actions button { flex: 1; }
+.ca-seed-history .ca-seed-disclosure { inline-size: 100%; flex-shrink: 0; font-size: 12px; }
+.ca-seed-list { flex: 1; min-block-size: 60px; overflow: auto; padding: 3px; margin: 0; list-style: none; border: 1px solid var(--ca-line); border-radius: 5px; background: var(--ca-field); }
+.ca-seed-list li + li { margin-block-start: 5px; }
+.ca-seed-history button.ca-seed-entry { inline-size: 100%; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 3px 10px; white-space: normal; text-align: start; }
+.ca-seed-entry[aria-pressed="true"] { border-color: var(--ca-focus); outline: 1px solid var(--ca-focus); outline-offset: -2px; }
+.ca-seed-value { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ca-seed-time { font-size: 11px; color: var(--ca-muted); }
+.ca-seed-empty { margin: 0; padding: 12px 4px; color: var(--ca-muted); font-size: 12px; text-align: center; }
+.ca-seed-status { min-block-size: 20px; font-size: 11px; overflow-wrap: anywhere; color: var(--ca-muted); flex-shrink: 0; }
+.ca-seed-status[data-kind="error"] { color: var(--ca-error-text); background: var(--ca-error-bg); }
 @media (forced-colors: active) {
     .ca-tools { --ca-accent: Highlight; --ca-focus: Highlight; --ca-border: ButtonText; --ca-line: CanvasText; }
     .ca-tools .ca-switch input:checked::before { background: HighlightText; }

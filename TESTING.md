@@ -97,6 +97,9 @@ and removal for the loader. Save Image additionally checks real image output,
 window close/reopen through the node control across renderer switches, theme
 changes, exclusion of the launcher from serialized values and owner removal.
 Its `/view` requests also use disposable fixture output rather than live files.
+Seed History checks keyboard-operable rows through renderer switches, list growth
+and scrolling on resize, palettes, saved history/node dimensions, serialization
+and polling cleanup on removal.
 Screenshots/traces appear in
 `tools/testing/test-results/comfyui/`. This opt-in smoke suite is separate from
 the required fixture CI job; fully provisioned, pinned ComfyUI CI and testing
