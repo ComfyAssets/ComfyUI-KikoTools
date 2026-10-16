@@ -1,31 +1,15 @@
 import { app } from "../../scripts/app.js";
-import { $el } from "../../scripts/ui.js";
+import { createColorPicker } from "./ui/color-picker.js";
 
 // Custom colors feature with extended options based on PR #433
 // Adds custom color pickers for nodes with full, title, and background options
 
-const colorShade = (col, amt) => {
-    col = col.replace(/^#/, "");
-    if (col.length === 3) col = col[0] + col[0] + col[1] + col[1] + col[2] + col[2];
+const colorShade = (color, amount) => '#' + color.slice(1).match(/../g)
+    .map(channel => Math.min(255, parseInt(channel, 16) + amount).toString(16).padStart(2, '0'))
+    .join('');
 
-    let [r, g, b] = col.match(/.{2}/g);
-    [r, g, b] = [parseInt(r, 16) + amt, parseInt(g, 16) + amt, parseInt(b, 16) + amt];
-
-    r = Math.max(Math.min(255, r), 0).toString(16);
-    g = Math.max(Math.min(255, g), 0).toString(16);
-    b = Math.max(Math.min(255, b), 0).toString(16);
-
-    const rr = (r.length < 2 ? "0" : "") + r;
-    const gg = (g.length < 2 ? "0" : "") + g;
-    const bb = (b.length < 2 ? "0" : "") + b;
-
-    return `#${rr}${gg}${bb}`;
-};
-
-// One lazily-created hidden color input, shared by every menu entry.
-// applyPicked holds what the currently open picker should do on change.
-let picker;
-let applyPicked;
+let activePicker;
+let pickerNode;
 
 const isEnabled = () => {
     const setting = app.ui.settings.getSettingValue("kikotools.custom_colors.enabled");
@@ -42,9 +26,7 @@ const getSettings = () => ({
 // Helper function to apply color to node(s)
 // Uses setColorOption like the built-in colors when possible
 const applyColorToNodes = (colorValue, colorType, node) => {
-    if (!colorValue) return;
-
-    const graphcanvas = LGraphCanvas.active_canvas;
+    const graphcanvas = globalThis.LGraphCanvas?.active_canvas || app.canvas;
     const nodes = (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1)
         ? [node]
         : Object.values(graphcanvas.selected_nodes);
@@ -74,7 +56,6 @@ const applyColorToNodes = (colorValue, colorType, node) => {
 
 // Groups have a single color
 const applyColorToGroup = (colorValue, group) => {
-    if (!colorValue) return;
     if (group.setColorOption) {
         group.setColorOption({ groupcolor: colorValue });
     } else {
@@ -83,19 +64,26 @@ const applyColorToGroup = (colorValue, group) => {
     app.canvas.setDirty(true, true);
 };
 
-// Open the shared hidden color input; apply(color) runs when a color is picked
-const openPicker = (initialColor, apply) => {
-    if (!picker) {
-        picker = $el("input", {
-            type: "color",
-            parent: document.body,
-            style: { display: "none" },
-        });
-        picker.onchange = () => applyPicked?.(picker.value);
-    }
-    applyPicked = apply;
-    picker.value = initialColor || "#000000";
-    picker.click();
+const openPicker = (initialColor, apply, node, label) => {
+    activePicker?.remove();
+    const previousFocus = document.activeElement;
+    const expanded = /^#[0-9a-f]{3}$/i.test(initialColor)
+        ? '#' + [...initialColor.slice(1)].map(value => value + value).join('') : initialColor;
+    const picker = createColorPicker(expanded, apply, app.ui.settings, label);
+    picker.hidden = true;
+    activePicker = picker;
+    pickerNode = node;
+    document.body.append(picker);
+    picker.dialog.addEventListener('close', () => {
+        picker.remove();
+        if (activePicker === picker) {
+            activePicker = null;
+            pickerNode = null;
+            if (previousFocus?.isConnected) previousFocus.focus();
+            else app.canvas.canvas?.focus();
+        }
+    }, { once: true });
+    picker.dialog.showModal();
 };
 
 // Wrap menu options in the "Custom Colors" submenu (or nothing if empty)
@@ -148,6 +136,14 @@ app.registerExtension({
         });
     },
 
+    beforeRegisterNodeDef(nodeType) {
+        const onRemoved = nodeType.prototype.onRemoved;
+        nodeType.prototype.onRemoved = function () {
+            if (pickerNode === this) activePicker?.remove();
+            return onRemoved?.apply(this, arguments);
+        };
+    },
+
     // New API: return items to append to node right-click menu
     getNodeMenuItems(node) {
         if (!isEnabled()) return [];
@@ -157,7 +153,10 @@ app.registerExtension({
 
         const addOption = (label, type, initialColor) => options.push({
             content: label,
-            callback: () => openPicker(initialColor, (color) => applyColorToNodes(color, type, node)),
+            callback: () => openPicker(
+                initialColor, (color) => applyColorToNodes(color, type, node),
+                node, `Custom ${type === 'bg' ? 'background' : type} color`,
+            ),
         });
 
         if (settings.showFull) addOption("🫶 Custom Full", 'full', node.bgcolor);
@@ -181,7 +180,7 @@ app.registerExtension({
 
         return customColorsMenu([{
             content: "🫶 Custom Group Color",
-            callback: () => openPicker(group.color, (color) => applyColorToGroup(color, group)),
+            callback: () => openPicker(group.color, (color) => applyColorToGroup(color, group), null, 'Group color'),
         }]);
     },
 });

@@ -727,3 +727,53 @@ test('embedding Unicode and emoticon completion preserves prompt boundaries in b
         }
     }
 });
+
+test('Custom Colors preserves node colors across renderers and workflow reload', async ({ page }, testInfo) => {
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = LiteGraph.createNode('EmptyLatentImage');
+        app.graph.add(node);
+        node.bgcolor = '#123456';
+        app.canvas.centerOnNode(node);
+    });
+    for (const renderer of [false, true, false]) {
+        await page.evaluate(async renderer => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+        }, renderer);
+        await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            const node = app.graph._nodes[0];
+            const menu = app.collectNodeMenuItems(node).find(item => item?.content === '🫶 Custom Colors');
+            menu.submenu.options.find(item => item.content === '🫶 Custom Full').callback();
+        });
+        const dialog = page.getByRole('dialog', { name: 'Custom full color', exact: true });
+        await expect(dialog).toBeVisible();
+        await dialog.getByLabel('Hex color', { exact: true }).fill('#112233');
+        await dialog.getByLabel('Hex color', { exact: true }).press('Tab');
+        if (renderer) {
+            for (const [color, theme] of [['#fff', 'light'], ['#202020', 'dark']]) {
+                await page.evaluate(color => document.body.style.setProperty('--bg-color', color), color);
+                await expect(dialog).toHaveAttribute('data-ca-theme', theme);
+                await page.screenshot({ path: testInfo.outputPath(`custom-colors-${theme}.png`) });
+            }
+        }
+        await page.keyboard.press('Escape');
+        await expect(page.locator('ca-color-picker')).toHaveCount(0);
+        expect(await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            const workflow = app.graph.serialize();
+            await app.loadGraphData(workflow);
+            const node = app.graph._nodes[0];
+            return { color: node.color, bgcolor: node.bgcolor };
+        })).toEqual({ color: '#253647', bgcolor: '#112233' });
+    }
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = app.graph._nodes[0];
+        app.collectNodeMenuItems(node).find(item => item?.content === '🫶 Custom Colors').submenu.options[0].callback();
+        app.graph.remove(node);
+    });
+    await expect(page.locator('dialog.ca-color-dialog')).toHaveCount(0);
+});

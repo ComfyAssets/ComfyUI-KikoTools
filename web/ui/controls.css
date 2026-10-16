@@ -143,6 +143,7 @@
 @keyframes ca-timer-glow { 0%, 100% { text-shadow: 0 0 8px currentColor; } 50% { text-shadow: 0 0 16px currentColor; } }
 @media (prefers-reduced-motion: reduce) { .ca-workflow-timer .kiko-timer-display { animation: none; text-shadow: none; } }
 .ca-color-picker { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.ca-color-picker[hidden] { display: none; }
 .ca-color-value { font-size: 12px; color: var(--ca-muted); font-family: ui-monospace, monospace; }
 .ca-color-swatch { inline-size: 24px; block-size: 20px; border: 1px solid var(--ca-border); border-radius: 3px; background: var(--ca-picked-color); }
 .ca-color-dialog { box-sizing: border-box; inline-size: 360px; max-inline-size: calc(100dvw - 32px); max-block-size: calc(100dvh - 32px); overflow: auto; padding: 16px; border: 1px solid var(--ca-border); border-radius: 8px; background: var(--ca-surface); color: var(--ca-text); box-shadow: 0 8px 28px #00000040; }
