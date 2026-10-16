@@ -60,10 +60,10 @@
     "statements": 98
   },
   "kikotools_extensions.js": {
-    "lines": 12,
+    "lines": 98,
     "branches": 98,
-    "functions": 0,
-    "statements": 12
+    "functions": 98,
+    "statements": 98
   },
   "seed_history_ui.js": {
     "lines": 95,
@@ -86,6 +86,12 @@
   "ui/core.js": {
     "lines": 98,
     "branches": 92,
+    "functions": 98,
+    "statements": 98
+  },
+  "ui/dialog.js": {
+    "lines": 98,
+    "branches": 85,
     "functions": 98,
     "statements": 98
   },
@@ -114,6 +120,12 @@
     "statements": 98
   },
   "views/image-browser.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
+  },
+  "views/node-dimensions.js": {
     "lines": 98,
     "branches": 98,
     "functions": 98,

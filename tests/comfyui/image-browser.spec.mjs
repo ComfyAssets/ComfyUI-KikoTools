@@ -397,3 +397,71 @@ test('actual host preserves the widget through renderer changes, theme changes a
     });
     await expect(loader).toHaveCount(0);
 });
+
+test('Node Dimensions applies and persists across Classic and Nodes 2.0', async ({ page }, testInfo) => {
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = LiteGraph.createNode('WidthHeightSelector');
+        app.graph.add(node);
+        node.pos = [300, 250];
+        app.canvas.centerOnNode(node);
+    });
+    const dialog = page.getByRole('dialog', { name: 'Node Dimensions', exact: true });
+    for (const renderer of [false, true, false]) {
+        await page.evaluate(async renderer => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+            app.canvas.centerOnNode(app.graph._nodes[0]);
+        }, renderer);
+        await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        const point = await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            const node = app.graph._nodes[0];
+            const canvas = app.canvas.canvas.getBoundingClientRect();
+            return { x: canvas.left + (node.pos[0] + app.canvas.ds.offset[0] + 60) * app.canvas.ds.scale, y: canvas.top + (node.pos[1] + app.canvas.ds.offset[1] - 15) * app.canvas.ds.scale };
+        });
+        await page.mouse.click(point.x, point.y, { button: 'right' });
+        await page.getByText('🎨 Node Dimensions', { exact: true }).click();
+        await expect(dialog).toBeVisible();
+        await dialog.getByLabel('Width (px)', { exact: true }).fill('900');
+        await dialog.getByLabel('Height (px)', { exact: true }).fill('600');
+        await page.keyboard.press('Enter');
+        await expect(dialog).toHaveCount(0);
+        expect(await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            return Array.from(app.graph._nodes[0].size);
+        })).toEqual([900, 600]);
+        await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            window.KikoToolsExtensions.showNodeDimensionsDialog(app.graph._nodes[0]);
+        });
+        await dialog.getByLabel('Width (px)', { exact: true }).fill('1200');
+        await page.keyboard.press('Escape');
+        expect(await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            return Array.from(app.graph._nodes[0].size);
+        })).toEqual([900, 600]);
+    }
+    const size = await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const workflow = app.graph.serialize();
+        await app.loadGraphData(workflow);
+        app.canvas.centerOnNode(app.graph._nodes[0]);
+        window.KikoToolsExtensions.showNodeDimensionsDialog(app.graph._nodes[0]);
+        return Array.from(app.graph._nodes[0].size);
+    });
+    expect(size).toEqual([900, 600]);
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(async theme => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.ColorPalette', theme);
+        }, theme);
+        await expect(dialog).toHaveAttribute('data-ca-theme', theme);
+        await page.screenshot({ path: testInfo.outputPath(`node-dimensions-${theme}.png`) });
+    }
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        app.graph.remove(app.graph._nodes[0]);
+    });
+    await expect(dialog).toHaveCount(0);
+});

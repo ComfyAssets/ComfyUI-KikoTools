@@ -870,3 +870,120 @@ test('gallery directory autocomplete handles keyboard selection escape and navig
     await input.press('Enter');
     await expect(page.getByAltText('forest.png', { exact: true })).toBeVisible();
 });
+
+async function openDimensions(page) {
+    await page.evaluate(() => {
+        const node = kikoHost.app.graph._nodes.at(-1);
+        node.computeSize = () => [180, 120];
+        node.setSize = size => { node.size = size; node.applied = (node.applied || 0) + 1; };
+        const opener = document.createElement('button');
+        opener.textContent = 'Edit dimensions';
+        opener.onclick = () => kikoHost.extensions.find(item => item.name === 'ComfyAssets.Extensions').getNodeMenuItems(node)[1].callback();
+        document.body.append(opener);
+    });
+    await page.getByRole('button', { name: 'Edit dimensions', exact: true }).click();
+    return page.getByRole('dialog', { name: 'Node Dimensions', exact: true });
+}
+
+test('Node Dimensions validates, applies once and enforces content minimums', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'WidthHeightSelector');
+    const dialog = await openDimensions(page);
+    await expect(dialog).toBeVisible();
+    await page.getByRole('button', { name: 'Edit dimensions', exact: true }).evaluate(element => element.focus());
+    await expect(dialog.getByLabel('Width (px)', { exact: true })).toBeFocused();
+    for (const value of ['', '-1', '1.5']) {
+        await dialog.getByLabel('Width (px)', { exact: true }).fill(value);
+        await dialog.getByRole('button', { name: 'Apply', exact: true }).click();
+        await expect(dialog.getByText('Enter positive whole numbers for width and height.')).toBeVisible();
+        expect(await page.evaluate(() => kikoHost.app.graph._nodes.at(-1).applied || 0)).toBe(0);
+    }
+    await dialog.getByLabel('Width (px)', { exact: true }).fill('1');
+    await dialog.getByLabel('Height (px)', { exact: true }).fill('10');
+    await page.keyboard.press('Enter');
+    await expect(dialog).toHaveCount(0);
+    expect(await page.evaluate(() => ({ size: kikoHost.app.graph._nodes.at(-1).size, applied: kikoHost.app.graph._nodes.at(-1).applied }))).toEqual({ size: [180, 120], applied: 1 });
+    await expect(page.getByRole('button', { name: 'Edit dimensions', exact: true })).toBeFocused();
+});
+
+test('Node Dimensions follows themes, fits narrow screens and cleans up on removal', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'WidthHeightSelector');
+    const dialog = await openDimensions(page);
+    for (const [color, theme] of [['#fafafa', 'light'], ['#202020', 'dark']]) {
+        await page.evaluate(color => document.body.style.setProperty('--bg-color', color), color);
+        await expect(dialog).toHaveAttribute('data-ca-theme', theme);
+    }
+    await page.setViewportSize({ width: 320, height: 480 });
+    expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await page.evaluate(() => window.KikoToolsExtensions.showNodeDimensionsDialog(kikoHost.app.graph._nodes.at(-1)));
+    await expect(dialog).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await page.getByRole('button', { name: 'Edit dimensions', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await page.getByRole('button', { name: 'Edit dimensions', exact: true }).click();
+    await page.evaluate(() => kikoHost.app.graph._nodes.at(-1).onRemoved());
+    await expect(dialog).toHaveCount(0);
+    expect(await page.evaluate(() => kikoHost.app.graph._nodes.at(-1).applied || 0)).toBe(0);
+});
+
+test('legacy dialog helpers preserve values, cancellation and manual close', async ({ page }) => {
+    await openHost(page);
+    await page.evaluate(() => {
+        window.dialogCalls = [];
+        window.openLegacy = () => window.legacyDialog = window.KikoToolsExtensions.createDialog('<label>Legacy value<input value="before"></label>', (dialog, values) => window.dialogCalls.push([dialog.tagName, values]), () => window.dialogCalls.push('cancel'));
+        window.openLegacy();
+    });
+    await page.getByLabel('Legacy value').fill('after');
+    await page.keyboard.press('Enter');
+    expect(await page.evaluate(() => window.dialogCalls)).toEqual([['DIALOG', ['after']]]);
+    await page.evaluate(() => window.openLegacy());
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => { window.openLegacy(); window.legacyDialog.close(); });
+    expect(await page.evaluate(() => window.dialogCalls)).toEqual([['DIALOG', ['after']], 'cancel']);
+    await page.evaluate(() => window.openLegacy());
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    expect(await page.evaluate(() => window.dialogCalls)).toEqual([['DIALOG', ['after']], 'cancel', 'cancel']);
+});
+
+test('dimension dialogs preserve node hooks and restrict menu ownership', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'WidthHeightSelector');
+    const result = await page.evaluate(() => {
+        const extension = kikoHost.extensions.find(item => item.name === 'ComfyAssets.Extensions');
+        const missing = extension.getNodeMenuItems({ constructor: {} });
+        const other = extension.getNodeMenuItems({ constructor: { category: 'Other' } });
+        const node = kikoHost.app.graph._nodes.at(-1);
+        const original = function (...args) { window.removedArgs = [this === node, ...args]; return 'removed'; };
+        node.onRemoved = original;
+        const dialog = window.KikoToolsExtensions.showNodeDimensionsDialog(node);
+        window.detachedApply = dialog.querySelector('button[type="submit"]');
+        const returned = node.onRemoved('a', 2);
+        return { missing, other, returned, restored: node.onRemoved === original, args: window.removedArgs };
+    });
+    expect(result).toEqual({ missing: [], other: [], returned: 'removed', restored: true, args: [true, 'a', 2] });
+    await page.evaluate(() => window.detachedApply.click());
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.evaluate(() => window.KikoToolsExtensions.createDialog('<label>Choice<select><option>chosen</option></select></label>'));
+    await page.getByRole('button', { name: 'OK', exact: true }).click();
+    await page.evaluate(() => window.KikoToolsExtensions.createDialog('No fields'));
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+
+test('legacy selects retain Enter confirmation', async ({ page }) => {
+    await openHost(page);
+    await page.evaluate(() => window.KikoToolsExtensions.createDialog('<label for="legacy-choice">Choice</label><select id="legacy-choice"><option>chosen</option></select>', (dialog, values) => window.selectedLegacy = values));
+    await page.evaluate(() => {
+        window.leakedDialogKeys = 0;
+        document.addEventListener('keydown', () => window.leakedDialogKeys++);
+    });
+    await page.getByLabel('Choice', { exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(await page.evaluate(() => window.selectedLegacy)).toEqual(['chosen']);
+    expect(await page.evaluate(() => window.leakedDialogKeys)).toBe(0);
+});
