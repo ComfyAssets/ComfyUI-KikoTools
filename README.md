@@ -50,6 +50,8 @@ Advanced parameter management tools adapted from [comfyui-essentials-nodes](http
 |------|-------------|----------|
 | [🎛️ Flux Sampler Params](#️-flux-sampler-params) | FLUX-optimized parameter generator with batch support | 🧰 xyz-helpers |
 | [📁 LoRA Folder Batch](#-lora-folder-batch) | Batch process multiple LoRAs from folders | 🧰 xyz-helpers |
+| [🔁 Checkpoint Folder Iterator](#-checkpoint-folder-iterator) | Load one checkpoint per queued run from a folder | 🧰 xyz-helpers |
+| [🧩 Model Compare Sheet](#-model-compare-sheet) | Save each run's image and rebuild a labeled contact sheet | 🧰 xyz-helpers |
 | [📊 Plot Parameters](#-plot-parameters) | Visualize parameter effects with graphs | 🧰 xyz-helpers |
 | [🎯 Sampler Select Helper](#-sampler-select-helper) | Intelligent sampler selection with recommendations | 🧰 xyz-helpers |
 | [📅 Scheduler Select Helper](#-scheduler-select-helper) | Optimal scheduler selection for samplers | 🧰 xyz-helpers |
@@ -300,6 +302,28 @@ Automated batch processing for multiple LoRA models from folders.
 - Batch process style transfers
 
 ![LoRA Folder Batch Example](examples/workflows/xyz_helpers_lora_testing.png)
+
+#### 🔁 Checkpoint Folder Iterator
+Run the same prompt through every checkpoint in a folder, one model per queued run.
+
+- **folder**: relative to `models/checkpoints`, or an absolute path anywhere on disk; regex include/exclude filters
+- **index** with `control_after_generate`: set 0 + *increment*, then queue a batch count equal to the checkpoint count
+- Queuing past the last checkpoint fails that run with a clear message instead of wrapping around, so the finished sweep is never restarted or archived by accident
+- Outputs MODEL/CLIP/VAE for the indexed file plus `ckpt_name`, `label`, `index`, `count`
+- Only one checkpoint is loaded at a time, so large folders do not exhaust RAM
+
+#### 🧩 Model Compare Sheet
+Output node that pairs with Checkpoint Folder Iterator.
+
+- Saves each run's image(s) to `output/model_compare/<run_name>/<NN>_<label>.png`
+- Rebuilds `grid.png` from every tile saved so far, each labeled with its filename
+- `columns`, `tile_width`, `font_size` control the layout; the grid is also returned as IMAGE
+- The node preview (and anything else that reads it) gets `grid_preview.png`, at most 1024 px wide; `grid.png` keeps full resolution
+- After the last queued run the preview shows the complete sheet
+- Wire Project File Path into `run_name` for `project/date/sweep` folders
+- A run at index 0 moves tiles already in the folder to `<run_name>_<timestamp>`, so an interrupted sweep never leaks into the new grid
+- Rerunning a nonzero index replaces its complete batch, even when the label or batch size changes; other indexes are preserved
+- Replacement PNGs are fully written before existing tiles are changed; a failed tile write preserves the prior tiles and grid
 
 #### 📊 Plot Parameters
 Visual analysis tool for understanding parameter relationships and effects.

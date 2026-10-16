@@ -10,6 +10,7 @@ from .tools.batch_list_converter import (
     LatentListToLatentBatchNode,
 )
 from .tools.batch_prompts import BatchPromptsNode
+from .tools.checkpoint_folder_iterator import CheckpointFolderIteratorNode
 from .tools.display_any import DisplayAnyNode
 from .tools.display_text import DisplayTextNode
 from .tools.embedding_autocomplete import KikoEmbeddingAutocomplete
@@ -23,6 +24,7 @@ from .tools.kiko_workflow_timer import KikoWorkflowTimerNode
 from .tools.kiko_save_image import KikoSaveImageNode
 from .tools.local_image_loader import LocalImageLoaderNode
 from .tools.project_file_path import ProjectFilePathNode
+from .tools.model_compare_sheet import ModelCompareSheetNode
 from .tools.model_downloader import ModelDownloaderNode
 from .tools.resolution_calculator import ResolutionCalculatorNode
 from .tools.sampler_combo import SamplerComboCompactNode, SamplerComboNode
@@ -69,6 +71,8 @@ NODE_CLASS_MAPPINGS = {
     "FluxSamplerParams": FluxSamplerParamsNode,
     "PlotParameters+": PlotParametersNode,
     "LoRAFolderBatch": LoRAFolderBatchNode,
+    "CheckpointFolderIterator": CheckpointFolderIteratorNode,
+    "ModelCompareSheet": ModelCompareSheetNode,
     "WidthHeightToVec2": WidthHeightToVec2Node,
     "KikoWorkflowTimer": KikoWorkflowTimerNode,
     "KikoProjectFilePath": ProjectFilePathNode,
@@ -105,6 +109,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxSamplerParams": "Flux Sampler Parameters",
     "PlotParameters+": "Plot Parameters",
     "LoRAFolderBatch": "LoRA Folder Batch",
+    "CheckpointFolderIterator": "Checkpoint Folder Iterator",
+    "ModelCompareSheet": "Model Compare Sheet",
     "WidthHeightToVec2": "Width Height to VEC2",
     "KikoWorkflowTimer": "Workflow Timer",
     "KikoProjectFilePath": "Project File Path",
