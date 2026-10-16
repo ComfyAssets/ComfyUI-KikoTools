@@ -78,12 +78,12 @@ def replace_index_tiles(
     published: List[str] = []
     try:
         for path in old_tiles:
-            backup = os.path.join(previous_dir, os.path.basename(path))
+            backup = os.path.join(previous_dir, os.path.basename(path) + ".previous")
             os.replace(path, backup)
             moved.append((path, backup))
         for name in names:
             destination = os.path.join(run_dir, name)
-            os.replace(os.path.join(staged_dir, name), destination)
+            os.replace(os.path.join(staged_dir, name + ".tmp"), destination)
             published.append(destination)
     except OSError:
         for path in published:

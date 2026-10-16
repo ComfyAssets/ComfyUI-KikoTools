@@ -91,7 +91,11 @@ class ModelCompareSheetNode(ComfyAssetsBaseNode):
                 array = (image.cpu().numpy().clip(0, 1) * 255).round().astype(np.uint8)
                 name = tile_filename(index, label, i, images.shape[0])
                 with Image.fromarray(array) as tile:
-                    tile.save(os.path.join(staging, name), pnginfo=metadata)
+                    tile.save(
+                        os.path.join(staging, name + ".tmp"),
+                        format="PNG",
+                        pnginfo=metadata,
+                    )
                 names.append(name)
             if index == 0:
                 archived = archive_previous_sweep(run_dir)

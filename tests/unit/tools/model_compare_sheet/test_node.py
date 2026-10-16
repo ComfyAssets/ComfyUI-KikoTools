@@ -295,3 +295,35 @@ class TestReplaceIndex:
         assert (notes / "notes.txt").read_text() == "keep this folder"
         assert (run_dir / "01_b.png").is_file()
         assert not (run_dir / "01_a.png").exists()
+
+    def test_staging_does_not_expose_temporary_images_to_output_galleries(
+        self, tmp_path: Path
+    ) -> None:
+        with _fake_output_dir(tmp_path):
+            node = ModelCompareSheetNode()
+            node.collect(_image(), "a", 1, "run1", 8, 32, 8)
+            base = tmp_path / "model_compare"
+            run_dir = base / "run1"
+            temporary_images = []
+            original_save = Image.Image.save
+            original_replace = os.replace
+
+            def observe_images() -> None:
+                temporary_images.extend(
+                    path for path in base.rglob("*.png") if path.parent != run_dir
+                )
+
+            def save_and_observe(image, path, *args, **kwargs):
+                result = original_save(image, path, *args, **kwargs)
+                observe_images()
+                return result
+
+            def replace_and_observe(source, destination):
+                result = original_replace(source, destination)
+                observe_images()
+                return result
+
+            with patch.object(Image.Image, "save", new=save_and_observe):
+                with patch("os.replace", side_effect=replace_and_observe):
+                    node.collect(_image(batch=2), "b", 1, "run1", 8, 32, 8)
+        assert temporary_images == []
