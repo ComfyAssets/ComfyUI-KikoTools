@@ -131,6 +131,8 @@ jobs:
         run: npm run --prefix tools/testing test:coverage
       - name: Firefox and WebKit workflows
         run: npm run --prefix tools/testing test:browser -- --project firefox --project webkit
+      - name: Shared UI design preview interactions
+        run: node tools/testing/node_modules/@playwright/test/cli.js test --config docs/ui-preview/playwright.config.mjs
       - name: Upload frontend reports
         if: always()
         uses: actions/upload-artifact@v7

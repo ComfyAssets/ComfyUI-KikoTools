@@ -51,6 +51,14 @@ all engines.
 
 ## Coverage and diagnosis
 
+The standalone shared UI design preview has a separate Playwright configuration.
+Run `node tools/testing/node_modules/@playwright/test/cli.js test --config
+docs/ui-preview/playwright.config.mjs` after installing the browser dependencies.
+It runs in the existing frontend CI job and writes screenshots/traces under
+`tools/testing/test-results/ui-preview/`. See
+[the preview guide](docs/ui-preview/README.md) for local review and its limits.
+These checks cover a mockup, not production widget or renderer compatibility.
+
 Python CI checks all twelve Python/OS combinations and enforces 85% combined
 statement/branch coverage. Every production `web/*.js` file appears in frontend
 coverage, including code without behavioral coverage. V8 unit coverage and

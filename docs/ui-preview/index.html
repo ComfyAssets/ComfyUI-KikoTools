@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark light">
+    <title>Local Image Loader · ComfyAssets UI preview</title>
+    <link rel="stylesheet" href="preview.css">
+    <script type="module" src="preview.mjs"></script>
+</head>
+<body class="ca-preview">
+    <svg class="ca-symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+        <symbol id="folder" viewBox="0 0 24 24"><path d="M3 6h7l2 3h9v11H3Z"/></symbol>
+        <symbol id="refresh" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-1 8M20 4v6h-6"/></symbol>
+        <symbol id="up" viewBox="0 0 24 24"><path d="m6 11 6-6 6 6M12 5v15"/></symbol>
+        <symbol id="star" viewBox="0 0 24 24"><path d="m12 3 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1Z"/></symbol>
+        <symbol id="grid" viewBox="0 0 24 24"><path d="M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z"/></symbol>
+        <symbol id="list" viewBox="0 0 24 24"><path d="M9 5h12M9 12h12M9 19h12M3 5h1M3 12h1M3 19h1"/></symbol>
+        <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></symbol>
+        <symbol id="alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2ZM12 9v5M12 17v1"/></symbol>
+    </svg>
+    <header class="ca-page-header">
+        <a class="ca-wordmark" href="#main"><span class="ca-brand-mark" aria-hidden="true">C<span>A</span></span> ComfyAssets</a>
+        <span class="ca-caption">Shared UI / Design preview 01</span>
+    </header>
+    <main id="main" class="ca-page-main">
+        <div class="ca-intro">
+            <div><h1>One set of tools. One design.</h1><p>Local Image Loader + PromptManager · compact controls, shared behavior, your ComfyUI theme.</p></div>
+            <span class="ca-preview-badge">Interactive mockup</span>
+        </div>
+        <section class="ca-review-controls" aria-label="Preview controls">
+            <fieldset class="ca-segments"><legend>ComfyUI theme preview</legend>
+                <label><input type="radio" name="theme" value="dark" checked><span>Dark</span></label>
+                <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+            </fieldset>
+            <label class="ca-width-control" for="node-width">Preview node width <input id="node-width" type="range" min="320" max="800" step="20" value="800"><output for="node-width" data-width>800 px</output></label>
+            <span class="ca-review-hint">Try resizing and switching themes</span>
+        </section>
+        <div class="ca-review-grid">
+            <div class="ca-canvas">
+                <article class="ca-node ca-loader" data-loader data-product-sample>
+                    <header class="ca-titlebar"><h2><span class="ca-node-dot" aria-hidden="true"></span>Local Image Loader</h2><span class="ca-product-label">KikoTools</span></header>
+                    <div class="ca-ports"><span class="ca-port">directory</span><span>media <i aria-hidden="true"></i></span></div>
+                    <div class="ca-node-body">
+                        <div class="ca-row ca-favorites"><label for="saved-paths" class="ca-visually-hidden">Saved paths</label><select id="saved-paths"><option value="/input/references">References</option><option value="/input/portraits">Portraits</option><option value="/input">All input files</option></select><button type="button" data-save-path><svg><use href="#star"/></svg>Save path</button></div>
+                        <form class="ca-path-form"><label for="directory" class="ca-field-label">Directory</label><div class="ca-path-row"><button type="button" class="ca-icon-button" aria-label="Parent folder" data-parent><svg><use href="#up"/></svg></button><input id="directory" value="/input/references" spellcheck="false"><button type="submit" class="ca-primary"><svg><use href="#folder"/></svg>Browse</button></div></form>
+                        <div class="ca-options">
+                            <label class="ca-switch" for="hide-dot"><input id="hide-dot" type="checkbox" role="switch" checked>Hide dot folders</label>
+                            <div class="ca-row ca-sort"><label for="sort">Sort</label><select id="sort"><option value="name">Name</option><option value="date">Date</option><option value="size">Size</option></select><button type="button" class="ca-icon-button" aria-label="Sort descending" aria-pressed="false" data-sort-order>↑</button><button type="button" class="ca-icon-button" aria-label="Refresh sample folder" data-refresh><svg><use href="#refresh"/></svg></button></div>
+                        </div>
+                        <div class="ca-gallery-tools"><label for="filter" class="ca-visually-hidden">Filter sample files</label><input id="filter" type="search" placeholder="Filter files…"><fieldset class="ca-segments ca-view-options"><legend class="ca-visually-hidden">Gallery layout</legend><label><input type="radio" name="view" value="grid" checked><span><svg aria-hidden="true"><use href="#grid"/></svg>Grid</span></label><label><input type="radio" name="view" value="list"><span><svg aria-hidden="true"><use href="#list"/></svg>List</span></label></fieldset></div>
+                        <div class="ca-error" role="alert" hidden><svg aria-hidden="true"><use href="#alert"/></svg><span><strong>Folder unavailable</strong><br>Check the path and try again.</span><button type="button" data-retry>Retry</button></div>
+                        <div class="ca-gallery" data-gallery data-view="grid"></div>
+                        <p class="ca-empty" data-empty hidden>No matching sample files.</p>
+                        <div class="ca-gallery-footer"><span data-count>6 sample files</span><span class="ca-page-count">Page 1 of 1</span></div>
+                        <div class="ca-thumbnail-control"><label for="thumbnail-size">Thumbnail size</label><input id="thumbnail-size" type="range" min="112" max="208" step="8" value="144"><output for="thumbnail-size" data-thumbnail-size>144 px</output></div>
+                        <div class="ca-selection"><span class="ca-selection-icon" aria-hidden="true"><svg><use href="#check"/></svg></span><div><span class="ca-field-label">Selected image</span><strong data-selection>No image selected</strong></div><button type="button" data-clear disabled>Clear</button></div>
+                    </div>
+                    <footer class="ca-node-status" role="status" data-status>Sample folder ready · choose an image</footer>
+                </article>
+                <p class="ca-canvas-caption">Same component system at every node size. All files shown here are demo content.</p>
+            </div>
+            <aside class="ca-reference">
+                <div class="ca-reference-heading"><h2>The same family</h2><p>Same controls. Same spacing. Same blue.</p></div>
+                <article class="ca-node ca-prompt-sample" data-product-sample>
+                    <header class="ca-titlebar"><h3><span class="ca-node-dot" aria-hidden="true"></span>Prompt editor</h3><span class="ca-product-label">PromptManager</span></header>
+                    <div class="ca-node-body">
+                        <div class="ca-prompt-rows" data-prompt-rows></div>
+                        <div class="ca-row"><button type="button" data-add-row>+ Add row</button><button type="button" data-reset-rows disabled>Reset</button></div>
+                    </div>
+                </article>
+                <section class="ca-reference-panel"><h3>One accent, clear states</h3><div class="ca-state-buttons"><button type="button" class="ca-primary" data-primary-example>Primary action</button><button type="button" class="ca-danger" data-error-example>Show error example</button><button type="button" disabled>Unavailable</button></div><p class="ca-muted-sample">Blue for active controls.<br>Strong red when something needs attention.</p></section>
+                <section class="ca-reference-panel ca-design-notes"><h3>What to review</h3><ul><li>Button weight and spacing</li><li>Blue and red in both themes</li><li>Switches and segmented choices</li><li>Narrow and wide node layouts</li></ul><p>This page previews appearance and interactions. ComfyUI renderer compatibility comes in the integration phase.</p></section>
+            </aside>
+        </div>
+    </main>
+    <footer class="ca-page-footer"><span>ComfyAssets · KikoTools + PromptManager</span><span>Original implementation · inspired by Pixaroma’s thoughtful controls</span></footer>
+</body>
+</html>
