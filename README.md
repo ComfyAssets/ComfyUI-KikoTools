@@ -37,7 +37,7 @@ switching, workflow persistence and cleanup. See the retained
 | [📦 Empty Latent Batch](#-empty-latent-batch) | Create empty latent batches with preset support | 📦 Latents |
 | [💾 Kiko Save Image](#-kiko-save-image) | Enhanced image saving with popup viewer | 💾 Images |
 | [📋 Display Text](#-display-text) | Smart text display with prompt detection | 👁️ Display |
-| [🤖 Gemini Prompt Engineer](#-gemini-prompt-engineer) | AI-powered image analysis and prompt generation | 🧠 Prompts |
+| [🤖 Gemini Prompt Engineer](#-gemini-prompt-engineer) | Deprecated; retained for existing workflows | 🧠 Prompts |
 | [🔍 Display Any](#-display-any) | Universal debugging tool for any data type | 👁️ Display |
 | [🖼️ Image to Multiple Of](#️-image-to-multiple-of) | Adjust dimensions to multiples for compatibility | 🖼️ Resolution |
 | [📉 Image Scale Down By](#-image-scale-down-by) | Scale images down by a factor with quality preservation | 🖼️ Resolution |
@@ -183,28 +183,17 @@ Advanced text display node with intelligent formatting and enhanced user interac
 ![Display Text Example](examples/workflows/display_text_example.png)
 
 #### 🤖 Gemini Prompt Engineer
-AI-powered image analysis using Google's Gemini to generate optimized prompts for various models.
 
-- **Multi-Model Support**: Generate prompts for FLUX, SDXL, Danbooru, and Video generation
-- **Smart Analysis**: Gemini analyzes composition, style, lighting, colors, and details
-- **Format-Specific Output**: FLUX artistic prompts, SDXL positive/negative pairs, Danbooru tags, Video motion descriptions
-- **Custom System Prompts**: Override templates with your own analysis instructions
-- **Flexible API Key Management**: Environment variable, config file, or direct input
-- **Visual Status Feedback**: Real-time processing indicators and error states
-- **Help Integration**: Built-in setup guide and documentation
-- **Dynamic Model Refresh**: Fetch latest Gemini models with refresh button
-- **Model Caching**: Persistent model list storage for offline access
-- **Enhanced SDXL Prompts**: Improved formatting with layered structure and quality boosters
+**Deprecated — retained for existing workflows only.** ComfyUI hides this node
+from normal new-node discovery using its deprecated-node metadata. The
+`GeminiPrompt` identifier, inputs, outputs and execution remain available so
+saved workflows can still load.
 
-**Use Cases:**
-- Reverse-engineer prompts from reference images
-- Convert artistic descriptions between different AI model formats
-- Generate consistent style descriptions across workflows
-- Create detailed scene breakdowns for complex compositions
-- Analyze and replicate lighting/mood from existing artwork
-- Access latest Gemini models including 2.0 and 2.5 versions
-
-![Gemini Prompt Example](examples/workflows/gemini_prompt_example.png)
+Google API/model compatibility updates and UI migration have ended. Existing
+workflows still depend on Google's service and the optional `google-genai`
+package; deprecation does not guarantee future API compatibility. See the
+[legacy Gemini documentation](examples/documentation/gemini_prompt.md) for the
+existing configuration and behavior.
 
 #### 🔍 Display Any
 Universal debugging node that displays any type of input value or tensor information.
@@ -700,6 +689,9 @@ Gemini Prompt → Display Text → Copy to Clipboard
 **Smart Detection:** Automatically formats SDXL-style prompts
 
 ### Gemini Prompt Engineer Example
+
+**Legacy example for the deprecated node; existing workflows only.**
+
 ```
 Load Image → Gemini Prompt → Display Text → Text Generation Model
 🖼️ reference ↘ type: SDXL   ↘ split view  ↘ "detailed portrait..."
@@ -794,7 +786,7 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Empty Latent Batch** | Create empty latent batches with preset support | ✅ Complete | [Docs](examples/documentation/empty_latent_batch.md) |
 | **Kiko Save Image** | Enhanced image saving with popup viewer and multi-format support | ✅ Complete | [Docs](examples/documentation/kiko_save_image.md) |
 | **Display Text** | Advanced text display with smart prompt detection and split view | ✅ Complete | [Docs](examples/documentation/display_text.md) |
-| **Gemini Prompt Engineer** | AI-powered image analysis with dynamic model refresh | ✅ Complete | [Docs](examples/documentation/gemini_prompt.md) |
+| **Gemini Prompt Engineer** | Legacy image analysis and prompt generation | Deprecated | [Docs](examples/documentation/gemini_prompt.md) |
 | **Display Any** | Universal debugging tool for any data type or tensor shapes | ✅ Complete | [Docs](examples/documentation/display_any.md) |
 | **Image to Multiple Of** | Adjust image dimensions to multiples for model compatibility | ✅ Complete | [Docs](examples/documentation/image_to_multiple_of.md) |
 | **Image Scale Down By** | Efficiently scale images down by a specified factor | ✅ Complete | [Docs](examples/documentation/image_scale_down_by.md) |
@@ -1108,7 +1100,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - **Format Support**: 3 (PNG, JPEG, WebP with advanced controls)
 - **Presets**: 26 curated resolution presets
 - **Interactive Features**: 8+ (swap buttons, history UI, popup viewers, parameter visualization)
-- **AI Integration**: Gemini API with 40+ model support
+- **Legacy AI Integration**: Deprecated Gemini node retained for saved workflows
 - **Test Coverage**: Enforced 85% Python statement/branch coverage and per-file frontend coverage floors
 - **Python Version**: 3.8+
 - **ComfyUI Compatibility**: Latest

@@ -24,6 +24,29 @@ from kikotools.tools.gemini_prompt.prompts import (
 class TestGeminiPromptNode:
     """Test cases for GeminiPromptNode."""
 
+    def test_deprecated_registration_preserves_legacy_workflow_lookup(self) -> None:
+        from kikotools import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+
+        cls = NODE_CLASS_MAPPINGS["GeminiPrompt"]
+        assert cls is GeminiPromptNode
+        assert NODE_DISPLAY_NAME_MAPPINGS["GeminiPrompt"] == "Gemini Prompt Engineer"
+        assert getattr(cls, "DEPRECATED", False) is True
+        assert "existing workflows" in cls.DESCRIPTION.lower()
+        assert "no longer receives" in cls.DESCRIPTION.lower()
+
+    def test_legacy_workflow_schema_is_retained(self) -> None:
+        with patch(
+            "kikotools.tools.gemini_prompt.node.get_available_models",
+            return_value=(["legacy-model"], None),
+        ):
+            inputs = GeminiPromptNode.INPUT_TYPES()
+        assert set(inputs["required"]) == {"image", "prompt_type", "model"}
+        assert set(inputs["optional"]) == {"api_key", "custom_prompt", "refresh_models"}
+        assert inputs["required"]["model"][0] == ["legacy-model"]
+        assert callable(getattr(GeminiPromptNode(), GeminiPromptNode.FUNCTION))
+        assert GeminiPromptNode.RETURN_TYPES == ("STRING", "STRING")
+        assert GeminiPromptNode.RETURN_NAMES == ("prompt", "negative_prompt")
+
     def test_node_properties(self):
         """Test node has correct properties."""
         assert GeminiPromptNode.CATEGORY == "🫶 ComfyAssets/🧠 Prompts"
