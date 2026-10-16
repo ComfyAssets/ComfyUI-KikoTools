@@ -54,10 +54,10 @@
     "statements": 84
   },
   "kiko_workflow_timer_ui.js": {
-    "lines": 44,
-    "branches": 73,
-    "functions": 34,
-    "statements": 44
+    "lines": 98,
+    "branches": 78,
+    "functions": 88,
+    "statements": 98
   },
   "kikotools_extensions.js": {
     "lines": 12,
@@ -71,6 +71,18 @@
     "functions": 88,
     "statements": 95
   },
+  "ui/color-picker.js": {
+    "lines": 98,
+    "branches": 94,
+    "functions": 98,
+    "statements": 98
+  },
+  "ui/color.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
+  },
   "ui/core.js": {
     "lines": 98,
     "branches": 92,
@@ -82,6 +94,12 @@
     "branches": 80,
     "functions": 98,
     "statements": 93
+  },
+  "ui/workflow-clock.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
   },
   "views/image-browser.js": {
     "lines": 98,

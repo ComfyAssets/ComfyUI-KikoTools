@@ -47,6 +47,100 @@ test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
     });
 });
 
+test('workflow timer preserves appearance and elapsed time through renderer switching and settings', async ({ page }, testInfo) => {
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const { api } = await import('/scripts/api.js');
+        await app.ui.settings.setSettingValue('kikotools.workflow_timer.color', '#123456');
+        const node = LiteGraph.createNode('KikoWorkflowTimer');
+        app.graph.add(node);
+        node.color = '#334455';
+        node.bgcolor = '#556677';
+        node.setSize([440, 240]);
+        node.properties.elapsed_time_str = '01:02:345';
+        node.onConfigure({ properties: node.properties });
+        app.canvas.centerOnNode(node);
+        api.dispatchEvent(new CustomEvent('execution_start'));
+    });
+    const panel = page.locator('.ca-workflow-timer');
+    const timer = panel.getByRole('timer', { name: 'Elapsed workflow time' });
+    for (const renderer of [false, true, false]) {
+        await page.evaluate(async renderer => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+        }, renderer);
+        await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        await expect(panel).toHaveCount(1);
+        await expect(timer).toHaveClass(/running/);
+        await expect(timer).toHaveCSS('color', 'rgb(18, 52, 86)');
+    }
+    await page.evaluate(async () => {
+        const { api } = await import('/scripts/api.js');
+        api.dispatchEvent(new CustomEvent('execution_interrupted'));
+    });
+    const stopped = await timer.textContent();
+    const initialFontSize = await timer.evaluate(element => parseFloat(getComputedStyle(element).fontSize));
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        app.graph._nodes.find(node => node.type === 'KikoWorkflowTimer').setSize([220, 160]);
+    });
+    await expect.poll(() => timer.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeLessThan(initialFontSize);
+    expect(await timer.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        app.graph._nodes.find(node => node.type === 'KikoWorkflowTimer').setSize([600, 320]);
+    });
+    await expect.poll(() => timer.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThan(initialFontSize);
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        app.graph._nodes.find(node => node.type === 'KikoWorkflowTimer').setSize([440, 240]);
+    });
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        await app.ui.settings.setSettingValue('kikotools.workflow_timer.color', '#0877bb');
+    });
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(async theme => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.ColorPalette', theme);
+        }, theme);
+        await expect(panel).toHaveAttribute('data-ca-theme', theme);
+        await page.screenshot({ path: testInfo.outputPath(`timer-${theme}.png`) });
+    }
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const workflow = app.graph.serialize();
+        await app.loadGraphData(workflow);
+        const node = app.graph._nodes.find(node => node.type === 'KikoWorkflowTimer');
+        if (node.color !== '#334455' || node.bgcolor !== '#556677') throw new Error('Custom node colors changed');
+        if (node.size[0] !== 440 || node.size[1] !== 240) throw new Error('Saved timer dimensions changed');
+        app.canvas.centerOnNode(node);
+    });
+    await expect(timer).toHaveText(stopped);
+    await page.getByRole('button', { name: 'Settings (Ctrl + ,)', exact: true }).click();
+    const search = page.getByPlaceholder(/search/i);
+    await expect(search).toBeVisible();
+    await search.fill('Workflow Timer');
+    await page.getByRole('button', { name: 'Choose timer color', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Timer color', exact: true });
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel('Hex color', { exact: true }).fill('#4a90d9');
+    await page.keyboard.press('Tab');
+    await expect(timer).toHaveCSS('color', 'rgb(74, 144, 217)');
+    await page.screenshot({ path: testInfo.outputPath('timer-color-picker.png') });
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Choose timer color', exact: true })).toBeFocused();
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = app.graph._nodes.find(node => node.type === 'KikoWorkflowTimer');
+        window.removedTimer = node;
+        app.graph.remove(node);
+    });
+    await expect(panel).toHaveCount(0);
+    expect(await page.evaluate(() => removedTimer.timerScope.signal.aborted)).toBe(true);
+});
+
 test('seed history survives renderer switching, resizing and workflow reload', async ({ page }, testInfo) => {
     await page.evaluate(async () => {
         const { app } = await import('/scripts/app.js');

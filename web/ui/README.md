@@ -60,3 +60,29 @@ ignored. Browser storage failures leave in-memory/workflow history usable.
 New nodes start at 320 × 420; saved workflows retain their node dimensions.
 Node removal disposes theme observers, event listeners, polling and setup/hide
 timers through `createScope()`.
+
+## Workflow Timer and color controls
+
+Workflow Timer uses the shared shell and theme without overriding node title or
+background colors. New nodes start at 340 × 180; saved dimensions and the
+`elapsed_time_str` property are restored with the workflow. Serialization saves
+a plain snapshot instead of a reference to live node properties.
+
+`workflow-clock.js` coordinates one polling interval for all visible timer
+nodes. New timers join the current execution; the interval stops when the last
+node is removed. Completion, interruption and errors freeze the same elapsed
+time across nodes. Color/glow changes apply immediately during execution.
+
+The existing `kikotools.workflow_timer.color` and `.glow` settings are retained.
+Configured colors are preserved; the default is shared blue. Glow also respects
+the system's reduced-motion preference.
+
+`createColorPicker()` provides native Hue/Saturation/Brightness sliders, validated
+six-digit hex input and keyboard-operable presets inside a native modal dialog.
+Changes apply immediately on input; hovering does not change the saved color.
+Done or Escape closes the picker and returns focus to its trigger. Disconnecting
+the settings control closes the dialog and disposes its listeners/theme scope.
+The setting renderer reuses its control across value updates. Its dialog lives
+in the document body so those re-renders preserve focus and native slider
+interaction. Cleanup waits one microtask to distinguish synchronous reparenting
+from actually closing/removing the settings control.
