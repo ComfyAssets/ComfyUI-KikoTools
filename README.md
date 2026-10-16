@@ -461,6 +461,15 @@ title shading. Node and group colors are saved with the workflow.
 Screenshots: [Dark](docs/screenshots/custom-colors/dark.png) ·
 [Light](docs/screenshots/custom-colors/light.png).
 
+#### 🧭 Follow Execution
+
+Enable **Follow Execution: Enable** in ComfyUI settings, then right-click the
+canvas to follow/stop execution, show the executing node, or navigate to a node
+by type. **Auto-start** begins following when a workflow starts. Disabling the
+feature stops following immediately; enabling it again waits for a manual start
+or the next workflow start when Auto-start is enabled. The same host menus work
+in Classic and Nodes 2.0.
+
 #### 🗂️ Project File Path
 Builds an organized save prefix to wire into a save node's `filename_prefix`.
 

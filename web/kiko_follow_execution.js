@@ -23,10 +23,17 @@ const checkAutoStart = () => {
 };
 
 const centerNode = (id) => {
+    checkEnabled();
     if (!followExecution || !id || !isEnabled) return;
     const node = app.graph.getNodeById(id);
     if (!node) return;
     app.canvas.centerOnNode(node);
+};
+
+const onExecuting = ({ detail }) => centerNode(detail);
+const onExecutionStart = () => {
+    checkEnabled();
+    checkAutoStart();
 };
 
 app.registerExtension({
@@ -39,6 +46,7 @@ app.registerExtension({
             type: "boolean",
             defaultValue: false,
             tooltip: "Enable follow execution feature in canvas right-click menu",
+            onChange: checkEnabled,
         });
 
         app.ui.settings.addSetting({
@@ -63,13 +71,10 @@ app.registerExtension({
         checkAutoStart();
 
         // Listen for execution events
-        api.addEventListener("executing", ({ detail }) => centerNode(detail));
+        api.addEventListener("executing", onExecuting);
 
         // Listen for execution start to handle auto-start
-        api.addEventListener("execution_start", () => {
-            checkEnabled();
-            checkAutoStart();
-        });
+        api.addEventListener("execution_start", onExecutionStart);
     },
 
     // New API: return items to append to canvas right-click menu
@@ -82,6 +87,8 @@ app.registerExtension({
             {
                 content: followExecution ? "🫶 Stop following execution" : "🫶 Follow execution",
                 callback: () => {
+                    checkEnabled();
+                    if (!isEnabled) return;
                     followExecution = !followExecution;
                     if (followExecution) {
                         centerNode(app.runningNodeId);
@@ -112,7 +119,7 @@ app.registerExtension({
                     p[n.type] = [n];
                 }
                 return p;
-            }, {});
+            }, Object.create(null));
 
             items.push({
                 content: "🫶 Go to node",

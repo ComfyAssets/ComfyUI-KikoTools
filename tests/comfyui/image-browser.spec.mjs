@@ -777,3 +777,79 @@ test('Custom Colors preserves node colors across renderers and workflow reload',
     });
     await expect(page.locator('dialog.ca-color-dialog')).toHaveCount(0);
 });
+
+test('Follow Execution honors live settings and host menus in both renderers', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = LiteGraph.createNode('EmptyLatentImage');
+        app.graph.add(node);
+        await app.ui.settings.setSettingValue('kikotools.follow_execution.auto_start', false);
+    });
+    for (const renderer of [false, true, false]) {
+        await page.evaluate(async renderer => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+        }, renderer);
+        await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        const result = await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            const { api } = await import('/scripts/api.js');
+            const node = app.graph._nodes[0];
+            const original = app.canvas.centerOnNode;
+            const centered = [];
+            app.canvas.centerOnNode = function (node) { centered.push(node.id); return original.apply(this, arguments); };
+            const set = (key, value) => app.ui.settings.setSettingValue(`kikotools.follow_execution.${key}`, value);
+            const menu = () => app.collectCanvasMenuItems(app.canvas);
+            const toggle = () => menu().find(item => /🫶 (Stop following execution|Follow execution)/.test(item?.content)).callback();
+            const emit = () => api.dispatchEvent(new CustomEvent('executing', { detail: String(node.id) }));
+            const progress = nodes => api.dispatchEvent(new CustomEvent('progress_state', { detail: { prompt_id: 'follow-execution-test', nodes } }));
+            try {
+                await set('enabled', true);
+                await set('auto_start', false);
+                progress({});
+                await new Promise(requestAnimationFrame);
+                const extension = app.extensions.find(item => item.name === 'kikotools.followExecution');
+                await extension.setup();
+                await extension.setup();
+                toggle();
+                emit();
+                const manual = centered.length;
+                await set('enabled', false);
+                emit();
+                const disabled = centered.length;
+                await set('enabled', true);
+                emit();
+                const reenabled = centered.length;
+                await set('auto_start', true);
+                api.dispatchEvent(new CustomEvent('execution_start', { detail: { prompt_id: 'follow-execution-test' } }));
+                emit();
+                const autoStart = centered.length;
+                toggle();
+                emit();
+                const stopped = centered.length;
+                progress({ [node.id]: { state: 'running', value: 0, max: 1, node_id: String(node.id), prompt_id: 'follow-execution-test' } });
+                await new Promise(requestAnimationFrame);
+                const showItem = menu().find(item => item?.content === '🫶 Show executing node');
+                if (!showItem) throw new Error(JSON.stringify({ running: app.runningNodeId, menus: menu().map(item => item?.content) }));
+                showItem.callback();
+                const show = centered.length;
+                menu().find(item => item?.content === '🫶 Go to node').submenu.options
+                    .find(item => item.content === 'EmptyLatentImage').submenu.options[0].callback();
+                const goTo = centered.length;
+                await set('show_goto_node', false);
+                const hideGoTo = !menu().some(item => item?.content === '🫶 Go to node');
+                await set('show_goto_node', true);
+                await set('enabled', false);
+                progress({});
+                api.dispatchEvent(new CustomEvent('executing', { detail: null }));
+                return { manual, disabled, reenabled, autoStart, stopped, show, goTo, hideGoTo };
+            } finally {
+                app.canvas.centerOnNode = original;
+            }
+        });
+        expect(result).toEqual({ manual: 1, disabled: 1, reenabled: 1, autoStart: 2, stopped: 2, show: 3, goTo: 4, hideGoTo: true });
+    }
+    expect(errors).toEqual([]);
+});

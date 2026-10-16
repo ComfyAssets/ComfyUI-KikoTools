@@ -210,3 +210,102 @@ test('gallery HTTP errors cover null bodies, message details, and generic status
         [503, {}, 'Request failed (HTTP 503)'],
     ]) assert.equal(await describe({ status, json: async () => body }), expected);
 });
+
+async function followFixture() {
+    const settings = new Map();
+    const definitions = new Map();
+    const centered = [];
+    const api = new EventTarget();
+    let extension;
+    const node = { id: '7', type: 'DisplayAny', pos: [10, 20], getTitle: () => 'Display' };
+    const app = {
+        registerExtension: value => { extension = value; },
+        ui: { settings: {
+            addSetting(value) { definitions.set(value.id, value); settings.set(value.id, value.defaultValue); },
+            getSettingValue: key => settings.get(key),
+        } },
+        graph: { _nodes: [node], getNodeById: id => app.graph._nodes.find(node => node.id === id) },
+        canvas: { centerOnNode: node => centered.push(node) }, runningNodeId: '7',
+    };
+    load('kiko_follow_execution.js', { app, api });
+    await extension.init();
+    function set(key, value) {
+        const id = `kikotools.follow_execution.${key}`;
+        settings.set(id, value);
+        definitions.get(id).onChange?.(value);
+    }
+    const emit = (type, detail = null) => {
+        const event = new Event(type);
+        event.detail = detail;
+        api.dispatchEvent(event);
+    };
+    return { extension, app, node, settings, centered, emit, set };
+}
+
+test('Follow Execution stops immediately when disabled without a menu or execution restart', async () => {
+    const f = await followFixture();
+    f.set('enabled', true);
+    f.set('auto_start', true);
+    await f.extension.setup();
+    f.emit('executing', '7');
+    assert.equal(f.centered.length, 1);
+    f.set('enabled', false);
+    f.emit('executing', '7');
+    assert.equal(f.centered.length, 1);
+    f.set('enabled', true);
+    f.emit('executing', '7');
+    assert.equal(f.centered.length, 1);
+    f.emit('execution_start');
+    f.emit('executing', '7');
+    assert.equal(f.centered.length, 2);
+});
+
+test('Follow Execution setup subscribes once per event across repeated setup', async () => {
+    const f = await followFixture();
+    f.set('enabled', true);
+    f.set('auto_start', true);
+    for (let i = 0; i < 3; i++) await f.extension.setup();
+    f.emit('executing', '7');
+    assert.deepEqual(f.centered, [f.node]);
+});
+
+test('Follow Execution menus safely group prototype-like types and sort nodes by position', async () => {
+    const f = await followFixture();
+    f.set('enabled', true);
+    await f.extension.setup();
+    f.app.graph._nodes = ['constructor', '__proto__', 'toString', 'constructor'].map((type, index) => ({
+        id: String(index), type, pos: [30 - index * 10, 0], getTitle: () => type,
+    }));
+    const menu = f.extension.getCanvasMenuItems().find(item => item?.content === '🫶 Go to node');
+    const options = menu.submenu.options;
+    assert.deepEqual(Array.from(options, item => item.content), ['__proto__', 'constructor', 'toString']);
+    const constructors = options[1].submenu.options;
+    assert.match(constructors[0].content, /#3 \(0, 0\)/);
+    assert.match(constructors[1].content, /#0 \(30, 0\)/);
+    constructors[0].callback();
+    assert.equal(f.centered[0], f.app.graph._nodes[3]);
+});
+
+test('Follow Execution ignores a stale follow menu after disabling the feature', async () => {
+    const f = await followFixture();
+    f.set('enabled', true);
+    await f.extension.setup();
+    const follow = f.extension.getCanvasMenuItems()[1];
+    f.set('enabled', false);
+    follow.callback();
+    assert.equal(f.centered.length, 0);
+    f.set('enabled', true);
+    f.emit('executing', '7');
+    assert.equal(f.centered.length, 0);
+});
+
+test('Follow Execution does not resume after disabling and re-enabling between events', async () => {
+    const f = await followFixture();
+    f.set('enabled', true);
+    f.set('auto_start', true);
+    await f.extension.setup();
+    f.set('enabled', false);
+    f.set('enabled', true);
+    f.emit('executing', '7');
+    assert.equal(f.centered.length, 0);
+});
