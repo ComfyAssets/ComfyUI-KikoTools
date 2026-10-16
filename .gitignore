@@ -169,3 +169,9 @@ referance/
 kikotools/tools/local_image_loader/config.json
 kikotools/tools/local_image_loader/selections.json
 gemini_config.json
+
+# Frontend test tooling and reports
+node_modules/
+coverage/
+playwright-report/
+test-results/

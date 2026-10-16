@@ -1,0 +1,80 @@
+{
+  "display_any.js": {
+    "lines": 84,
+    "branches": 66,
+    "functions": 83,
+    "statements": 84
+  },
+  "display_text.js": {
+    "lines": 71,
+    "branches": 74,
+    "functions": 42,
+    "statements": 71
+  },
+  "empty_latent_batch_swap.js": {
+    "lines": 41,
+    "branches": 91,
+    "functions": 64,
+    "statements": 41
+  },
+  "gemini_prompt_ui.js": {
+    "lines": 52,
+    "branches": 85,
+    "functions": 42,
+    "statements": 52
+  },
+  "kikoEmbeddingAutocomplete.js": {
+    "lines": 44,
+    "branches": 43,
+    "functions": 59,
+    "statements": 44
+  },
+  "kiko_custom_colors.js": {
+    "lines": 46,
+    "branches": 98,
+    "functions": 8,
+    "statements": 46
+  },
+  "kiko_follow_execution.js": {
+    "lines": 60,
+    "branches": 79,
+    "functions": 73,
+    "statements": 60
+  },
+  "kiko_local_image_loader.js": {
+    "lines": 72,
+    "branches": 69,
+    "functions": 40,
+    "statements": 72
+  },
+  "kiko_save_image_ui.js": {
+    "lines": 66,
+    "branches": 49,
+    "functions": 57,
+    "statements": 66
+  },
+  "kiko_workflow_timer_ui.js": {
+    "lines": 44,
+    "branches": 73,
+    "functions": 34,
+    "statements": 44
+  },
+  "kikotools_extensions.js": {
+    "lines": 12,
+    "branches": 98,
+    "functions": 0,
+    "statements": 12
+  },
+  "seed_history_ui.js": {
+    "lines": 63,
+    "branches": 58,
+    "functions": 56,
+    "statements": 63
+  },
+  "width_height_swap.js": {
+    "lines": 60,
+    "branches": 79,
+    "functions": 73,
+    "statements": 60
+  }
+}

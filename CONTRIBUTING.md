@@ -357,9 +357,12 @@ Brief description of changes.
 
 ### Review Process
 
+See [TESTING.md](TESTING.md) for automated suites, coverage gates, required merge
+checks, and the remaining ComfyUI/GPU/service boundaries.
+
 1. **Automated Checks**: CI runs tests and quality checks
 2. **Code Review**: Maintainer reviews code and provides feedback
-3. **Testing**: Manual testing in ComfyUI environment
+3. **Testing**: Run relevant automated suites; use live ComfyUI checks for host, GPU, service, or visual changes
 4. **Merge**: After approval, changes are merged to main
 
 ## 🎨 Code Style Guidelines
