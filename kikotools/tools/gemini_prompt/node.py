@@ -12,6 +12,8 @@ from .models import get_available_models
 class GeminiPromptNode(ComfyAssetsBaseNode):
     """Analyzes images using Gemini AI to generate optimized prompts for various AI models."""
 
+    DEPRECATED = True
+
     @classmethod
     def INPUT_TYPES(cls):
         """Define input types for the node."""
@@ -54,6 +56,9 @@ class GeminiPromptNode(ComfyAssetsBaseNode):
     CATEGORY = "🫶 ComfyAssets/🧠 Prompts"
 
     DESCRIPTION = """
+Deprecated: retained for existing workflows only. This node no longer receives
+Google API/model compatibility updates.
+
 Analyzes images using Google's Gemini AI to generate optimized prompts.
 
 Supports multiple prompt formats:

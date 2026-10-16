@@ -1,4 +1,15 @@
-# Gemini Prompt Engineer
+# Gemini Prompt Engineer (Deprecated)
+
+**Legacy documentation for existing workflows.** This node is soft-deprecated
+and hidden from normal new-node discovery through ComfyUI's deprecated-node
+metadata. Users who enable deprecated-node visibility may still find it.
+
+The `GeminiPrompt` registration, display name, input/output schema and execution
+remain available for saved workflows. Existing configuration and model-refresh
+behavior remain in place. Google API/model compatibility updates and UI migration
+have ended; the historical model and setup details below may no longer match
+Google's current service. No replacement or automatic workflow conversion is
+provided.
 
 The Gemini Prompt Engineer node uses Google's Gemini AI to analyze images and generate optimized prompts for various AI image generation models.
 
