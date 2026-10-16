@@ -10,6 +10,7 @@ test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
     const info = await (await request.get(`${baseURL}system_stats`)).json();
     expect(info.system.comfyui_version).toBe('0.39.0');
     expect(info.system.required_frontend_version).toBe('1.55.14');
+    expect(info.system.comfy_package_versions.find(item => item.name === 'comfyui-frontend-package')?.installed).toBe('1.55.14');
     await testInfo.attach('host-versions.json', { body: JSON.stringify(info.system, null, 2), contentType: 'application/json' });
     await expect(await request.post(`${fixture}/__test__/reset`)).toBeOK();
     await context.route('**/*', async route => {
