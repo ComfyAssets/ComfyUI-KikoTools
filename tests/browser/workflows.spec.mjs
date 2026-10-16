@@ -280,14 +280,14 @@ test('real display node output renders as text and replaces previous widgets', a
     await expect(response).toBeOK();
     const data = await response.json();
     await page.evaluate(({ id, message }) => kikoHost.nodes.get(String(id)).onExecuted(message), { id, message: data.ui });
-    await expect(page.getByLabel('text_positive')).toHaveValue('<img src=x onerror="window.injected=true">');
-    await expect(page.getByLabel('text_negative')).toHaveValue('blur');
+    await expect(page.getByLabel('Positive prompt', { exact: true })).toHaveValue('<img src=x onerror="window.injected=true">');
+    await expect(page.getByLabel('Negative prompt', { exact: true })).toHaveValue('blur');
     expect(await page.evaluate(() => window.injected)).toBeUndefined();
     const next = await (await request.post('/__test__/execute/DisplayText', { data: { text: 'Replacement' } })).json();
     await page.evaluate(({ id, message }) => kikoHost.nodes.get(String(id)).onExecuted(message), { id, message: next.ui });
     await expect(page.locator('textarea')).toHaveCount(1);
-    await expect(page.getByLabel('text_display')).toHaveValue('Replacement');
-    await expect(page.getByLabel('text_display')).toHaveAttribute('readonly', '');
+    await expect(page.getByLabel('Text output', { exact: true })).toHaveValue('Replacement');
+    await expect(page.getByLabel('Text output', { exact: true })).toHaveAttribute('readonly', '');
 });
 
 test('seed history persists across reloads and removal clears its watcher', async ({ page }) => {
@@ -810,15 +810,15 @@ test('Display Any renders real multiline output and restores serialized values w
     await expect(response).toBeOK();
     const result = await response.json();
     await page.evaluate(({ id, message }) => kikoHost.nodes.get(String(id)).onExecuted(message), { id, message: result.ui });
-    await expect(page.locator('textarea')).toHaveCount(3);
+    await expect(page.locator('textarea')).toHaveCount(1);
     expect(await page.locator('textarea').evaluateAll(elements => elements.map(element => element.value).join('\n'))).toBe(result.ui.text[0]);
     await page.evaluate(id => {
         const node = kikoHost.nodes.get(String(id));
         node.configure({ widgets_values: ['Restored value'] });
-        node.onConfigure();
+        node.onConfigure?.();
     }, id);
     await expect(page.locator('textarea')).toHaveCount(1);
-    await expect(page.getByLabel('display_0')).toHaveValue('Restored value');
+    await expect(page.getByLabel('Value output', { exact: true })).toHaveValue('Restored value');
 });
 
 test('gallery pagination sorting and hidden-folder controls use real directory pages', async ({ page, request }) => {
@@ -986,4 +986,129 @@ test('legacy selects retain Enter confirmation', async ({ page }) => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(await page.evaluate(() => window.selectedLegacy)).toEqual(['chosen']);
     expect(await page.evaluate(() => window.leakedDialogKeys)).toBe(0);
+});
+
+
+for (const name of ['DisplayText', 'DisplayAny']) {
+    test(`${name}: shared output follows themes, resizes, copies and preserves empty output`, async ({ page }) => {
+        await openHost(page);
+        const id = await createNode(page, name, name === 'DisplayAny' ? { mode: 'tensor shape' } : {});
+        await page.evaluate(id => {
+            const node = kikoHost.nodes.get(String(id));
+            node.onExecuted({ text: ['first\nsecond <b>literal</b>'] });
+            window.copiedOutput = [];
+            Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => window.copiedOutput.push(text) } });
+        }, id);
+        const panel = page.locator('.ca-text-output');
+        await expect(panel).toBeVisible();
+        for (const [color, theme] of [['#fafafa', 'light'], ['#202020', 'dark']]) {
+            await page.evaluate(color => document.body.style.setProperty('--bg-color', color), color);
+            await expect(panel).toHaveAttribute('data-ca-theme', theme);
+        }
+        const field = panel.getByRole('textbox');
+        await expect(field).toHaveAttribute('readonly', '');
+        await expect(field).toHaveValue('first\nsecond <b>literal</b>');
+        await field.focus();
+        await page.keyboard.press('ControlOrMeta+A');
+        expect(await field.evaluate(element => element.value.substring(element.selectionStart, element.selectionEnd))).toBe('first\nsecond <b>literal</b>');
+        await panel.getByRole('button', { name: /Copy/ }).focus();
+        await page.keyboard.press('Enter');
+        await expect(panel.getByRole('status')).toHaveText('Copied.');
+        expect(await page.evaluate(() => window.copiedOutput)).toEqual(['first\nsecond <b>literal</b>']);
+        for (const width of [240, 450, 800]) {
+            await panel.evaluate((element, width) => { element.style.width = `${width}px`; element.style.height = '400px'; }, width);
+            expect(await panel.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+        }
+        await page.evaluate(id => kikoHost.nodes.get(String(id)).onExecuted({ text: [''] }), id);
+        await expect(panel.getByRole('textbox')).toHaveValue('');
+        await expect(panel.getByRole('status')).toBeEmpty();
+        const snapshot = await page.evaluate(id => {
+            const node = kikoHost.nodes.get(String(id));
+            const data = {};
+            node.onSerialize(data);
+            node.onExecuted({ text: ['replacement'] });
+            node.configure(data);
+            return data;
+        }, id);
+        expect(snapshot.kikoDisplay).toEqual({ version: 1, text: '' });
+        await expect(panel.getByRole('textbox')).toHaveValue('');
+        await page.evaluate(id => kikoHost.removeNode(id), id);
+        await expect(panel).toHaveCount(0);
+    });
+}
+
+test('display prompt copy feedback handles failure, replacement and removal safely', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'DisplayText');
+    await page.evaluate(id => {
+        kikoHost.nodes.get(String(id)).onExecuted({ text: ['Positive prompt: sun\nNegative prompt: rain'] });
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.reject(new Error('denied')) } });
+    }, id);
+    const panel = page.locator('.ca-text-output');
+    await panel.getByRole('button', { name: 'Copy negative', exact: true }).click();
+    await expect(panel.getByRole('status')).toContainText('Could not copy');
+    await expect(panel.getByRole('textbox', { name: 'Negative prompt', exact: true })).toHaveValue('rain');
+    await page.evaluate(() => { navigator.clipboard.writeText = () => new Promise(resolve => window.finishCopy = resolve); });
+    await panel.getByRole('button', { name: 'Copy positive', exact: true }).click();
+    await page.evaluate(id => {
+        kikoHost.nodes.get(String(id)).onExecuted({ text: ['new output'] });
+        window.finishCopy();
+    }, id);
+    await expect(panel.getByRole('status')).toBeEmpty();
+    await panel.getByRole('button', { name: 'Copy text', exact: true }).click();
+    await page.evaluate(id => { kikoHost.removeNode(id); window.finishCopy(); }, id);
+    await expect(panel).toHaveCount(0);
+});
+
+test('display adapters preserve lifecycle context, arguments, results and saved snapshots', async ({ page }) => {
+    await openHost(page);
+    const result = await page.evaluate(async () => {
+        const calls = [];
+        let node;
+        class HookNode {
+            constructor() { this.widgets = []; this.size = [600, 500]; this.inputs = []; }
+            addDOMWidget(name, type, element) { document.body.append(element); const widget = { name, element }; this.widgets.push(widget); return widget; }
+            setSize(size) { this.size = size; }
+            setDirtyCanvas() {}
+            onNodeCreated(...args) { calls.push(['created', this === node, args]); return 'created-result'; }
+            onExecuted(...args) { calls.push(['executed', this === node, args]); return 'executed-result'; }
+            configure(...args) { calls.push(['configure', this === node, args]); return 'configure-result'; }
+            onSerialize(...args) { calls.push(['serialize', this === node, args.length]); args[0].external = 'retained'; return 'serialize-result'; }
+            onRemoved(...args) { calls.push(['removed', this === node, args]); return 'removed-result'; }
+        }
+        await kikoHost.extensions.find(extension => extension.name === 'ComfyAssets.DisplayAny').beforeRegisterNodeDef(HookNode, { name: 'DisplayAny' }, kikoHost.app);
+        node = new HookNode();
+        const created = node.onNodeCreated('creation');
+        const executed = node.onExecuted({ text: ['first'] }, 'execution');
+        const data = {};
+        const serialized = node.onSerialize(data, 'serialization');
+        const configured = node.configure({ kikoDisplay: { version: 1, text: 'restored' } }, 'configuration');
+        const removed = node.onRemoved('removal');
+        node.onExecuted({ text: ['too late'] });
+        return { created, executed, serialized, configured, removed, data, text: node.displayOutput.text, calls, disposed: node.displayOutput.scope.signal.aborted, size: node.size };
+    });
+    expect(result).toMatchObject({ created: 'created-result', executed: 'executed-result', serialized: 'serialize-result', configured: 'configure-result', removed: 'removed-result', data: { external: 'retained', kikoDisplay: { version: 1, text: 'first' } }, text: 'restored', disposed: true, size: [600, 500] });
+    expect(result.calls.slice(0, 5)).toEqual([
+        ['created', true, ['creation']],
+        ['executed', true, [{ text: ['first'] }, 'execution']],
+        ['serialize', true, 2],
+        ['configure', true, [{ kikoDisplay: { version: 1, text: 'restored' } }, 'configuration']],
+        ['removed', true, ['removal']],
+    ]);
+});
+
+test('display copy feedback expires and malformed execution messages retain the latest output', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'DisplayText');
+    await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        node.onExecuted({ text: ['latest'] });
+        for (const message of [null, {}, { text: [] }, { text: [12] }]) node.onExecuted(message);
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => {} } });
+    }, id);
+    const panel = page.locator('.ca-text-output');
+    await expect(panel.getByRole('textbox')).toHaveValue('latest');
+    await panel.getByRole('button', { name: 'Copy text', exact: true }).click();
+    await expect(panel.getByRole('status')).toHaveText('Copied.');
+    await expect(panel.getByRole('status')).toBeEmpty({ timeout: 4000 });
 });
