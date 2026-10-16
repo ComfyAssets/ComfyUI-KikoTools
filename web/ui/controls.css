@@ -171,3 +171,20 @@
     .ca-tools .ca-switch input:checked::before { background: HighlightText; }
     .ca-tools button.kiko-selected { outline: 2px solid Highlight; }
 }
+
+.ca-dialog { box-sizing: border-box; inline-size: 400px; max-inline-size: calc(100dvw - 24px); max-block-size: calc(100dvh - 24px); padding: 0; border: 1px solid var(--ca-border); border-radius: 8px; overflow: auto; box-shadow: 0 12px 40px #0006; }
+.ca-dialog[open] { display: flex; flex-direction: column; }
+.ca-dialog::backdrop { background: #0007; }
+.ca-dialog > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-block-end: 1px solid var(--ca-line); }
+.ca-dialog h2 { margin: 0; font-size: 14px; font-weight: 550; }
+.ca-dialog > header span { color: var(--ca-muted); font-size: 10px; }
+.ca-dialog-body { padding: 16px; min-inline-size: 0; }
+.ca-dialog > footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-block-start: 1px solid var(--ca-line); }
+.ca-dialog-hint { color: var(--ca-muted); margin: 0 0 12px; font-size: 12px; }
+.ca-dimension-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ca-dimension-fields .ca-field { display: flex; flex-direction: column; align-items: stretch; }
+.ca-dimension-fields input { inline-size: 100%; }
+.ca-dialog-error { margin: 12px 0 0; color: var(--ca-error-text); }
+.ca-dialog-error:empty { display: none; }
+.ca-dialog input[aria-invalid="true"] { border-color: var(--ca-error); }
+@media (max-width: 360px) { .ca-dimension-fields { grid-template-columns: minmax(0, 1fr); } }

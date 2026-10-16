@@ -103,3 +103,23 @@ the host context exactly once, and existing preset callback results are retained
 The control does not change node dimensions, batch size, native input order or
 backend interfaces. Workflow persistence remains with ComfyUI's native widgets;
 the DOM control does not serialize its UI state.
+
+## Node Dimensions and modal dialogs
+
+The ComfyAssets-only Node Dimensions context menu uses `dialog.js` for a native
+modal shell, shared theme tokens, focus restoration and scoped cleanup. Native
+modality contains keyboard focus; Escape and Cancel close without applying.
+`../views/node-dimensions.js` owns the form and node lifecycle binding.
+
+Enter or Apply accepts positive whole pixel values and clamps them to the node's
+computed content minimum. Invalid values keep the form open with an associated
+error. Opening the same node again reuses its dialog; node removal closes it and
+preserves the previous removal hook's context, arguments and return value.
+ComfyUI continues to serialize the resulting node size.
+
+The global `KikoToolsExtensions.createDialog(htmlContent, onOK, onCancel)` helper
+remains available for trusted HTML templates. It returns the native dialog with
+an immediate `close()` method. OK/Enter supplies the dialog and input/select
+values; Cancel/Escape invokes cancellation once. Manual `close()` dismisses
+without invoking cancellation. New views should build DOM through shared
+factories rather than pass HTML to this compatibility helper.
