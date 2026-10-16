@@ -1,0 +1,35 @@
+{
+  "source": "danbooru.donmai.us tags.json + tag_aliases.json",
+  "pulled": "2026-10-16",
+  "target_models": "Illustrious 1.0-3.x, NoobAI-XL",
+  "filters": {
+    "created_before": "2025-01-01",
+    "min_post_count": {
+      "general": 50,
+      "artist": 30,
+      "copyright": 20,
+      "character": 20
+    },
+    "artists_kept": true,
+    "deprecated_removed": true,
+    "meta_tags": "removed except small allowlist"
+  },
+  "tag_count": 165158,
+  "schema_version": 1,
+  "file": "danbooru-illustrious-noobai-2026-10-16.csv",
+  "encoding": "UTF-8",
+  "header_row": false,
+  "columns": [
+    "tag",
+    "category",
+    "post_count",
+    "aliases"
+  ],
+  "aliases_format": "Comma-separated inside a CSV-quoted field when necessary",
+  "size_bytes": 3979593,
+  "sha256": "733531a60f2e2d38925f53381b18cff21513ef14550d1f2ca670a0f55b86b798",
+  "prepared_by": "ComfyAssets",
+  "terms_url": "https://danbooru.donmai.us/terms",
+  "terms_source_url": "https://github.com/danbooru/danbooru/blob/master/app/views/static/terms_of_service.html.erb",
+  "release_tag": "tags-2026-10-16"
+}
