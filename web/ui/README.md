@@ -190,3 +190,13 @@ boundaries. Literal bracketed names are tried before interpreting leading
 parentheses/brackets as prompt weighting; insertion preserves surrounding
 weight syntax. URL downloads enforce their byte limit while reading the body,
 cancel oversized/aborted streams, and decode UTF-8 across chunk boundaries.
+
+### Custom Colors
+
+`../kiko_custom_colors.js` opens the same shared color picker as Workflow Timer
+from the host's node and group context menus. Hex entry, HSV sliders and presets
+apply immediately. Full/Title/Background options, selected-node behavior, title
+auto-shading and existing setting IDs are retained. Closing or replacing the
+picker removes its dialog and theme observers; removing its target node also
+closes it without replacing other node removal behavior. Keyboard focus returns
+to the available opener, with the canvas as a fallback.

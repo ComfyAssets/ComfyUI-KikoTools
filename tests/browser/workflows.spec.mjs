@@ -1599,3 +1599,160 @@ test('autocomplete stops an oversized URL stream before it reaches the parser', 
     expect(result.cancelled).toBe(true);
     expect(result.error).toMatch(/large/i);
 });
+
+async function openCustomColor(page, kind = 'Full') {
+    await page.evaluate(kind => {
+        const extension = kikoHost.extensions.find(item => item.name === 'kikotools.customColors');
+        const node = kikoHost.app.graph._nodes[0];
+        extension.getNodeMenuItems(node)[1].submenu.options.find(item => item.content === `🫶 Custom ${kind}`).callback();
+    }, kind);
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.locator('ca-color-picker')).toHaveCSS('display', 'none');
+}
+
+test('custom colors share the themed picker and preserve full, title, background and selection behavior', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'TextInput');
+    await createNode(page, 'TextInput');
+    await page.evaluate(() => {
+        const [first, second] = kikoHost.app.graph._nodes;
+        first.bgcolor = '#123456';
+        first.setColorOption = function (value) { Object.assign(this, value); };
+        kikoHost.app.canvas.selected_nodes = { [first.id]: first, [second.id]: second };
+        window.LGraphCanvas = { active_canvas: kikoHost.app.canvas };
+    });
+    await openCustomColor(page);
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByLabel('Hex color', { exact: true })).toHaveValue('#123456');
+    for (const [color, theme] of [['#fff', 'light'], ['#202020', 'dark']]) {
+        await page.evaluate(color => document.body.style.setProperty('--bg-color', color), color);
+        await expect(dialog).toHaveAttribute('data-ca-theme', theme);
+    }
+    await dialog.getByLabel('Hex color', { exact: true }).fill('#112233');
+    await dialog.getByLabel('Hex color', { exact: true }).press('Tab');
+    expect(await page.evaluate(() => kikoHost.app.graph._nodes.map(({ color, bgcolor }) => ({ color, bgcolor })))).toEqual([
+        { color: '#253647', bgcolor: '#112233' }, { color: '#253647', bgcolor: '#112233' },
+    ]);
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(page.locator('ca-color-picker')).toHaveCount(0);
+    await page.evaluate(() => { kikoHost.app.canvas.selected_nodes = {}; });
+    for (const kind of ['Title', 'BG']) {
+        await openCustomColor(page, kind);
+        await dialog.getByRole('button', { name: 'Use color #0877BB', exact: true }).click();
+        await page.keyboard.press('Escape');
+        await expect(page.locator('ca-color-picker')).toHaveCount(0);
+    }
+    expect(await page.evaluate(() => kikoHost.app.graph._nodes.map(({ color, bgcolor }) => ({ color, bgcolor })))).toEqual([
+        { color: '#0877bb', bgcolor: '#0877bb' }, { color: '#253647', bgcolor: '#112233' },
+    ]);
+});
+
+test('custom colors replace open pickers, preserve removal hooks and release detached dialogs', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'TextInput');
+    await openCustomColor(page);
+    await openCustomColor(page, 'Title');
+    await expect(page.locator('dialog')).toHaveCount(1);
+    expect(await page.evaluate(id => kikoHost.removeNode(id).removed, id)).toBe(true);
+    await expect(page.locator('dialog')).toHaveCount(0);
+    await expect(page.locator('ca-color-picker')).toHaveCount(0);
+});
+
+test('custom colors retain group application and menu setting filters', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'TextInput');
+    await page.evaluate(() => {
+        window.testGroup = { color: '#abc', setColorOption(value) { this.color = value.groupcolor; } };
+        kikoHost.app.canvas.setDirty = () => { window.groupDirtied = true; };
+        kikoHost.app.canvas.graph_mouse = [5, 10];
+        kikoHost.app.canvas.graph = { getGroupOnPos: (x, y) => x === 5 && y === 10 ? testGroup : null };
+        const extension = kikoHost.extensions.find(item => item.name === 'kikotools.customColors');
+        extension.getCanvasMenuItems(kikoHost.app.canvas)[1].submenu.options[0].callback();
+    });
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByLabel('Hex color', { exact: true })).toHaveValue('#AABBCC');
+    await dialog.getByRole('button', { name: 'Use color #0877BB', exact: true }).click();
+    expect(await page.evaluate(() => [testGroup.color, groupDirtied])).toEqual(['#0877bb', true]);
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+    expect(await page.evaluate(() => {
+        const extension = kikoHost.extensions.find(item => item.name === 'kikotools.customColors');
+        const node = kikoHost.app.graph._nodes[0];
+        for (const key of ['show_full', 'show_title', 'show_bg']) kikoHost.settings.set(`kikotools.custom_colors.${key}`, false);
+        const empty = [extension.getNodeMenuItems(node), extension.getCanvasMenuItems(kikoHost.app.canvas)];
+        kikoHost.settings.set('kikotools.custom_colors.enabled', false);
+        return [...empty, extension.getNodeMenuItems(node), extension.getCanvasMenuItems(kikoHost.app.canvas)];
+    })).toEqual([[], [], [], []]);
+});
+
+test('custom colors keep unshaded fallback colors and restore keyboard focus', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'TextInput');
+    await page.evaluate(() => {
+        kikoHost.settings.set('kikotools.custom_colors.auto_shade', false);
+        const opener = document.createElement('button');
+        opener.textContent = 'Open custom colors';
+        opener.onclick = () => {
+            const extension = kikoHost.extensions.find(item => item.name === 'kikotools.customColors');
+            extension.getNodeMenuItems(kikoHost.app.graph._nodes[0])[1].submenu.options[0].callback();
+        };
+        document.body.append(opener);
+    });
+    const opener = page.getByRole('button', { name: 'Open custom colors', exact: true });
+    await opener.focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Use color #0877BB', exact: true }).click();
+    expect(await page.evaluate(() => {
+        const node = kikoHost.app.graph._nodes[0];
+        return [node.color, node.bgcolor];
+    })).toEqual(['#0877bb', '#0877bb']);
+    await page.keyboard.press('Escape');
+    await expect(opener).toBeFocused();
+    await expect(page.locator('ca-color-picker')).toHaveCount(0);
+    await opener.click();
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(opener).toBeFocused();
+});
+
+test('custom colors handle absent settings, empty canvas menus, legacy groups and detached openers', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'TextInput');
+    expect(await page.evaluate(() => {
+        const extension = kikoHost.extensions.find(item => item.name === 'kikotools.customColors');
+        kikoHost.settings.delete('kikotools.custom_colors.enabled');
+        return [extension.getCanvasMenuItems({}), extension.getCanvasMenuItems({ graph_mouse: [0, 0], graph: { getGroupOnPos: () => null } }), extension.getNodeMenuItems(kikoHost.app.graph._nodes[0])[1].submenu.options.length];
+    })).toEqual([[], [], 3]);
+    await page.evaluate(() => {
+        const extension = kikoHost.extensions.find(item => item.name === 'kikotools.customColors');
+        window.testGroup = { color: '#000000' };
+        kikoHost.app.canvas.setDirty = () => {};
+        const focusTarget = document.createElement('button');
+        focusTarget.textContent = 'Canvas focus target';
+        kikoHost.app.canvas.canvas = focusTarget;
+        const temporaryOpener = document.createElement('button');
+        document.body.append(temporaryOpener, focusTarget);
+        temporaryOpener.focus();
+        extension.getCanvasMenuItems({ graph_mouse: [0, 0], graph: { getGroupOnPos: () => testGroup } })[1].submenu.options[0].callback();
+        temporaryOpener.remove();
+    });
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Use color #FFFFFF', exact: true }).click();
+    expect(await page.evaluate(() => testGroup.color)).toBe('#ffffff');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('button', { name: 'Canvas focus target', exact: true })).toBeFocused();
+    await page.evaluate(() => {
+        delete kikoHost.app.canvas.selected_nodes;
+        const extension = kikoHost.extensions.find(item => item.name === 'kikotools.customColors');
+        class BareNode {}
+        extension.beforeRegisterNodeDef(BareNode);
+        new BareNode().onRemoved();
+    });
+    await openCustomColor(page);
+    await dialog.getByRole('button', { name: 'Use color #000000', exact: true }).click();
+    expect(await page.evaluate(() => kikoHost.app.graph._nodes[0].color)).toBe('#141414');
+    await dialog.getByRole('button', { name: 'Use color #FFFFFF', exact: true }).click();
+    expect(await page.evaluate(() => kikoHost.app.graph._nodes[0].color)).toBe('#ffffff');
+    await page.keyboard.press('Escape');
+});
