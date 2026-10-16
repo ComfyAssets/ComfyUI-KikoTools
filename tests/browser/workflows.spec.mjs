@@ -14,7 +14,7 @@ test.beforeEach(async ({ page, request, context, browserName, baseURL }) => {
         page.errors.push(`Unexpected external request: ${url.origin}`);
         return route.abort();
     });
-    await page.addInitScript(() => localStorage.setItem('kikotools.embedding_autocomplete.settings', JSON.stringify({ showCustomWords: false, customWordsUrl: '' })));
+    await page.addInitScript(() => { if (!localStorage.getItem('kikotools.embedding_autocomplete.settings')) localStorage.setItem('kikotools.embedding_autocomplete.settings', JSON.stringify({ showCustomWords: false, customWordsUrl: '' })); });
 });
 test.afterEach(async ({ page, browserName }) => {
     await saveCoverage(page, browserName);
@@ -1111,4 +1111,491 @@ test('display copy feedback expires and malformed execution messages retain the 
     await panel.getByRole('button', { name: 'Copy text', exact: true }).click();
     await expect(panel.getByRole('status')).toHaveText('Copied.');
     await expect(panel.getByRole('status')).toBeEmpty({ timeout: 4000 });
+});
+
+async function mountAutocompleteSettings(page) {
+    await page.evaluate(() => {
+        const table = document.createElement('table');
+        table.id = 'autocomplete-test-settings';
+        const body = document.createElement('tbody');
+        body.append(kikoHost.settingDefinitions.get('kikotools.embeddingAutocomplete').type());
+        table.append(body);
+        document.body.append(table);
+    });
+    await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
+    return page.getByRole('dialog', { name: 'Embedding Autocomplete Settings', exact: true });
+}
+
+test('autocomplete shared settings save preferences, cancel edits and follow themes', async ({ page }) => {
+    await openHost(page);
+    await page.evaluate(() => Object.assign(window.kikotools.autocomplete.settings, { quickTrigger: 'keep', maxSuggestions: 7, insertOnTab: false }));
+    const dialog = await mountAutocompleteSettings(page);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('switch', { name: 'Enable Autocomplete', exact: true })).toBeChecked();
+    await dialog.getByRole('switch', { name: 'Show LoRAs', exact: true }).uncheck();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open Settings', exact: true })).toBeFocused();
+    expect(await page.evaluate(() => window.kikotools.autocomplete.settings.showLoras)).toBe(true);
+    await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
+    await page.evaluate(() => document.querySelector('#autocomplete-test-settings button').click());
+    await expect(dialog).toHaveCount(1);
+    for (const [color, theme] of [['#fafafa', 'light'], ['#202020', 'dark']]) {
+        await page.evaluate(color => document.body.style.setProperty('--bg-color', color), color);
+        await expect(dialog).toHaveAttribute('data-ca-theme', theme);
+    }
+    await page.setViewportSize({ width: 320, height: 480 });
+    expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await dialog.getByRole('switch', { name: 'Show LoRAs', exact: true }).uncheck();
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('kikotools.embedding_autocomplete.settings')))).toMatchObject({ showLoras: false, quickTrigger: 'keep', maxSuggestions: 7, insertOnTab: false });
+    await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
+    await expect(dialog.getByRole('switch', { name: 'Show LoRAs', exact: true })).not.toBeChecked();
+    await page.evaluate(() => document.getElementById('autocomplete-test-settings').remove());
+    await expect(dialog).toHaveCount(0);
+});
+
+test('autocomplete settings report storage failure and keep the previous preferences', async ({ page }) => {
+    await openHost(page);
+    const dialog = await mountAutocompleteSettings(page);
+    await dialog.getByRole('switch', { name: 'Enable Autocomplete', exact: true }).uncheck();
+    await page.evaluate(() => { window.restoreAutocompleteStorage = Storage.prototype.setItem; Storage.prototype.setItem = () => { throw new Error('blocked'); }; });
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog.getByRole('status')).toContainText('Could not save');
+    expect(await page.evaluate(() => window.kikotools.autocomplete.settings.enabled)).toBe(true);
+    await page.evaluate(() => Storage.prototype.setItem = window.restoreAutocompleteStorage);
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+});
+
+test('autocomplete suggestions retain focus, expose selection, and survive unrelated removal', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'TextInput', { text: '' });
+    const other = await createNode(page, 'TextInput', { text: '' });
+    await expect.poll(() => page.evaluate(() => window.kikotools.autocomplete.embeddings.length)).toBe(2);
+    const prompt = page.getByLabel('text', { exact: true }).first();
+    await prompt.fill('em');
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    await expect(list.getByRole('option')).toHaveCount(2);
+    await prompt.press('ArrowDown');
+    const selected = list.getByRole('option', { selected: true });
+    await expect(selected).toHaveCount(1);
+    await expect(prompt).toHaveAttribute('aria-activedescendant', await selected.getAttribute('id'));
+    await expect(prompt).toBeFocused();
+    await page.evaluate(other => kikoHost.removeNode(other), other);
+    await expect(list).toBeVisible();
+    await prompt.press('Tab');
+    await expect(prompt).toHaveValue(/embedding:/);
+    await expect(list).toBeHidden();
+    await expect(prompt).not.toHaveAttribute('aria-activedescendant');
+    await prompt.fill('<lora:in');
+    await expect(list).toBeVisible();
+    await list.getByRole('option').click();
+    await expect(prompt).toHaveValue('<lora:styles/ink:1.0>, ');
+    await expect(prompt).toBeFocused();
+});
+
+test('autocomplete respects composition, read-only fields, custom words and keyboard preferences', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'TextInput', { text: '' });
+    const prompt = page.getByLabel('text', { exact: true });
+    await page.evaluate(() => {
+        Object.assign(window.kikotools.autocomplete.settings, { showEmbeddings: false, showLoras: false, showCustomWords: true, insertOnEnter: false });
+        window.kikotools.autocomplete.customWords = [{ name: 'blue_sky', value: 'blue_sky', display: 'blue_sky', type: 'custom' }];
+    });
+    await expect(prompt).toHaveAttribute('aria-autocomplete', 'list');
+    await prompt.fill('blue');
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    await expect(list).toBeVisible();
+    await prompt.press('ArrowDown');
+    await prompt.dispatchEvent('keydown', { key: 'Enter', isComposing: true });
+    await expect(prompt).toHaveValue('blue');
+    await prompt.press('Enter');
+    await expect(prompt).not.toHaveValue('blue sky, ');
+    await prompt.fill('blue');
+    await prompt.press('ArrowDown');
+    await prompt.press('Tab');
+    await expect(prompt).toHaveValue('blue sky, ');
+    await prompt.fill('blue');
+    await prompt.press('Escape');
+    await expect(list).toBeHidden();
+    await prompt.evaluate(element => { element.readOnly = true; element.dispatchEvent(new Event('input', { bubbles: true })); });
+    await expect(list).toBeHidden();
+});
+
+test('autocomplete restores existing attributes and lifecycle hooks on detach', async ({ page }) => {
+    await openHost(page);
+    const result = await page.evaluate(() => {
+        const autocomplete = window.kikotools.autocomplete;
+        const input = document.createElement('textarea');
+        input.setAttribute('aria-controls', 'original-controls');
+        input.setAttribute('aria-autocomplete', 'none');
+        input.readOnly = true;
+        const calls = [];
+        const widget = { inputEl: input, onRemoved(...args) { calls.push([this === widget, args]); return 'widget-result'; } };
+        const node = { onRemoved(...args) { calls.push([this === node, args]); return 'node-result'; } };
+        const original = widget.onRemoved;
+        autocomplete.attachToWidget(widget, node);
+        const ignored = !autocomplete.activeWidgets.has(widget);
+        input.readOnly = false;
+        autocomplete.attachToWidget(widget, node);
+        autocomplete.attachToWidget(widget, node);
+        const value = widget.onRemoved('widget-arg', 7);
+        const restored = widget.onRemoved === original;
+        autocomplete.attachToWidget(widget, node);
+        const removed = node.onRemoved('node-arg');
+        autocomplete.detachFromWidget(widget);
+        autocomplete.detachFromWidget(widget);
+        return { ignored, value, removed, restored, calls, controls: input.getAttribute('aria-controls'), autocomplete: input.getAttribute('aria-autocomplete'), popup: input.hasAttribute('aria-haspopup'), active: autocomplete.activeWidgets.has(widget) };
+    });
+    expect(result).toEqual({ ignored: true, value: 'widget-result', removed: 'node-result', restored: true, calls: [[true, ['widget-arg', 7]], [true, ['node-arg']]], controls: 'original-controls', autocomplete: 'none', popup: false, active: false });
+});
+
+test('autocomplete popup fits narrow viewports and cleanup cancels pending refresh', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'TextInput', { text: '' });
+    await expect.poll(() => page.evaluate(() => window.kikotools.autocomplete.embeddings.length)).toBe(2);
+    await page.setViewportSize({ width: 320, height: 480 });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const prompt = page.getByLabel('text', { exact: true });
+    await prompt.fill('em');
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    const box = await list.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+    expect(box.y + box.height).toBeLessThanOrEqual(480);
+    await prompt.dispatchEvent('blur');
+    await page.waitForTimeout(40);
+    await expect(list).toBeVisible();
+    await page.evaluate(() => {
+        const autocomplete = window.kikotools.autocomplete;
+        window.lateAutocompleteFetches = 0;
+        autocomplete.fetchResources = () => window.lateAutocompleteFetches++;
+        autocomplete.fetchResourcesDebounced();
+        autocomplete.cleanup();
+    });
+    await expect(list).toHaveCount(0);
+    await page.waitForTimeout(550);
+    expect(await page.evaluate(() => window.lateAutocompleteFetches)).toBe(0);
+    await expect(prompt).not.toHaveAttribute('aria-haspopup');
+});
+
+test('autocomplete binds replacement renderer fields without changing native widget ownership', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'TextInput', { text: '' });
+    await expect.poll(() => page.evaluate(() => window.kikotools.autocomplete.embeddings.length)).toBe(2);
+    await page.evaluate(id => {
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('node-id', String(id));
+        const label = document.createElement('label');
+        label.htmlFor = 'replacement-prompt';
+        label.textContent = 'text';
+        const textarea = document.createElement('textarea');
+        textarea.id = 'replacement-prompt';
+        wrapper.append(label, textarea);
+        document.body.append(wrapper);
+    }, id);
+    const prompt = page.locator('#replacement-prompt');
+    await prompt.fill('embedding:ca');
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    await expect(list).toBeVisible();
+    await prompt.press('ArrowDown');
+    await prompt.press('Enter');
+    await expect(prompt).toHaveValue('embedding:portraits/cat, ');
+    await prompt.fill('embedding:ca');
+    await expect(list).toBeVisible();
+    await page.evaluate(() => {
+        window.removedRendererBridge = window.kikotools.autocomplete.currentWidget;
+        document.getElementById('replacement-prompt').parentElement.remove();
+    });
+    await expect(prompt).toHaveCount(0);
+    await expect(list).toBeHidden();
+    expect(await page.evaluate(() => window.kikotools.autocomplete.activeWidgets.has(window.removedRendererBridge))).toBe(false);
+    const native = page.getByLabel('text', { exact: true });
+    await native.fill('embedding:ca');
+    await expect(list).toBeVisible();
+    await native.press('ArrowDown');
+    await native.press('Tab');
+    await expect(native).toHaveValue('embedding:portraits/cat, ');
+});
+
+test('autocomplete starts a new query without carrying over the previous selection', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'TextInput', { text: '' });
+    await expect.poll(() => page.evaluate(() => window.kikotools.autocomplete.embeddings.length)).toBe(2);
+    const prompt = page.getByLabel('text', { exact: true });
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    await prompt.fill('embedding:ca');
+    await prompt.press('ArrowDown');
+    await prompt.press('ArrowDown');
+    await expect(list.getByRole('option', { selected: true })).toContainText('forest');
+    await prompt.fill('embedding:ca');
+    await prompt.press('ArrowDown');
+    await expect(list.getByRole('option', { selected: true })).toContainText('cat');
+});
+
+test('autocomplete keyboard selection ignores a stationary pointer over a new result list', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'TextInput', { text: '' });
+    await expect.poll(() => page.evaluate(() => window.kikotools.autocomplete.embeddings.length)).toBe(2);
+    const prompt = page.getByLabel('text', { exact: true });
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    await prompt.fill('embedding:ca');
+    await list.getByRole('option').first().hover();
+    await prompt.fill('embedding:ca');
+    await page.waitForTimeout(50);
+    await expect(list.getByRole('option', { selected: true })).toHaveCount(0);
+    await prompt.press('ArrowDown');
+    await prompt.press('Enter');
+    await expect(prompt).toHaveValue('embedding:portraits/cat, ');
+});
+
+test('autocomplete delayed attachment cannot revive a removed node and teardown restores host hooks', async ({ page }) => {
+    await openHost(page);
+    await page.evaluate(async () => {
+        const id = await kikoHost.createNode('TextInput', { text: '' });
+        window.quicklyRemovedPrompt = kikoHost.nodes.get(String(id)).widgets.find(widget => widget.inputEl);
+        kikoHost.removeNode(id);
+    });
+    await page.waitForTimeout(70);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.activeWidgets.has(window.quicklyRemovedPrompt))).toBe(false);
+    expect(await page.evaluate(() => {
+        const wrapped = kikoHost.app.graph.add;
+        const stringWidget = kikoHost.widgets.STRING;
+        window.kikotools.autocomplete.cleanup();
+        return { graphRestored: kikoHost.app.graph.add !== wrapped, widgetRestored: kikoHost.widgets.STRING !== stringWidget };
+    })).toEqual({ graphRestored: true, widgetRestored: true });
+});
+
+test('autocomplete tag import preserves aliases and ranking across reload and failed imports', async ({ page }) => {
+    await openHost(page);
+    const dialog = await mountAutocompleteSettings(page);
+    await dialog.getByRole('switch', { name: 'Show Custom Words', exact: true }).check();
+    await dialog.getByRole('switch', { name: 'Show Embeddings', exact: true }).uncheck();
+    await dialog.getByRole('switch', { name: 'Show LoRAs', exact: true }).uncheck();
+    await dialog.getByLabel('Tag list file', { exact: true }).setInputFiles({ name: 'tags.csv', mimeType: 'text/csv', buffer: Buffer.from('blue_sky,0,100,azure\nblue_eyes,0,900,"blue_eye,bright_eyes"') });
+    await expect(dialog.getByRole('status')).toContainText('2 tags ready');
+    await dialog.getByText('Triggers, matching and insertion', { exact: true }).click();
+    await dialog.getByRole('switch', { name: 'Replace underscores with spaces', exact: true }).uncheck();
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await createNode(page, 'TextInput', { text: '' });
+    const prompt = page.getByLabel('text', { exact: true });
+    await expect(prompt).toHaveAttribute('aria-autocomplete', 'list');
+    await prompt.focus();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+    await prompt.fill('blue');
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    await expect(list.getByRole('option').first()).toContainText('blue_eyes');
+    await prompt.fill('azure');
+    await prompt.press('ArrowDown');
+    await prompt.press('Tab');
+    await expect(prompt).toHaveValue('blue_sky, ');
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => window.kikotools?.autocomplete.customWords.length)).toBe(2);
+    const reopened = await mountAutocompleteSettings(page);
+    await expect(reopened.getByText('2 tags loaded', { exact: true })).toBeVisible();
+    await expect(reopened.getByText('Current source: tags.csv', { exact: true })).toBeVisible();
+    await reopened.getByLabel('Tag list file', { exact: true }).setInputFiles({ name: 'bad.csv', mimeType: 'text/csv', buffer: Buffer.from('bad,0,not-a-count,') });
+    await expect(reopened.getByRole('status')).toContainText('Could not load');
+    await reopened.getByRole('button', { name: 'Cancel', exact: true }).click();
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(2);
+});
+
+test('autocomplete restores advanced preferences and stages URL tags until save', async ({ page }) => {
+    await openHost(page);
+    await page.route('**/__test__/tags.csv', route => route.fulfill({ body: 'tag,category,post_count,aliases\nblue_eyes,0,120,azure' }));
+    const dialog = await mountAutocompleteSettings(page);
+    await dialog.getByLabel('Tag list URL', { exact: true }).fill(new URL('/__test__/tags.csv', page.url()).href);
+    await dialog.getByRole('button', { name: 'Load URL', exact: true }).click();
+    await expect(dialog.getByRole('status')).toContainText('1 tags ready');
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(0);
+    await dialog.getByText('Triggers, matching and insertion', { exact: true }).click();
+    await dialog.getByLabel('Embedding trigger', { exact: true }).fill('emb:');
+    await dialog.getByLabel('LoRA trigger', { exact: true }).fill('l:');
+    await dialog.getByLabel('Quick embedding trigger', { exact: true }).fill('zz');
+    await dialog.getByLabel('Maximum suggestions', { exact: true }).fill('8');
+    await dialog.getByLabel('Minimum characters', { exact: true }).fill('3');
+    await dialog.getByRole('switch', { name: 'Group by directory', exact: true }).uncheck();
+    await dialog.getByRole('switch', { name: 'Insert on Enter', exact: true }).uncheck();
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(await page.evaluate(() => ({ ...window.kikotools.autocomplete.settings }))).toMatchObject({ embeddingTrigger: 'emb:', loraTrigger: 'l:', quickTrigger: 'zz', maxSuggestions: 8, minChars: 3, sortByDirectory: false, insertOnEnter: false });
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords[0].frequency)).toBe(120);
+});
+
+test('autocomplete cancelling a staged import leaves the cached source unchanged', async ({ page }) => {
+    await openHost(page);
+    const dialog = await mountAutocompleteSettings(page);
+    await dialog.getByLabel('Tag list file', { exact: true }).setInputFiles({ name: 'staged.csv', mimeType: 'text/csv', buffer: Buffer.from('blue_eyes,0,10,azure') });
+    await expect(dialog.getByRole('status')).toContainText('1 tags ready');
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords)).toEqual([]);
+    expect(await page.evaluate(async () => (await import('/extensions/kikotools/autocomplete/tag-storage.js')).tagCache())).toBeUndefined();
+});
+
+test('autocomplete reports tag download and cache errors without losing the current settings', async ({ page }) => {
+    await openHost(page);
+    const dialog = await mountAutocompleteSettings(page);
+    await dialog.getByRole('button', { name: 'Load URL', exact: true }).click();
+    await expect(dialog.getByRole('status')).toContainText('Enter a valid');
+    await page.route('**/__test__/bad-tags.csv', route => route.fulfill({ status: 404, body: 'Missing' }));
+    await dialog.getByLabel('Tag list URL', { exact: true }).fill(new URL('/__test__/bad-tags.csv', page.url()).href);
+    await dialog.getByRole('button', { name: 'Load URL', exact: true }).click();
+    await expect(dialog.getByRole('status')).toContainText('404');
+    await dialog.getByLabel('Tag list file', { exact: true }).setInputFiles({ name: 'valid.csv', mimeType: 'text/csv', buffer: Buffer.from('blue_eyes,0,10,azure') });
+    await expect(dialog.getByRole('status')).toContainText('1 tags ready');
+    await dialog.getByRole('switch', { name: 'Enable Autocomplete', exact: true }).uncheck();
+    await page.evaluate(() => {
+        window.originalTagDBOpen = indexedDB.open.bind(indexedDB);
+        indexedDB.open = () => { throw new DOMException('Storage denied', 'SecurityError'); };
+    });
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog.getByRole('status')).toContainText('Could not save tag list');
+    expect(await page.evaluate(() => window.kikotools.autocomplete.settings.enabled)).toBe(true);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(0);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.settings.tagSource)).toBeUndefined();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('kikotools.embedding_autocomplete.settings')).tagSource)).toBeUndefined();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('kikotools.embedding_autocomplete.settings')).enabled)).toBe(true);
+    await page.evaluate(() => indexedDB.open = window.originalTagDBOpen);
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(1);
+});
+
+test('autocomplete cancels pending tag downloads when its settings close', async ({ page }) => {
+    await openHost(page);
+    let held;
+    await page.route('**/__test__/slow-tags.csv', route => { held = route; });
+    const dialog = await mountAutocompleteSettings(page);
+    await dialog.getByLabel('Tag list URL', { exact: true }).fill(new URL('/__test__/slow-tags.csv', page.url()).href);
+    await dialog.getByRole('button', { name: 'Load URL', exact: true }).click();
+    await expect.poll(() => Boolean(held)).toBe(true);
+    await expect(dialog.getByRole('button', { name: 'Save Settings', exact: true })).toBeDisabled();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await held.fulfill({ body: 'blue_eyes,0,10,azure' });
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(0);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.pendingFetches.size)).toBe(0);
+});
+
+test('autocomplete imports 300000 tags off the UI thread and bounds broad matches', async ({ page }) => {
+    await openHost(page);
+    const dialog = await mountAutocompleteSettings(page);
+    const text = Array.from({ length: 300000 }, (_, i) => `tag_${i},0,${i},alias_${i}`).join('\n');
+    await page.evaluate(() => { window.tagImportTicks = 0; window.tagImportTimer = setInterval(() => window.tagImportTicks++, 10); });
+    await dialog.getByLabel('Tag list file', { exact: true }).setInputFiles({ name: 'large.csv', mimeType: 'text/csv', buffer: Buffer.from(text) });
+    await expect(dialog.getByRole('status')).toContainText('300,000 tags ready', { timeout: 15000 });
+    expect(await page.evaluate(() => { clearInterval(window.tagImportTimer); return window.tagImportTicks; })).toBeGreaterThan(1);
+    await dialog.getByRole('switch', { name: 'Show Custom Words', exact: true }).check();
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await createNode(page, 'TextInput', { text: '' });
+    const prompt = page.getByLabel('text', { exact: true });
+    await expect(prompt).toHaveAttribute('aria-autocomplete', 'list');
+    await prompt.fill('alias_299999');
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    await expect(list.getByRole('option')).toHaveCount(1);
+    await expect(list.getByRole('option')).toContainText('tag_299999');
+    await prompt.fill('tag_');
+    await expect(list.getByRole('option')).toHaveCount(20);
+});
+
+test('autocomplete legacy URL loads retain the newest valid list when older requests finish late', async ({ page }) => {
+    await openHost(page);
+    let held;
+    await page.route('**/__test__/old-tags.txt', route => { held = route; });
+    await page.route('**/__test__/new-tags.txt', route => route.fulfill({ body: 'blue_sky,10\nblue_eyes,200' }));
+    await page.evaluate(() => { window.oldTagLoad = window.kikotools.autocomplete.loadCustomWords('/__test__/old-tags.txt'); });
+    await expect.poll(() => Boolean(held)).toBe(true);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.loadCustomWords('/__test__/new-tags.txt'))).toBe(2);
+    await held.fulfill({ body: 'obsolete,1000' });
+    expect(await page.evaluate(() => window.oldTagLoad)).toBe(0);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.map(tag => tag.name))).toEqual(['blue_eyes', 'blue_sky']);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.loadCustomWords('file:///tmp/tags.csv'))).toBe(0);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(2);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWordsError)).toContain('HTTP or HTTPS');
+});
+
+test('autocomplete shares one removable node hook across widgets in any cleanup order', async ({ page }) => {
+    await openHost(page);
+    const result = await page.evaluate(() => {
+        const autocomplete = window.kikotools.autocomplete;
+        const restored = [];
+        const calls = [];
+        const make = () => {
+            const original = function (...args) { calls.push([this === node, args]); return 'original-result'; };
+            const node = { onRemoved: original };
+            const widgets = [0, 1, 2].map(() => ({ inputEl: document.createElement('textarea') }));
+            widgets.forEach(widget => autocomplete.attachToWidget(widget, node));
+            return { node, original, widgets };
+        };
+        for (const order of [[0, 1, 2], [2, 0, 1]]) {
+            const { node, original, widgets } = make();
+            const hook = node.onRemoved;
+            autocomplete.detachFromWidget(widgets[order[0]]);
+            restored.push(node.onRemoved === hook);
+            autocomplete.detachFromWidget(widgets[order[1]]);
+            autocomplete.detachFromWidget(widgets[order[2]]);
+            restored.push(node.onRemoved === original);
+        }
+        const active = make();
+        const removal = active.node.onRemoved('removed', 7);
+        restored.push(active.node.onRemoved === active.original, active.widgets.every(widget => !autocomplete.activeWidgets.has(widget)));
+        const final = make();
+        autocomplete.cleanup();
+        restored.push(final.node.onRemoved === final.original);
+        return { restored, removal, calls };
+    });
+    expect(result).toEqual({ restored: Array(7).fill(true), removal: 'original-result', calls: [[true, ['removed', 7]]] });
+});
+
+test('autocomplete inserts Unicode and punctuation aliases at the correct prompt boundary', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'TextInput', { text: '' });
+    const prompt = page.getByLabel('text', { exact: true });
+    await expect(prompt).toHaveAttribute('aria-autocomplete', 'list');
+    await page.evaluate(async () => {
+        const autocomplete = window.kikotools.autocomplete;
+        const { parseTagList } = await import('/extensions/kikotools/autocomplete/tags.js');
+        autocomplete.customWords = parseTagList('日本語,0,10,にほんご\nheart,0,20,<3\nhatsune_miku_(vocaloid),4,100,miku/vocaloid\n🎨🎨,0,1,\n(o_o),0,1,');
+        Object.assign(autocomplete.settings, { showCustomWords: true, showEmbeddings: false, showLoras: false, replaceUnderscores: false });
+    });
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    for (const [query, label, value] of [
+        ['日本', '日本語', '日本語, '],
+        ['にほん', '日本語', '日本語, '],
+        ['sky, <3', 'heart', 'sky, heart, '],
+        ['miku/vocal', 'hatsune_miku_(vocaloid)', 'hatsune_miku_(vocaloid), '],
+        ['sky, (日本:1.2)', '日本語', 'sky, (日本語:1.2)'],
+        ['🎨🎨', '🎨🎨', '🎨🎨, '],
+        ['(o_o)', '(o_o)', '(o_o), '],
+    ]) {
+        await prompt.fill(query);
+        if (query.includes(':1.2')) await prompt.evaluate(element => { element.setSelectionRange(element.value.indexOf(':1.2'), element.value.indexOf(':1.2')); element.dispatchEvent(new Event('input', { bubbles: true })); });
+        await expect(list.getByRole('option').first()).toContainText(label);
+        await prompt.press('ArrowDown');
+        await prompt.press('Tab');
+        await expect(prompt).toHaveValue(value);
+    }
+});
+
+test('autocomplete stops an oversized URL stream before it reaches the parser', async ({ page }) => {
+    await openHost(page);
+    const result = await page.evaluate(async () => {
+        const autocomplete = window.kikotools.autocomplete;
+        let cancelled = false, sent = false;
+        const original = autocomplete.fetchWithAbort;
+        autocomplete.fetchWithAbort = async () => new Response(new ReadableStream({
+            pull(controller) { if (!sent) { sent = true; controller.enqueue(new Uint8Array(32 * 1024 * 1024 + 1).fill(97)); } else controller.close(); },
+            cancel() { cancelled = true; },
+        }, { highWaterMark: 0 }));
+        let error;
+        try { await autocomplete.fetchTagList('/__test__/oversized-tags.csv'); }
+        catch (failure) { error = failure.message; }
+        finally { autocomplete.fetchWithAbort = original; }
+        return { cancelled, error };
+    });
+    expect(result.cancelled).toBe(true);
+    expect(result.error).toMatch(/large/i);
 });

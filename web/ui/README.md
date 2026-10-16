@@ -141,3 +141,52 @@ Legacy widget values remain readable: converted input prefixes, prompt header
 pairs, native Display Any modes and all saved output chunks are recognized.
 The new output DOM widget does not serialize presentation state into native
 widget values. Node removal disposes the view, its listeners and theme observers.
+
+## Embedding Autocomplete
+
+`autocomplete-suggestions.js` supplies the shared themed listbox, type badges,
+selected state and viewport placement. The controller retains resource fetching,
+matching, sorting, triggers and insertion preferences. Focus stays in the native
+textarea; arrow keys select suggestions, configured Enter/Tab keys insert, and
+Escape dismisses. New input clears the previous selection. Completion names are
+rendered as text, including directory names, without interpreting markup.
+
+`text-widget-adapter.js` binds editable Nodes 2.0 replacement textareas through
+their node ID and associated label. It leaves the original widget/input intact,
+cleans up disconnected replacements, and preserves Classic behavior when switching
+back. Read-only and disabled fields are excluded. Each widget owns its listeners,
+blur work and temporary accessibility attributes; removing a different widget
+does not dismiss the active list. Page cleanup cancels pending refresh work.
+
+`../views/autocomplete-settings.js` uses the shared native dialog and switches.
+Only Save updates the existing `kikotools.embedding_autocomplete.settings` key;
+Cancel/Escape discards edits. All advanced saved preferences are retained.
+Storage failures keep the dialog open and restore the previous live preferences.
+The settings launcher owns dialog cleanup, tolerates synchronous reparenting and
+returns keyboard focus when the modal closes. The shared modal shell contains
+pointer events so nested dialogs do not dismiss ComfyUI's parent settings panel.
+
+### Tag packs and autocomplete preferences
+
+The settings view stages CSV/TXT file and URL imports until Save Settings.
+`autocomplete/tags.js` parses quoted four-column Danbooru data and legacy
+word/frequency lists, validates counts/categories, deduplicates tags and aliases,
+and limits search results without sorting every matching tag on each keystroke.
+`autocomplete/tag-worker.js` performs parsing outside the UI thread; its owner
+terminates it on completion, error, or dialog removal. Records expand to the
+existing suggestion shape only for returned results.
+
+`autocomplete/tag-storage.js` persists the active source text in browser
+IndexedDB. The controller restores matching cached sources before requesting a
+URL, guards stale loads, and retains the active list when an import fails.
+Advanced trigger, matching and insertion controls use the existing settings key.
+For dataset provenance, format and installation, see
+[Tag packs](../../docs/tag-packs/README.md).
+
+Node removal uses one hook per node, shared by its active text widgets. Detaching
+widgets in any order restores the original hook after the last widget leaves.
+General queries accept Unicode and punctuation between whitespace/comma
+boundaries. Literal bracketed names are tried before interpreting leading
+parentheses/brackets as prompt weighting; insertion preserves surrounding
+weight syntax. URL downloads enforce their byte limit while reading the body,
+cancel oversized/aborted streams, and decode UTF-8 across chunk boundaries.

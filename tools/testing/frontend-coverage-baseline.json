@@ -1,4 +1,28 @@
 {
+  "autocomplete/tag-download.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
+  },
+  "autocomplete/tag-storage.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 74,
+    "statements": 98
+  },
+  "autocomplete/tag-worker.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
+  },
+  "autocomplete/tags.js": {
+    "lines": 98,
+    "branches": 95,
+    "functions": 98,
+    "statements": 98
+  },
   "controllers/display-node.js": {
     "lines": 98,
     "branches": 95,
@@ -30,10 +54,10 @@
     "statements": 52
   },
   "kikoEmbeddingAutocomplete.js": {
-    "lines": 44,
-    "branches": 43,
-    "functions": 59,
-    "statements": 44
+    "lines": 82,
+    "branches": 74,
+    "functions": 92,
+    "statements": 82
   },
   "kiko_custom_colors.js": {
     "lines": 46,
@@ -77,6 +101,12 @@
     "functions": 88,
     "statements": 95
   },
+  "ui/autocomplete-suggestions.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
+  },
   "ui/color-picker.js": {
     "lines": 98,
     "branches": 94,
@@ -97,7 +127,7 @@
   },
   "ui/dialog.js": {
     "lines": 98,
-    "branches": 85,
+    "branches": 88,
     "functions": 98,
     "statements": 98
   },
@@ -119,9 +149,21 @@
     "functions": 98,
     "statements": 93
   },
+  "ui/text-widget-adapter.js": {
+    "lines": 98,
+    "branches": 89,
+    "functions": 98,
+    "statements": 98
+  },
   "ui/workflow-clock.js": {
     "lines": 98,
     "branches": 98,
+    "functions": 98,
+    "statements": 98
+  },
+  "views/autocomplete-settings.js": {
+    "lines": 98,
+    "branches": 83,
     "functions": 98,
     "statements": 98
   },

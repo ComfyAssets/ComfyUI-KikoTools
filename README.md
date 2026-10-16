@@ -477,8 +477,8 @@ This feature is an enhanced fork of the autocomplete functionality from [ComfyUI
 
 **Key Features:**
 - **Smart Triggers**: Type `embedding:` for embeddings, `<lora:` for LoRAs, or just start typing for tags
-- **Custom Word Lists**: Load tag databases (like Danbooru tags) from any URL
-- **Security First**: Comprehensive input validation prevents code injection and XSS attacks
+- **Custom Word Lists**: Import CSV/TXT files or browser-accessible URLs, including [versioned Danbooru tag packs](docs/tag-packs/README.md), with local offline caching
+- **Safe Rendering**: Tag data stays plain text, with validated CSV fields and file-size limits
 - **Flexible Settings**: Customize triggers, auto-insert commas, replace underscores, and more
 - **Performance Optimized**: Handles 100,000+ tags smoothly with frequency-based sorting
 - **Visual Polish**: Clean UI with proper scrolling, keyboard navigation, and type indicators
@@ -492,9 +492,9 @@ This feature is an enhanced fork of the autocomplete functionality from [ComfyUI
 - Load custom word lists from URLs with security validation
 
 **Security Features:**
-- Validates all loaded content to prevent script injection
-- Blocks dangerous patterns (eval, innerHTML, script tags, etc.)
-- Safe character whitelist for tags
+- Validates CSV structure, tag names, categories, counts, and file size
+- Renders tag data as plain text rather than executable HTML or JavaScript
+- Rejects control characters and HTML error documents
 - File size limits to prevent memory exhaustion
 - Clear error messages for rejected content
 
