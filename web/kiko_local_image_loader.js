@@ -451,9 +451,8 @@ app.registerExtension({
                         </div>
 
                         <!-- Gallery -->
-                        <div class="kiko-cardholder">
-                            <div class="kiko-status-message">Loading...</div>
-                        </div>
+                        <div class="kiko-status-message">Loading...</div>
+                        <div class="kiko-cardholder"></div>
 
                         <!-- Pagination -->
                         <div class="kiko-pagination"></div>

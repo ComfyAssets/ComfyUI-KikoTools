@@ -21,3 +21,8 @@ example.py
 CLAUDE.md
 CONTRIBUTING.md
 CODE_OF_CONDUCT.md
+
+tools/
+coverage/
+TESTING.md
+AGENTS.md

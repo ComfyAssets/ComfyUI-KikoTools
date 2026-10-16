@@ -1,6 +1,6 @@
 # ComfyUI-KikoTools Development Makefile
 
-.PHONY: help install test test-fast lint format type-check quality-check clean setup dev-test release-test
+.PHONY: coverage frontend-test browser-test frontend-coverage help install test test-fast lint format type-check quality-check clean setup dev-test release-test
 
 # Python and virtual environment setup
 PYTHON := python3
@@ -34,7 +34,11 @@ help:
 	@echo "  quality-check  - Run all quality checks"
 	@echo ""
 	@echo "Testing:"
-	@echo "  test           - Run comprehensive tests"
+	@echo "  test           - Run the complete pytest suite"
+	@echo "  coverage       - Python statement/branch coverage (85% gate)"
+	@echo "  frontend-test  - JavaScript regression tests"
+	@echo "  browser-test   - Extension workflows in four browser configurations"
+	@echo "  frontend-coverage - JavaScript tests, browser tests, and coverage gate"
 	@echo "  test-fast      - Run core functionality tests"
 	@echo "  dev-test       - Quick development test"
 	@echo "  release-test   - Full release validation"
@@ -120,13 +124,20 @@ test-fast: $(VENV_DIR)
 	print('🎉 All core tests passed!'); \
 	"
 
-test: test-fast
-	@echo "Running comprehensive test suite..."
-	@echo "✅ Test case 1: 512×512 → 1024×1024 (scale: 2.0)"
-	@echo "✅ Test case 2: 1024×1024 → 1536×1536 (scale: 1.5)"
-	@echo "✅ Test case 3: 832×1216 → 1272×1864 (scale: 1.53)"
-	@echo "✅ Error handling test passed"
-	@echo "🎉 All comprehensive tests passed!"
+test: $(VENV_DIR)
+	@$(PYTHON_CMD) -m pytest tests
+
+coverage: $(VENV_DIR)
+	@$(PYTHON_CMD) -m pytest tests --cov=kikotools --cov-report=term-missing --cov-report=html
+
+frontend-test:
+	npm test --prefix tools/testing
+
+browser-test:
+	npm run --prefix tools/testing test:browser
+
+frontend-coverage:
+	npm run --prefix tools/testing test:coverage
 
 release-test: quality-check test
 	@echo "Running release validation..."

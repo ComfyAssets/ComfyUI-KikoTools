@@ -4,10 +4,9 @@
 repos:
   # Python code formatting with Black
   - repo: https://github.com/psf/black
-    rev: 25.1.0
+    rev: 26.10.1
     hooks:
       - id: black
-        language_version: python3.10
         args: ['--line-length=88']  # Match CI configuration
 
   # Python linting with flake8
@@ -61,9 +60,27 @@ repos:
         args: ['--baseline', '.secrets.baseline']
         exclude: '^(tests/|\.git/)'
 
+  - repo: local
+    hooks:
+      - id: python-regressions
+        name: Python regression suite
+        entry: python -m pytest tests
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+      - id: frontend-regressions
+        name: JavaScript regression suite
+        entry: npm test --prefix tools/testing
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
 # Configuration for specific hooks
+default_stages: [pre-commit]
 default_language_version:
-  python: python3.10
+  python: python3
 
 # Run hooks on all files by default
 fail_fast: false
