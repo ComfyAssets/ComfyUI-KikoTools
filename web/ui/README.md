@@ -165,3 +165,20 @@ Storage failures keep the dialog open and restore the previous live preferences.
 The settings launcher owns dialog cleanup, tolerates synchronous reparenting and
 returns keyboard focus when the modal closes. The shared modal shell contains
 pointer events so nested dialogs do not dismiss ComfyUI's parent settings panel.
+
+### Tag packs and autocomplete preferences
+
+The settings view stages CSV/TXT file and URL imports until Save Settings.
+`autocomplete/tags.js` parses quoted four-column Danbooru data and legacy
+word/frequency lists, validates counts/categories, deduplicates tags and aliases,
+and limits search results without sorting every matching tag on each keystroke.
+`autocomplete/tag-worker.js` performs parsing outside the UI thread; its owner
+terminates it on completion, error, or dialog removal. Records expand to the
+existing suggestion shape only for returned results.
+
+`autocomplete/tag-storage.js` persists the active source text in browser
+IndexedDB. The controller restores matching cached sources before requesting a
+URL, guards stale loads, and retains the active list when an import fails.
+Advanced trigger, matching and insertion controls use the existing settings key.
+For dataset provenance, format and installation, see
+[Tag packs](../../docs/tag-packs/README.md).

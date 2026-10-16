@@ -14,7 +14,7 @@ test.beforeEach(async ({ page, request, context, browserName, baseURL }) => {
         page.errors.push(`Unexpected external request: ${url.origin}`);
         return route.abort();
     });
-    await page.addInitScript(() => localStorage.setItem('kikotools.embedding_autocomplete.settings', JSON.stringify({ showCustomWords: false, customWordsUrl: '' })));
+    await page.addInitScript(() => { if (!localStorage.getItem('kikotools.embedding_autocomplete.settings')) localStorage.setItem('kikotools.embedding_autocomplete.settings', JSON.stringify({ showCustomWords: false, customWordsUrl: '' })); });
 });
 test.afterEach(async ({ page, browserName }) => {
     await saveCoverage(page, browserName);
@@ -1256,6 +1256,7 @@ test('autocomplete popup fits narrow viewports and cleanup cancels pending refre
     await createNode(page, 'TextInput', { text: '' });
     await expect.poll(() => page.evaluate(() => window.kikotools.autocomplete.embeddings.length)).toBe(2);
     await page.setViewportSize({ width: 320, height: 480 });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const prompt = page.getByLabel('text', { exact: true });
     await prompt.fill('em');
     const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
@@ -1364,4 +1365,153 @@ test('autocomplete delayed attachment cannot revive a removed node and teardown 
         window.kikotools.autocomplete.cleanup();
         return { graphRestored: kikoHost.app.graph.add !== wrapped, widgetRestored: kikoHost.widgets.STRING !== stringWidget };
     })).toEqual({ graphRestored: true, widgetRestored: true });
+});
+
+test('autocomplete tag import preserves aliases and ranking across reload and failed imports', async ({ page }) => {
+    await openHost(page);
+    const dialog = await mountAutocompleteSettings(page);
+    await dialog.getByRole('switch', { name: 'Show Custom Words', exact: true }).check();
+    await dialog.getByRole('switch', { name: 'Show Embeddings', exact: true }).uncheck();
+    await dialog.getByRole('switch', { name: 'Show LoRAs', exact: true }).uncheck();
+    await dialog.getByLabel('Tag list file', { exact: true }).setInputFiles({ name: 'tags.csv', mimeType: 'text/csv', buffer: Buffer.from('blue_sky,0,100,azure\nblue_eyes,0,900,"blue_eye,bright_eyes"') });
+    await expect(dialog.getByRole('status')).toContainText('2 tags ready');
+    await dialog.getByText('Triggers, matching and insertion', { exact: true }).click();
+    await dialog.getByRole('switch', { name: 'Replace underscores with spaces', exact: true }).uncheck();
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await createNode(page, 'TextInput', { text: '' });
+    const prompt = page.getByLabel('text', { exact: true });
+    await expect(prompt).toHaveAttribute('aria-autocomplete', 'list');
+    await prompt.focus();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+    await prompt.fill('blue');
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    await expect(list.getByRole('option').first()).toContainText('blue_eyes');
+    await prompt.fill('azure');
+    await prompt.press('ArrowDown');
+    await prompt.press('Tab');
+    await expect(prompt).toHaveValue('blue_sky, ');
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => window.kikotools?.autocomplete.customWords.length)).toBe(2);
+    const reopened = await mountAutocompleteSettings(page);
+    await expect(reopened.getByText('2 tags loaded', { exact: true })).toBeVisible();
+    await expect(reopened.getByText('Current source: tags.csv', { exact: true })).toBeVisible();
+    await reopened.getByLabel('Tag list file', { exact: true }).setInputFiles({ name: 'bad.csv', mimeType: 'text/csv', buffer: Buffer.from('bad,0,not-a-count,') });
+    await expect(reopened.getByRole('status')).toContainText('Could not load');
+    await reopened.getByRole('button', { name: 'Cancel', exact: true }).click();
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(2);
+});
+
+test('autocomplete restores advanced preferences and stages URL tags until save', async ({ page }) => {
+    await openHost(page);
+    await page.route('**/__test__/tags.csv', route => route.fulfill({ body: 'tag,category,post_count,aliases\nblue_eyes,0,120,azure' }));
+    const dialog = await mountAutocompleteSettings(page);
+    await dialog.getByLabel('Tag list URL', { exact: true }).fill(new URL('/__test__/tags.csv', page.url()).href);
+    await dialog.getByRole('button', { name: 'Load URL', exact: true }).click();
+    await expect(dialog.getByRole('status')).toContainText('1 tags ready');
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(0);
+    await dialog.getByText('Triggers, matching and insertion', { exact: true }).click();
+    await dialog.getByLabel('Embedding trigger', { exact: true }).fill('emb:');
+    await dialog.getByLabel('LoRA trigger', { exact: true }).fill('l:');
+    await dialog.getByLabel('Quick embedding trigger', { exact: true }).fill('zz');
+    await dialog.getByLabel('Maximum suggestions', { exact: true }).fill('8');
+    await dialog.getByLabel('Minimum characters', { exact: true }).fill('3');
+    await dialog.getByRole('switch', { name: 'Group by directory', exact: true }).uncheck();
+    await dialog.getByRole('switch', { name: 'Insert on Enter', exact: true }).uncheck();
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(await page.evaluate(() => ({ ...window.kikotools.autocomplete.settings }))).toMatchObject({ embeddingTrigger: 'emb:', loraTrigger: 'l:', quickTrigger: 'zz', maxSuggestions: 8, minChars: 3, sortByDirectory: false, insertOnEnter: false });
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords[0].frequency)).toBe(120);
+});
+
+test('autocomplete cancelling a staged import leaves the cached source unchanged', async ({ page }) => {
+    await openHost(page);
+    const dialog = await mountAutocompleteSettings(page);
+    await dialog.getByLabel('Tag list file', { exact: true }).setInputFiles({ name: 'staged.csv', mimeType: 'text/csv', buffer: Buffer.from('blue_eyes,0,10,azure') });
+    await expect(dialog.getByRole('status')).toContainText('1 tags ready');
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords)).toEqual([]);
+    expect(await page.evaluate(async () => (await import('/extensions/kikotools/autocomplete/tag-storage.js')).tagCache())).toBeUndefined();
+});
+
+test('autocomplete reports tag download and cache errors without losing the current settings', async ({ page }) => {
+    await openHost(page);
+    const dialog = await mountAutocompleteSettings(page);
+    await dialog.getByRole('button', { name: 'Load URL', exact: true }).click();
+    await expect(dialog.getByRole('status')).toContainText('Enter a valid');
+    await page.route('**/__test__/bad-tags.csv', route => route.fulfill({ status: 404, body: 'Missing' }));
+    await dialog.getByLabel('Tag list URL', { exact: true }).fill(new URL('/__test__/bad-tags.csv', page.url()).href);
+    await dialog.getByRole('button', { name: 'Load URL', exact: true }).click();
+    await expect(dialog.getByRole('status')).toContainText('404');
+    await dialog.getByLabel('Tag list file', { exact: true }).setInputFiles({ name: 'valid.csv', mimeType: 'text/csv', buffer: Buffer.from('blue_eyes,0,10,azure') });
+    await expect(dialog.getByRole('status')).toContainText('1 tags ready');
+    await dialog.getByRole('switch', { name: 'Enable Autocomplete', exact: true }).uncheck();
+    await page.evaluate(() => {
+        window.originalTagDBOpen = indexedDB.open.bind(indexedDB);
+        indexedDB.open = () => { throw new DOMException('Storage denied', 'SecurityError'); };
+    });
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog.getByRole('status')).toContainText('Could not save tag list');
+    expect(await page.evaluate(() => window.kikotools.autocomplete.settings.enabled)).toBe(true);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(0);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.settings.tagSource)).toBeUndefined();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('kikotools.embedding_autocomplete.settings')).tagSource)).toBeUndefined();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('kikotools.embedding_autocomplete.settings')).enabled)).toBe(true);
+    await page.evaluate(() => indexedDB.open = window.originalTagDBOpen);
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(1);
+});
+
+test('autocomplete cancels pending tag downloads when its settings close', async ({ page }) => {
+    await openHost(page);
+    let held;
+    await page.route('**/__test__/slow-tags.csv', route => { held = route; });
+    const dialog = await mountAutocompleteSettings(page);
+    await dialog.getByLabel('Tag list URL', { exact: true }).fill(new URL('/__test__/slow-tags.csv', page.url()).href);
+    await dialog.getByRole('button', { name: 'Load URL', exact: true }).click();
+    await expect.poll(() => Boolean(held)).toBe(true);
+    await expect(dialog.getByRole('button', { name: 'Save Settings', exact: true })).toBeDisabled();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await held.fulfill({ body: 'blue_eyes,0,10,azure' });
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(0);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.pendingFetches.size)).toBe(0);
+});
+
+test('autocomplete imports 300000 tags off the UI thread and bounds broad matches', async ({ page }) => {
+    await openHost(page);
+    const dialog = await mountAutocompleteSettings(page);
+    const text = Array.from({ length: 300000 }, (_, i) => `tag_${i},0,${i},alias_${i}`).join('\n');
+    await page.evaluate(() => { window.tagImportTicks = 0; window.tagImportTimer = setInterval(() => window.tagImportTicks++, 10); });
+    await dialog.getByLabel('Tag list file', { exact: true }).setInputFiles({ name: 'large.csv', mimeType: 'text/csv', buffer: Buffer.from(text) });
+    await expect(dialog.getByRole('status')).toContainText('300,000 tags ready', { timeout: 15000 });
+    expect(await page.evaluate(() => { clearInterval(window.tagImportTimer); return window.tagImportTicks; })).toBeGreaterThan(1);
+    await dialog.getByRole('switch', { name: 'Show Custom Words', exact: true }).check();
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await createNode(page, 'TextInput', { text: '' });
+    const prompt = page.getByLabel('text', { exact: true });
+    await expect(prompt).toHaveAttribute('aria-autocomplete', 'list');
+    await prompt.fill('alias_299999');
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    await expect(list.getByRole('option')).toHaveCount(1);
+    await expect(list.getByRole('option')).toContainText('tag_299999');
+    await prompt.fill('tag_');
+    await expect(list.getByRole('option')).toHaveCount(20);
+});
+
+test('autocomplete legacy URL loads retain the newest valid list when older requests finish late', async ({ page }) => {
+    await openHost(page);
+    let held;
+    await page.route('**/__test__/old-tags.txt', route => { held = route; });
+    await page.route('**/__test__/new-tags.txt', route => route.fulfill({ body: 'blue_sky,10\nblue_eyes,200' }));
+    await page.evaluate(() => { window.oldTagLoad = window.kikotools.autocomplete.loadCustomWords('/__test__/old-tags.txt'); });
+    await expect.poll(() => Boolean(held)).toBe(true);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.loadCustomWords('/__test__/new-tags.txt'))).toBe(2);
+    await held.fulfill({ body: 'obsolete,1000' });
+    expect(await page.evaluate(() => window.oldTagLoad)).toBe(0);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.map(tag => tag.name))).toEqual(['blue_eyes', 'blue_sky']);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.loadCustomWords('file:///tmp/tags.csv'))).toBe(0);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(2);
+    expect(await page.evaluate(() => window.kikotools.autocomplete.customWordsError)).toContain('HTTP or HTTPS');
 });

@@ -214,3 +214,17 @@
 .ca-completions [aria-selected="true"] { background: var(--ca-accent); color: #fff; outline: 2px solid var(--ca-focus); outline-offset: -2px; }
 .ca-completions [aria-selected="true"] :where(.ca-completion-type, .ca-completion-directory) { color: inherit; }
 @media (pointer: coarse) { .ca-completions .kikotools-autocomplete-item { min-block-size: 40px; } }
+.ca-autocomplete-settings { inline-size: 520px; }
+.ca-autocomplete-settings fieldset { min-inline-size: 0; margin: 0; padding: 12px; border: 1px solid var(--ca-line); border-radius: 6px; display: flex; flex-direction: column; gap: 10px; }
+.ca-autocomplete-settings legend { padding-inline: 4px; font-size: 12px; font-weight: 550; }
+.ca-autocomplete-settings .ca-field { display: flex; flex-direction: column; align-items: stretch; gap: 5px; }
+.ca-autocomplete-settings input { min-inline-size: 0; max-inline-size: 100%; box-sizing: border-box; }
+.ca-autocomplete-settings input[type="file"] { inline-size: 100%; }
+.ca-autocomplete-settings .ca-dialog-hint { margin: 0; }
+.ca-autocomplete-settings a { color: var(--ca-focus); font-size: 12px; }
+.ca-autocomplete-settings summary { cursor: pointer; font-size: 12px; padding-block: 6px; }
+.ca-autocomplete-settings details[open] { display: flex; flex-direction: column; gap: 12px; }
+.ca-autocomplete-settings .ca-tag-status { margin: 0; min-block-size: 18px; font-size: 12px; overflow-wrap: anywhere; color: var(--ca-muted); }
+.ca-autocomplete-settings .ca-tag-status[data-error="true"] { color: var(--ca-error-text); }
+
+.ca-autocomplete-settings .ca-tag-source { overflow-wrap: anywhere; }

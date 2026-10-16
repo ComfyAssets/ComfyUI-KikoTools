@@ -654,3 +654,43 @@ test('embedding settings use the real host launcher and preserve preferences', a
     await page.keyboard.press('Escape');
     expect(await page.evaluate(() => window.kikotools.autocomplete.settings.showLoras)).toBe(false);
 });
+
+test('embedding tag files import through real settings and complete canonical tags in both renderers', async ({ page }, testInfo) => {
+    await page.getByRole('button', { name: 'Settings (Ctrl + ,)', exact: true }).click();
+    await page.getByPlaceholder(/search/i).fill('Embedding Autocomplete');
+    await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Embedding Autocomplete Settings', exact: true });
+    const input = process.env.KIKO_TAG_CSV || { name: 'tags.csv', mimeType: 'text/csv', buffer: Buffer.from('highres,5,100,"high_res,high_resolution"\nblue_eyes,0,90,azure') };
+    await dialog.getByLabel('Tag list file', { exact: true }).setInputFiles(input);
+    await expect(dialog.getByRole('status')).toContainText('tags ready', { timeout: 15000 });
+    await testInfo.attach('import-status.txt', { body: await dialog.getByRole('status').innerText(), contentType: 'text/plain' });
+    await dialog.getByRole('switch', { name: 'Show Custom Words', exact: true }).check();
+    await dialog.getByText('Triggers, matching and insertion', { exact: true }).click();
+    await dialog.getByRole('switch', { name: 'Replace underscores with spaces', exact: true }).uncheck();
+    await page.screenshot({ path: testInfo.outputPath('tag-import.png') });
+    await dialog.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = LiteGraph.createNode('TextInput');
+        app.graph.add(node);
+        node.setSize([550, 350]);
+        app.canvas.centerOnNode(node);
+    });
+    const prompt = page.locator('textarea:visible');
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    for (const renderer of [false, true, false]) {
+        await page.evaluate(async renderer => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+            app.canvas.centerOnNode(app.graph._nodes[0]);
+        }, renderer);
+        await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        await prompt.fill('high_resolution');
+        await expect(list.getByRole('option').first()).toContainText('highres');
+        await prompt.press('ArrowDown');
+        await prompt.press('Tab');
+        await expect(prompt).toHaveValue('highres, ');
+    }
+});

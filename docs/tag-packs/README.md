@@ -16,10 +16,23 @@ Aliases share a comma-separated field; use a CSV parser that respects quoting.
 An empty alias field means no aliases. Category codes are 0 (general), 1
 (artist), 3 (copyright), 4 (character), and 5 (meta).
 
-The existing URL loader expects `tag,frequency`; it cannot correctly consume
-this four-column pack yet. Automatic installation, local import, and settings
-integration remain pending. Publishing the asset does not change the default
-autocomplete source.
+In ComfyUI Settings, search **Embedding Autocomplete**, open its settings,
+then download the pack and choose the CSV under **Tag list file**. Enable
+**Show Custom Words** and select **Save Settings**. Importing stages the list;
+Cancel leaves the active list unchanged. The browser caches the saved file in
+IndexedDB for offline use and restores it after a refresh. Clearing browser site
+data removes this cache. There is no server-side autocomplete folder to populate.
+
+Alternatively, enter a CSV/TXT URL and select **Load URL**, then save. Remote
+servers must allow browser cross-origin requests; for GitHub release assets,
+download and import the file locally. Existing one-column word lists and
+`tag,frequency` lists remain supported. The default URL is unchanged.
+
+Parsing runs in a Web Worker with a 32 MB UTF-8 limit. Search checks canonical
+names and aliases, inserts the canonical tag, and ranks exact matches ahead of
+prefixes and substrings, then by descending post count. The number of displayed
+results is bounded by Maximum suggestions. Categories are retained in records;
+category-specific controls are not currently exposed.
 
 ## Source and terms
 

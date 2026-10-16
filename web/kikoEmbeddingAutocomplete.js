@@ -5,6 +5,8 @@ import { createScope } from './ui/core.js';
 import { createSuggestionView } from './ui/autocomplete-suggestions.js';
 import { watchRendererTextareas } from './ui/text-widget-adapter.js';
 import { createAutocompleteLauncher } from './views/autocomplete-settings.js';
+import { searchTags, MAX_TAG_BYTES } from './autocomplete/tags.js';
+import { parseTagFile, tagCache } from './autocomplete/tag-storage.js';
 
 // KikoEmbeddingAutocomplete - Provides autocomplete for embeddings and LoRAs in text widgets
 class KikoEmbeddingAutocomplete {
@@ -48,8 +50,8 @@ class KikoEmbeddingAutocomplete {
         this.fetchResourcesDebounced();
 
         // Load custom words if URL is set
-        if (this.settings.customWordsUrl && this.settings.showCustomWords) {
-            this.loadCustomWords(this.settings.customWordsUrl);
+        if ((this.settings.tagSource || this.settings.customWordsUrl) && this.settings.showCustomWords) {
+            this.restoreCustomWords();
         }
 
         // Single suggestion container for all widgets
@@ -123,7 +125,7 @@ class KikoEmbeddingAutocomplete {
         try {
             const response = await fetch(url, {
                 ...options,
-                signal: controller.signal
+                signal: AbortSignal.any([controller.signal, this.scope.signal, ...(options.signal ? [options.signal] : [])])
             });
             this.pendingFetches.delete(controller);
             return response;
@@ -295,106 +297,72 @@ class KikoEmbeddingAutocomplete {
         }
     }
 
-    async loadCustomWords(url) {
-        if (!url) return 0;
-
+    async restoreCustomWords() {
+        const revision = this.tagRevision = (this.tagRevision || 0) + 1;
         try {
-            const response = await this.fetchWithAbort(url);
-            if (!response || !response.ok) {
-                throw new Error(`Failed to load custom words: ${response?.status || 'aborted'}`);
+            const cached = await tagCache();
+            const source = this.settings.tagSource || this.settings.customWordsUrl;
+            if (cached?.source === source) {
+                const tags = await parseTagFile(cached.text, this.scope.signal);
+                if (!this.scope.signal.aborted && revision === this.tagRevision) this.customWords = tags;
+            } else if (!this.scope.signal.aborted && revision === this.tagRevision) {
+                if (this.settings.tagSource?.startsWith('file:')) this.customWordsError = 'Saved tag file is missing. Import it again.';
+                else await this.loadCustomWords(this.settings.customWordsUrl);
             }
-
-            const text = await response.text();
-
-            // Security validation - detect potentially dangerous patterns
-            // Note: This is defense-in-depth for text files, not HTML rendering
-            const dangerousPatterns = [
-                // Script tags - catch all variations including bypass attempts with whitespace
-                // Matches: <script>, <script >, <script src="x">, </script >, </script>, etc.
-                /<\s*\/?script[^>]*>/gi,  // Script tags (opening/closing with any attributes/whitespace)
-                // Other dangerous HTML tags
-                /<\s*iframe[^>]*>/gi,
-                /<\s*embed[^>]*>/gi,
-                /<\s*object[^>]*>/gi,
-                // JavaScript protocol and event handlers
-                /javascript:/gi,
-                /data:text\/html/gi,
-                /\bon\w+\s*=/gi,  // Matches any event handler (onclick, onload, etc.)
-                // Code execution patterns
-                /import\s+/gi,
-                /require\s*\(/gi,
-                /eval\s*\(/gi,
-                /new\s+Function\s*\(/gi,
-                /\.innerHTML\s*=/gi,
-                // DOM manipulation
-                /document\./gi,
-                /window\./gi,
-                // Prototype pollution
-                /__proto__/gi,
-                /\.prototype\./gi,
-                /\.constructor\s*\(/gi
-            ];
-
-            for (const pattern of dangerousPatterns) {
-                if (pattern.test(text)) {
-                    throw new Error("Security Warning: File contains potentially dangerous code patterns.");
-                }
-            }
-
-            // Size check
-            if (text.length > 10 * 1024 * 1024) {
-                throw new Error("File too large. Maximum size is 10MB.");
-            }
-
-            const lines = text.split('\n');
-            this.customWords = [];
-            const maxLineLength = 500;
-
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed || trimmed.length > maxLineLength) continue;
-
-                // Security check for individual lines
-                if ((trimmed.includes('<script') || trimmed.includes('</script')) ||
-                    (trimmed.includes('{') && trimmed.includes('}') && trimmed.includes('function')) ||
-                    trimmed.includes('=>') ||
-                    trimmed.includes('eval(') ||
-                    trimmed.includes('document.') ||
-                    trimmed.includes('window.')) {
-                    continue;
-                }
-
-                const parts = trimmed.split(',');
-                const word = parts[0].trim();
-                const frequency = parts[1] ? parseInt(parts[1]) : 0;
-
-                const safeWordPattern = /^[a-zA-Z0-9_\s\-:()'\.\!\?,\/\+\*&@#;=\[\]]+$/;
-                if (word && safeWordPattern.test(word) && word.length > 0) {
-                    this.customWords.push({
-                        name: word,
-                        fullPath: word,
-                        type: "custom",
-                        display: word,
-                        value: word,
-                        frequency: frequency
-                    });
-                }
-            }
-
-            // Sort by frequency and name
-            this.customWords.sort((a, b) => {
-                if (a.frequency !== b.frequency) {
-                    return b.frequency - a.frequency;
-                }
-                return a.name.localeCompare(b.name);
-            });
-
-            return this.customWords.length;
-
         } catch (error) {
-            console.error("[KikoTools] Error loading custom words:", error);
+            if (error.name !== 'AbortError' && !this.scope.signal.aborted && revision === this.tagRevision) {
+                if (this.settings.tagSource?.startsWith('file:')) this.customWordsError = 'Could not restore the saved tag file. Import it again.';
+                else await this.loadCustomWords(this.settings.customWordsUrl);
+            }
+        }
+    }
+
+    async fetchTagList(url, signal = this.scope.signal) {
+        const parsed = new URL(url, location.href);
+        if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Use an HTTP or HTTPS tag-list URL.');
+        const response = await this.fetchWithAbort(parsed.href, { signal });
+        if (!response?.ok) throw new Error(`Tag download failed (${response?.status || 'cancelled'}).`);
+        if (Number(response.headers.get('content-length')) > MAX_TAG_BYTES) throw new Error('Tag file too large. Maximum size is 32 MB.');
+        const text = await response.text();
+        const tags = await parseTagFile(text, signal);
+        return { text, tags, source: parsed.href };
+    }
+
+    async loadCustomWords(url) {
+        if (!url || this.scope.signal.aborted) return 0;
+        const revision = this.tagRevision = (this.tagRevision || 0) + 1;
+        try {
+            const list = await this.fetchTagList(url);
+            if (revision !== this.tagRevision || this.scope.signal.aborted) return 0;
+            this.customWords = list.tags;
+            this.customWordsError = '';
+            return this.customWords.length;
+        } catch (error) {
+            if (error.name !== 'AbortError') this.customWordsError = error.message;
             return 0;
         }
+    }
+
+    async saveTagSettings(next, pending) {
+        const previous = { ...this.settings };
+        Object.assign(this.settings, next);
+        if (!this.saveSettings()) {
+            this.settings = previous;
+            throw new Error('Could not save settings. Check browser storage and try again.');
+        }
+        if (pending) {
+            try { await tagCache({ text: pending.text, source: pending.source }); }
+            catch (error) {
+                this.settings = previous;
+                this.saveSettings();
+                throw new Error(`Could not save tag list: ${error.message}`);
+            }
+            this.tagRevision = (this.tagRevision || 0) + 1;
+            this.customWords = pending.tags;
+            this.customWordsError = '';
+        }
+        if (this.settings.showEmbeddings || this.settings.showLoras) this.fetchResourcesDebounced();
+        if (!pending && this.settings.showCustomWords && (!previous.showCustomWords || previous.customWordsUrl !== this.settings.customWordsUrl)) this.restoreCustomWords();
     }
 
     createSuggestionContainer() {
@@ -627,14 +595,13 @@ class KikoEmbeddingAutocomplete {
                     }
 
                     if (this.settings.showCustomWords) {
-                        suggestions.push(...this.customWords.filter(w =>
-                            w.name.toLowerCase().includes(prefix)
-                        ));
+                        suggestions.push(...searchTags(this.customWords, prefix, this.settings.maxSuggestions));
                     }
                 }
 
                 // Sort suggestions
                 suggestions.sort((a, b) => {
+                    if (a.type === 'custom' && b.type === 'custom') return 0;
                     const aName = a.name.toLowerCase();
                     const bName = b.name.toLowerCase();
                     const aPath = (a.fullPath || a.name).toLowerCase();
