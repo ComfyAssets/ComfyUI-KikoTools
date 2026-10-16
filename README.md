@@ -17,6 +17,13 @@ I tried forking, patching, and submitting merge requests, but eventually decided
 
 I’m sharing them here with the community, and I hope you find them as useful as I do.
 
+## ComfyUI Classic and Nodes 2.0
+
+KikoTools supports both ComfyUI Classic and Nodes 2.0. Our shared ComfyAssets
+controls follow ComfyUI's dark/light theme, with automated tests covering renderer
+switching, workflow persistence and cleanup. See the retained
+[UI screenshots](docs/screenshots/) for examples from the migrations.
+
 ## 🚀 Features
 
 ### ✨ Current Tools
@@ -439,6 +446,20 @@ Real-time execution timer that displays workflow duration with millisecond preci
 **Settings (KikoTools Settings Panel):**
 - **Workflow Timer: Color** - Custom color picker for timer display
 - **Workflow Timer: Enable Glow** - Toggle pulsing glow effect on/off
+
+#### 🎨 Custom Colors
+
+Right-click a node and choose **🫶 Custom Colors** to change its full color,
+title or background. The shared picker supports hex entry, HSV sliders and
+presets, and follows ComfyUI's dark/light theme. Changes apply immediately;
+**Done** or **Escape** closes the picker. Multiple selected nodes receive the
+same change. Right-click a group for its color option.
+
+Existing Custom Colors settings control the available menu options and automatic
+title shading. Node and group colors are saved with the workflow.
+
+Screenshots: [Dark](docs/screenshots/custom-colors/dark.png) ·
+[Light](docs/screenshots/custom-colors/light.png).
 
 #### 🗂️ Project File Path
 Builds an organized save prefix to wire into a save node's `filename_prefix`.
