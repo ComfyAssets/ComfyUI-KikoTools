@@ -3,8 +3,15 @@
 import math
 import os
 import re
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Tuple
 import logging
+
+from ....base.model_folders import (
+    filter_by_pattern,
+    natural_sort,
+    resolve_scan_targets,
+    scan_model_entries,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,66 +47,9 @@ def get_lora_folders() -> List[str]:
         return [".", "flux", "sdxl", "sd15"]
 
 
-def _get_lora_roots() -> List[str]:
-    """Return every configured loras root directory (empty if unavailable)."""
-    try:
-        import folder_paths
-
-        entry = folder_paths.folder_names_and_paths.get("loras")
-        return list(entry[0]) if entry else []
-    except (ImportError, AttributeError, IndexError, TypeError):
-        return []
-
-
-def _is_within(path: str, root: str) -> bool:
-    """True if realpath `path` equals or is inside realpath `root`."""
-    try:
-        real_path, real_root = os.path.realpath(path), os.path.realpath(root)
-        return os.path.commonpath([real_path, real_root]) == real_root
-    except ValueError:  # different drives or mixed absolute/relative
-        return False
-
-
-def _resolve_scan_targets(folder_path: str) -> List[Tuple[str, Optional[str]]]:
-    """
-    Resolve a folder setting to (directory, base_root) pairs to scan.
-
-    base_root is the loras root the directory lives in, or None when the
-    directory is an absolute path outside every known root.
-    """
-    roots = _get_lora_roots()
-
-    if os.path.isabs(folder_path):
-        base = next((r for r in roots if _is_within(folder_path, r)), None)
-        return [(folder_path, base)]
-
-    targets = []
-    for root in roots:
-        candidate = os.path.join(root, folder_path)
-        if not _is_within(candidate, root):
-            logger.warning(f"Folder escapes the loras directory: {folder_path}")
-            continue
-        targets.append((candidate, root))
-    return targets
-
-
 def _scan_entries(folder_path: str) -> List[Tuple[str, str]]:
     """Return (relative_name, absolute_path) for every .safetensors found."""
-    entries: Dict[str, str] = {}
-    for directory, base in _resolve_scan_targets(folder_path):
-        if not os.path.isdir(directory):
-            continue
-        for root, _, files in os.walk(directory):
-            for file in files:
-                if not file.endswith(".safetensors"):
-                    continue
-                full = os.path.join(root, file)
-                try:
-                    rel = os.path.relpath(full, base or directory)
-                except ValueError:
-                    rel = os.path.relpath(full, directory)
-                entries.setdefault(rel.replace("\\", "/"), full)
-    return [(name, entries[name]) for name in natural_sort(list(entries))]
+    return scan_model_entries(folder_path, "loras")
 
 
 def scan_folder_for_loras(folder_path: str) -> List[str]:
@@ -164,71 +114,11 @@ def sort_lora_files(lora_files: List[str], sort_order: str) -> List[str]:
         return lora_files
 
 
-def natural_sort(items: List[str]) -> List[str]:
-    """
-    Sort strings naturally, handling numbers properly.
-
-    Args:
-        items: List of strings to sort
-
-    Returns:
-        Naturally sorted list
-    """
-
-    def natural_key(text):
-        def atoi(text):
-            return int(text) if text.isdigit() else text
-
-        # Split on digits and filter out empty strings
-        parts = [atoi(c) for c in re.split(r"(\d+)", text) if c]
-
-        # Convert to tuple of (type_order, value) to ensure consistent comparison
-        # Integers get type_order 0, strings get type_order 1
-        typed_parts = []
-        for part in parts:
-            if isinstance(part, int):
-                typed_parts.append((0, part))
-            else:
-                typed_parts.append((1, part))
-
-        return typed_parts
-
-    return sorted(items, key=natural_key)
-
-
 def filter_loras_by_pattern(
     lora_files: List[str], include_pattern: str = "", exclude_pattern: str = ""
 ) -> List[str]:
-    """
-    Filter LoRA files by include/exclude patterns.
-
-    Args:
-        lora_files: List of LoRA filenames
-        include_pattern: Regex pattern to include (empty = include all)
-        exclude_pattern: Regex pattern to exclude (empty = exclude none)
-
-    Returns:
-        Filtered list of LoRA files
-    """
-    filtered = lora_files.copy()
-
-    # Apply include pattern
-    if include_pattern:
-        try:
-            include_re = re.compile(include_pattern)
-            filtered = [f for f in filtered if include_re.search(f)]
-        except re.error as e:
-            logger.error(f"Invalid include pattern: {e}")
-
-    # Apply exclude pattern
-    if exclude_pattern:
-        try:
-            exclude_re = re.compile(exclude_pattern)
-            filtered = [f for f in filtered if not exclude_re.search(f)]
-        except re.error as e:
-            logger.error(f"Invalid exclude pattern: {e}")
-
-    return filtered
+    """Filter LoRA names by include/exclude regex (empty pattern = no filter)."""
+    return filter_by_pattern(lora_files, include_pattern, exclude_pattern)
 
 
 def _parse_finite(token: str, what: str, original: str) -> float:
@@ -438,7 +328,7 @@ def validate_folder_path(folder_path: str) -> bool:
 
         return any(
             os.path.isdir(directory)
-            for directory, _ in _resolve_scan_targets(folder_path)
+            for directory, _ in resolve_scan_targets(folder_path, "loras")
         )
     except Exception:
         return False
