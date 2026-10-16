@@ -41,3 +41,22 @@ workflow or persisted across browser reloads.
 The owning node controls removal. Another node may take over the shared viewer,
 but deleting the previous owner must not remove it. Closing or deleting a viewer,
 or replacing its results, cancels delayed bulk-open actions.
+
+## Seed History
+
+`../views/seed-history.js` composes the shared buttons and theme tokens. The
+extension keeps seed generation, callbacks, history and workflow persistence.
+History entries are native buttons: Tab to an entry and press Enter or Space to
+reuse its seed. The selected entry has a visible outline and pressed state.
+
+The list fills the available node space and scrolls as needed. It automatically
+hides after 2.5 seconds of inactivity, except while hovered or keyboard-focused.
+Use Show history / Hide history to control it explicitly. Feedback appears in
+the node's status area instead of temporary overlays on the canvas.
+
+The existing browser storage key and serialized `seedHistory` field are retained.
+Up to ten unique valid seeds are kept, including zero; malformed entries are
+ignored. Browser storage failures leave in-memory/workflow history usable.
+New nodes start at 320 × 420; saved workflows retain their node dimensions.
+Node removal disposes theme observers, event listeners, polling and setup/hide
+timers through `createScope()`.

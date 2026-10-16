@@ -66,10 +66,10 @@
     "statements": 12
   },
   "seed_history_ui.js": {
-    "lines": 63,
-    "branches": 58,
-    "functions": 56,
-    "statements": 63
+    "lines": 95,
+    "branches": 85,
+    "functions": 88,
+    "statements": 95
   },
   "ui/core.js": {
     "lines": 98,
@@ -84,6 +84,12 @@
     "statements": 93
   },
   "views/image-browser.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
+  },
+  "views/seed-history.js": {
     "lines": 98,
     "branches": 98,
     "functions": 98,

@@ -47,6 +47,71 @@ test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
     });
 });
 
+test('seed history survives renderer switching, resizing and workflow reload', async ({ page }, testInfo) => {
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = LiteGraph.createNode('SeedHistory');
+        app.graph.add(node);
+        node.setSize([380, 560]);
+        for (let seed = 100; seed < 110; seed++) node.addSeedToHistory(seed);
+        app.canvas.centerOnNode(node);
+    });
+    const panel = page.locator('.ca-seed-history');
+    for (const renderer of [false, true, false]) {
+        await page.evaluate(async renderer => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+        }, renderer);
+        await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        await expect(panel).toHaveCount(1);
+        await panel.getByRole('button', { name: 'Use seed 105', exact: true }).focus();
+        await page.keyboard.press('Enter');
+        await expect(panel.getByRole('button', { name: 'Use seed 105', exact: true })).toHaveAttribute('aria-pressed', 'true');
+        await expect(panel.getByRole('status')).toHaveText('Loaded: 105');
+        expect(await panel.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    }
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        app.graph._nodes.find(node => node.type === 'SeedHistory').setSize([280, 350]);
+    });
+    const list = panel.getByRole('list', { name: 'Recent seeds' });
+    await expect.poll(() => list.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+    const smallHeight = await list.evaluate(element => element.clientHeight);
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        app.graph._nodes.find(node => node.type === 'SeedHistory').setSize([420, 650]);
+    });
+    await expect.poll(() => list.evaluate(element => element.clientHeight)).toBeGreaterThan(smallHeight);
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(async theme => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.ColorPalette', theme);
+        }, theme);
+        await expect(panel).toHaveAttribute('data-ca-theme', theme);
+        await page.screenshot({ path: testInfo.outputPath(`seed-${theme}.png`) });
+    }
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const workflow = app.graph.serialize();
+        const saved = workflow.nodes.find(node => node.type === 'SeedHistory');
+        if (saved.widgets_values[0] !== 105 || saved.widgets_values.slice(2).some(value => value !== '' && value != null)) throw new Error('History UI leaked into serialized widget values');
+        await app.loadGraphData(workflow);
+        const node = app.graph._nodes.find(node => node.type === 'SeedHistory');
+        if (node.size[0] !== saved.size[0] || node.size[1] !== saved.size[1]) throw new Error('Saved node size changed');
+        app.canvas.centerOnNode(node);
+    });
+    await expect(panel).toHaveCount(1);
+    await expect(panel.getByRole('button', { name: 'Use seed 105', exact: true })).toBeVisible();
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = app.graph._nodes.find(node => node.type === 'SeedHistory');
+        window.removedSeedNode = node;
+        app.graph.remove(node);
+    });
+    await expect(panel).toHaveCount(0);
+    expect(await page.evaluate(() => removedSeedNode.seedScope.signal.aborted && removedSeedNode.seedValueWatcher === null)).toBe(true);
+});
+
 test('saved-image window survives real renderer switching and is removed with its owner', async ({ page, request }, testInfo) => {
     const result = await request.post(`${fixture}/__test__/execute/KikoSaveImage`, { data: { filename_prefix: 'Real host viewer' } });
     await expect(result).toBeOK();

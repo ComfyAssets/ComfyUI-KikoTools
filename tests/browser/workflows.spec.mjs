@@ -255,6 +255,148 @@ test('seed history persists across reloads and removal clears its watcher', asyn
     }, id)).toEqual({ watcher: null, registered: false, removed: true });
 });
 
+test('shared seed history supports keyboard selection, themes and local status feedback', async ({ page }) => {
+    await openHost(page);
+    await page.evaluate(() => Object.defineProperty(crypto, 'randomUUID', { value: undefined }));
+    const id = await createNode(page, 'SeedHistory', { seed: 42 });
+    await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        node.addSeedToHistory(123);
+        node.addSeedToHistory(456);
+    }, id);
+    const panel = page.locator('.ca-seed-history');
+    await expect(panel).toHaveCount(1);
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(theme => document.body.style.setProperty('--bg-color', theme === 'light' ? '#ffffff' : '#202020'), theme);
+        await expect(panel).toHaveAttribute('data-ca-theme', theme);
+    }
+    const entry = panel.getByRole('button', { name: 'Use seed 123', exact: true });
+    await entry.focus();
+    await page.keyboard.press('Enter');
+    await expect(entry).toHaveAttribute('aria-pressed', 'true');
+    await expect(panel.getByRole('status')).toHaveText('Loaded: 123');
+    expect(await page.evaluate(id => Number(kikoHost.nodes.get(String(id)).widgets.find(widget => widget.name === 'seed').value), id)).toBe(123);
+    await page.evaluate(id => kikoHost.nodes.get(String(id)).addSeedToHistory(789), id);
+    await expect(entry).toBeFocused();
+    await panel.getByRole('button', { name: 'Generate', exact: true }).click();
+    await expect(panel.getByRole('status')).toContainText('Generated:');
+    await panel.getByRole('button', { name: 'Clear', exact: true }).click();
+    await expect(panel.getByRole('status')).toHaveText('History cleared');
+    await expect(panel.getByText('No seeds tracked')).toBeVisible();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('comfyui_kikotools_seed_history')))).toEqual([]);
+});
+
+test('seed history auto-hide protects keyboard focus and its disclosure reopens with Space', async ({ page }) => {
+    await openHost(page);
+    await page.clock.install();
+    const id = await createNode(page, 'SeedHistory', { seed: 42 });
+    await page.evaluate(id => kikoHost.nodes.get(String(id)).addSeedToHistory(123), id);
+    const panel = page.locator('.ca-seed-history');
+    const entry = panel.getByRole('button', { name: 'Use seed 123', exact: true });
+    await entry.focus();
+    await page.clock.runFor(3000);
+    await expect(entry).toBeVisible();
+    await expect(entry).toBeFocused();
+    await panel.getByRole('button', { name: 'Generate', exact: true }).focus();
+    await page.clock.runFor(2600);
+    const restore = panel.getByRole('button', { name: 'Show history', exact: true });
+    await expect(restore).toHaveAttribute('aria-expanded', 'false');
+    await restore.focus();
+    await page.keyboard.press('Space');
+    await expect(panel.getByRole('list', { name: 'Recent seeds' })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Hide history', exact: true })).toHaveAttribute('aria-expanded', 'true');
+    await entry.hover();
+    await page.clock.runFor(3000);
+    await expect(entry).toBeVisible();
+    await page.mouse.move(0, 0);
+    await page.clock.runFor(2600);
+    await expect(restore).toBeVisible();
+});
+
+test('seed history removal cancels delayed setup and retries and disposes theme listeners', async ({ page }) => {
+    await openHost(page);
+    await page.clock.install();
+    const early = await createNode(page, 'SeedHistory', { seed: 42 });
+    await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        window.removedSeedNode = node;
+        window.seedSetups = 0;
+        node.setupSeedWidgetCallbacks = () => window.seedSetups++;
+        node.addSeedToHistory(123);
+        kikoHost.removeNode(id);
+    }, early);
+    await page.clock.runFor(3000);
+    expect(await page.evaluate(() => ({ setups: seedSetups, watcher: removedSeedNode.seedValueWatcher, hide: removedSeedNode.hideTimer, aborted: removedSeedNode.seedScope.signal.aborted }))).toEqual({ setups: 0, watcher: null, hide: null, aborted: true });
+    const retry = await createNode(page, 'SeedHistory');
+    await page.clock.runFor(101);
+    await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        window.detachedSeedPanel = node.seedWidget.element;
+        window.detachedSeedTheme = detachedSeedPanel.dataset.caTheme;
+        window.retrySeedNode = kikoHost.removeNode(id);
+        document.body.style.setProperty('--bg-color', detachedSeedTheme === 'light' ? '#202020' : '#ffffff');
+    }, retry);
+    await page.clock.runFor(3000);
+    expect(await page.evaluate(() => ({ watcher: retrySeedNode.seedValueWatcher, setup: retrySeedNode.seedSetupTimer, theme: detachedSeedPanel.dataset.caTheme === detachedSeedTheme, registered: seedHistoryNodes.length }))).toEqual({ watcher: null, setup: null, theme: true, registered: 0 });
+});
+
+test('seed history keeps ten unique valid seeds and restores workflow history safely', async ({ page }) => {
+    await openHost(page);
+    await page.evaluate(() => localStorage.setItem('comfyui_kikotools_seed_history', '{broken'));
+    const id = await createNode(page, 'SeedHistory', { seed: 42 });
+    expect(await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        for (let seed = 0; seed < 12; seed++) node.addSeedToHistory(seed);
+        node.addSeedToHistory(0);
+        node.addSeedToHistory(0);
+        node.addSeedToHistory('invalid');
+        const data = node.serialize();
+        node.clearSeedHistory();
+        node.configure(data);
+        return node.seedHistory.map(item => item.seed);
+    }, id)).toEqual([0, 11, 10, 9, 8, 7, 6, 5, 4, 3]);
+    const panel = page.locator('.ca-seed-history');
+    await expect(panel.getByRole('button', { name: 'Use seed 0', exact: true })).toBeVisible();
+    await page.evaluate(id => kikoHost.nodes.get(String(id)).configure({ seedHistory: [{ seed: '<img src=x onerror=alert(1)>', timestamp: 0 }] }), id);
+    await expect(panel.getByText('No seeds tracked')).toBeVisible();
+    await expect(panel.locator('img')).toHaveCount(0);
+});
+
+test('seed actions pass the host callback context and polling tracks manual values once', async ({ page }) => {
+    await openHost(page);
+    await page.clock.install();
+    const id = await createNode(page, 'SeedHistory', { seed: 42 });
+    await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        const widget = node.widgets.find(widget => widget.name === 'seed');
+        window.seedCallbacks = [];
+        widget.callback = function (value, canvas, owner) {
+            seedCallbacks.push({ value, canvas: canvas === kikoHost.app.canvas, owner: owner === node, widget: this === widget });
+        };
+        node.addSeedToHistory(123);
+    }, id);
+    const panel = page.locator('.ca-seed-history');
+    await panel.getByRole('button', { name: 'Use seed 123', exact: true }).click();
+    await panel.getByRole('button', { name: 'Generate', exact: true }).click();
+    expect(await page.evaluate(() => seedCallbacks)).toEqual([
+        { value: 123, canvas: true, owner: true, widget: true },
+        { value: expect.any(Number), canvas: true, owner: true, widget: true },
+    ]);
+    await page.clock.runFor(101);
+    await page.evaluate(id => { kikoHost.nodes.get(String(id)).widgets.find(widget => widget.name === 'seed').value = 987; }, id);
+    await page.clock.runFor(1100);
+    await expect(panel.getByRole('button', { name: 'Use seed 987', exact: true })).toHaveCount(1);
+    await page.evaluate(id => {
+        Storage.prototype.setItem = () => { throw new DOMException('Storage unavailable', 'SecurityError'); };
+        kikoHost.nodes.get(String(id)).addSeedToHistory(654);
+    }, id);
+    await expect(panel.getByRole('button', { name: 'Use seed 654', exact: true })).toBeVisible();
+    await page.evaluate(id => { kikoHost.nodes.get(String(id)).widgets.find(widget => widget.name === 'seed').value = 555; }, id);
+    await panel.getByRole('button', { name: 'Clear', exact: true }).click();
+    await page.clock.runFor(1100);
+    await expect(panel.getByText('No seeds tracked')).toBeVisible();
+});
+
 test('workflow timer responds to execution events and detaches removed nodes', async ({ page }) => {
     await page.clock.install();
     await openHost(page);
