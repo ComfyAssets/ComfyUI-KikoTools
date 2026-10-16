@@ -41,6 +41,14 @@ test('plugin startup registers every frontend extension and exposes real autocom
 });
 
 test('shared loader controls follow host themes, resize and support keyboard selection', async ({ page }) => {
+    let firstListing = true;
+    await page.route('**/kiko_local_image_loader/images?*', async route => {
+        if (firstListing) {
+            firstListing = false;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        await route.continue();
+    });
     await openHost(page);
     await createNode(page, 'KikoLocalImageLoader');
     const loader = page.locator('.ca-image-browser');
@@ -49,6 +57,7 @@ test('shared loader controls follow host themes, resize and support keyboard sel
     await expect(loader).toHaveAttribute('data-ca-theme', 'dark');
     await page.evaluate(() => document.body.style.setProperty('--bg-color', '#fafafa'));
     await expect(loader).toHaveAttribute('data-ca-theme', 'light');
+    await expect(loader.getByRole('button', { name: 'Select image cat & dog.png', exact: true })).toBeVisible();
     const toggle = loader.getByRole('switch', { name: 'Hide dot folders' });
     await toggle.focus();
     await page.keyboard.press('Space');
