@@ -144,3 +144,17 @@ test('gallery HTTP errors preserve actionable server detail and handle non-JSON 
     assert.match(await describe({ status: 403, json: async () => { throw new Error('not JSON'); } }), /allowed folders/);
     assert.match(await describe({ status: 400, json: async () => ({}) }), /Invalid path/);
 });
+
+test('gallery HTTP errors cover null bodies, message details, and generic status fallbacks', async () => {
+    const { context } = load('kiko_local_image_loader.js', { document: { getElementById: () => ({}) } });
+    const describe = vm.runInContext('describeHttpError', context);
+    for (const [status, body, expected] of [
+        [400, { error: 'Invalid directory' }, 'Invalid directory'],
+        [403, { message: 'Not an allowed root' }, 'Not an allowed root'],
+        [400, null, 'Invalid path or request'],
+        [500, { error: 'Storage unavailable' }, 'Storage unavailable'],
+        [404, { message: 'Missing image' }, 'Missing image'],
+        [502, null, 'Request failed (HTTP 502)'],
+        [503, {}, 'Request failed (HTTP 503)'],
+    ]) assert.equal(await describe({ status, json: async () => body }), expected);
+});

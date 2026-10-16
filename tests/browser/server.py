@@ -50,14 +50,16 @@ def create_app(root: Path) -> web.Application:
     loader.CONFIG_FILE = str(root / "config.json")
     loader.SELECTIONS_FILE = str(root / "selections.json")
 
-    def reset() -> None:
+    def reset(extra_images: int = 0) -> None:
         (root / "selections.json").unlink(missing_ok=True)
-        shutil.rmtree(root / "output")
-        (root / "output").mkdir()
+        for kind in ("input", "output"):
+            shutil.rmtree(root / kind)
+            (root / kind).mkdir()
         loader.save_config({"saved_paths": [], "last_path": str(root / "input")})
         for path, color in [
             ("input/cat & dog.png", "red"),
             ("input/sub/forest.png", "green"),
+            ("input/.hidden/hidden.png", "green"),
             ("outside/secret.png", "blue"),
         ]:
             target = root / path
@@ -65,9 +67,22 @@ def create_app(root: Path) -> web.Application:
             with Image.new("RGB", (16, 12), color) as image:
                 image.save(target)
 
+        for index in range(extra_images):
+            target = root / "input" / "bulk" / f"{index:04}.png"
+            target.parent.mkdir(exist_ok=True)
+            shutil.copyfile(root / "input" / "cat & dog.png", target)
+
     @routes.post("/__test__/reset")
     async def reset_route(request: web.Request) -> web.Response:
-        await asyncio.to_thread(reset)
+        data = await request.json() if request.can_read_body else {}
+        extra_images = data.get("extra_images", 0)
+        if (
+            isinstance(extra_images, bool)
+            or not isinstance(extra_images, int)
+            or not 0 <= extra_images <= 60
+        ):
+            raise web.HTTPBadRequest()
+        await asyncio.to_thread(reset, extra_images)
         return web.json_response({"success": True})
 
     @routes.get("/__test__/state")

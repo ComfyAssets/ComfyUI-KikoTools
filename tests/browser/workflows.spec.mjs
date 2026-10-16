@@ -233,3 +233,53 @@ test('Display Any renders real multiline output and restores serialized values w
     await expect(page.locator('textarea')).toHaveCount(1);
     await expect(page.getByLabel('display_0')).toHaveValue('Restored value');
 });
+
+test('gallery pagination sorting and hidden-folder controls use real directory pages', async ({ page, request }) => {
+    await expect(await request.post('/__test__/reset', { data: { extra_images: 52 } })).toBeOK();
+    await openHost(page);
+    await createNode(page, 'KikoLocalImageLoader');
+    const folder = name => page.locator('.kiko-folder-name').filter({ hasText: new RegExp(`^${name}$`) });
+    await expect(folder('sub')).toBeVisible();
+    await expect(folder('\\.hidden')).toHaveCount(0);
+    await page.locator('.kiko-hide-dot-folders').uncheck();
+    await expect(folder('\\.hidden')).toBeVisible();
+    await folder('bulk').click();
+    await expect(page.locator('.kiko-card-info-panel')).toHaveCount(50);
+    await expect(page.locator('.kiko-card-info-panel').first()).toHaveText('0000.png');
+    await page.locator('.kiko-sort-order').selectOption('desc');
+    await expect(page.locator('.kiko-card-info-panel').first()).toHaveText('0051.png');
+    await page.locator('.kiko-pagination').getByRole('button', { name: '2', exact: true }).click();
+    await expect(page.locator('.kiko-card-info-panel')).toHaveCount(2);
+    await expect(page.getByAltText('0000.png', { exact: true })).toBeVisible();
+    await page.locator('.kiko-pagination').getByRole('button', { name: '◀', exact: true }).click();
+    await expect(page.locator('.kiko-card-info-panel')).toHaveCount(50);
+    await page.locator('.kiko-pagination').getByRole('button', { name: '▶', exact: true }).click();
+    await expect(page.locator('.kiko-card-info-panel')).toHaveCount(2);
+});
+
+test('gallery directory autocomplete handles keyboard selection escape and navigation', async ({ page, request }) => {
+    await openHost(page);
+    await createNode(page, 'KikoLocalImageLoader');
+    await expect(page.getByAltText('cat & dog.png', { exact: true })).toBeVisible();
+    const input = page.locator('.kiko-path-input');
+    const dropdown = page.locator('.kiko-autocomplete-dropdown');
+    const directory = (await state(request)).input;
+    await input.fill(`${directory}/su`);
+    await expect(dropdown).toBeVisible();
+    await expect(dropdown.locator('.folder-name')).toContainText('sub');
+    await input.press('ArrowDown');
+    await expect(dropdown.locator('.selected')).toHaveCount(1);
+    await input.press('ArrowUp');
+    await expect(dropdown.locator('.selected')).toHaveCount(0);
+    await input.press('Escape');
+    await expect(dropdown).toBeHidden();
+    await input.fill(`${directory}/su`);
+    await expect(dropdown).toBeVisible();
+    await input.press('ArrowDown');
+    await input.press('Tab');
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue(`${directory}/sub/`);
+    await expect(dropdown).toBeHidden();
+    await input.press('Enter');
+    await expect(page.getByAltText('forest.png', { exact: true })).toBeVisible();
+});

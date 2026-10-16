@@ -11,7 +11,8 @@ original implementation, then run the relevant suites after the fix.
 | JavaScript | Production extension hooks and callback behavior | Minimal host objects; controlled timers for focused regressions |
 | Browser | All shipped extension imports and lifecycle registration; real plugin startup, HTTP routes, PNG thumbnails, selection persistence, and image loading | ComfyUI graph/widgets/settings/event interfaces and its saved-image serving endpoint |
 
-Browser workflows cover swaps, local image browsing/selection, saved paths,
+Browser workflows cover swaps, local image browsing/selection, pagination,
+sorting, hidden folders, directory autocomplete, saved paths,
 denied paths and network recovery, display output, seed persistence/cleanup, and
 workflow timing, autocomplete insertion, and saved-image previews. They run in Chromium, Firefox, WebKit, and touch Chromium.
 The harness binds to localhost and writes configuration, selections, and fixture
