@@ -5,14 +5,16 @@ import { createScope } from './ui/core.js';
 import { createSuggestionView } from './ui/autocomplete-suggestions.js';
 import { watchRendererTextareas } from './ui/text-widget-adapter.js';
 import { createAutocompleteLauncher } from './views/autocomplete-settings.js';
-import { searchTags, MAX_TAG_BYTES } from './autocomplete/tags.js';
+import { searchTags, tagQuery } from './autocomplete/tags.js';
 import { parseTagFile, tagCache } from './autocomplete/tag-storage.js';
+import { readTagResponse } from './autocomplete/tag-download.js';
 
 // KikoEmbeddingAutocomplete - Provides autocomplete for embeddings and LoRAs in text widgets
 class KikoEmbeddingAutocomplete {
     constructor() {
         this.scope = createScope();
         this.widgetCleanups = new Set();
+        this.nodeHooks = new WeakMap();
         this.pendingFrames = new Set();
         this.embeddings = [];
         this.loras = [];
@@ -322,8 +324,7 @@ class KikoEmbeddingAutocomplete {
         if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Use an HTTP or HTTPS tag-list URL.');
         const response = await this.fetchWithAbort(parsed.href, { signal });
         if (!response?.ok) throw new Error(`Tag download failed (${response?.status || 'cancelled'}).`);
-        if (Number(response.headers.get('content-length')) > MAX_TAG_BYTES) throw new Error('Tag file too large. Maximum size is 32 MB.');
-        const text = await response.text();
+        const text = await readTagResponse(response, { signal });
         const tags = await parseTagFile(text, signal);
         return { text, tags, source: parsed.href };
     }
@@ -440,7 +441,7 @@ class KikoEmbeddingAutocomplete {
                 const textBefore = text.substring(0, cursor);
 
                 let insertText = "";
-                let replaceLength = widgetState.currentPrefix.length;
+                let replaceLength = cursor - widgetState.prefixStart;
 
                 // Apply replace underscores setting for custom words
                 if (suggestion.type === "custom" && this.settings.replaceUnderscores) {
@@ -475,12 +476,7 @@ class KikoEmbeddingAutocomplete {
                     replaceLength = match[1].length;
                 } else {
                     insertText = suggestion.value || suggestion.display;
-                    let wordStart = cursor - widgetState.currentPrefix.length;
-                    while (wordStart > 0 && /[a-zA-Z0-9_-]/.test(text[wordStart - 1])) {
-                        wordStart--;
-                    }
-                    widgetState.prefixStart = wordStart;
-                    replaceLength = cursor - wordStart;
+                    replaceLength = cursor - widgetState.prefixStart;
                 }
 
                 const before = text.substring(0, widgetState.prefixStart);
@@ -490,9 +486,7 @@ class KikoEmbeddingAutocomplete {
                 let finalInsertText = insertText;
                 if (this.settings.autoInsertComma && (suggestion.type === "custom" || suggestion.type === "embedding" || suggestion.type === "lora")) {
                     const trimmedAfter = after.trim();
-                    const nextChar = trimmedAfter.charAt(0);
-
-                    if (nextChar !== ',' && nextChar !== '.' && nextChar !== ';') {
+                    if (!/^(?:[,.;)\]]|:\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)\s*[)\]])/.test(trimmedAfter)) {
                         finalInsertText += ', ';
                     }
                 }
@@ -544,18 +538,11 @@ class KikoEmbeddingAutocomplete {
                     return "lora";
                 }
 
-                // Check for general word
-                let start = cursor - 1;
-                while (start >= 0 && /[a-zA-Z0-9_-]/.test(text[start])) {
-                    start--;
-                }
-                start++;
-
-                const word = text.substring(start, cursor);
-
-                if (word.length >= this.settings.minChars) {
-                    widgetState.currentPrefix = word.toLowerCase();
-                    widgetState.prefixStart = start;
+                const query = tagQuery(textBefore);
+                if (query && [...query.prefix].length >= this.settings.minChars) {
+                    widgetState.currentPrefix = query.prefix.toLowerCase();
+                    widgetState.prefixStart = query.start;
+                    const word = query.prefix;
 
                     const quickTrigger = this.settings.quickTrigger;
                     if (quickTrigger && word.toLowerCase().startsWith(quickTrigger.toLowerCase())) {
@@ -641,6 +628,14 @@ class KikoEmbeddingAutocomplete {
                 widgetState.selectedIndex = -1;
                 if (triggerType) {
                     widgetState.currentSuggestions = handlers.getSuggestions(widgetState.currentPrefix, triggerType);
+                    if (!widgetState.currentSuggestions.length && triggerType === 'general') {
+                        const query = tagQuery(textarea.value.substring(0, textarea.selectionStart), true);
+                        if (query && query.start !== widgetState.prefixStart && [...query.prefix].length >= this.settings.minChars) {
+                            widgetState.currentPrefix = query.prefix.toLowerCase();
+                            widgetState.prefixStart = query.start;
+                            widgetState.currentSuggestions = handlers.getSuggestions(widgetState.currentPrefix, triggerType);
+                        }
+                    }
 
                     if (widgetState.currentSuggestions.length > 0) {
                         handlers.showSuggestions(widgetState.currentSuggestions);
@@ -710,12 +705,32 @@ class KikoEmbeddingAutocomplete {
             this.widgetCleanupMap.delete(widget);
             this.widgetCleanups.delete(cleanup);
         };
-        for (const [owner, name] of [[widget, 'onRemoved'], [widget, 'onRemove'], [node, 'onRemoved']]) {
+        for (const [owner, name] of [[widget, 'onRemoved'], [widget, 'onRemove']]) {
             const original = owner[name];
             const wrapped = function (...args) { cleanup(); return original?.apply(this, args); };
             owner[name] = wrapped;
             widgetScope.cleanup(() => { if (owner[name] === wrapped) owner[name] = original; });
         }
+        let nodeHook = this.nodeHooks.get(node);
+        if (!nodeHook) {
+            const original = node.onRemoved;
+            const cleanups = new Set();
+            const wrapped = function (...args) {
+                for (const cleanup of [...cleanups]) cleanup();
+                return original?.apply(this, args);
+            };
+            nodeHook = { original, wrapped, cleanups };
+            this.nodeHooks.set(node, nodeHook);
+            node.onRemoved = wrapped;
+        }
+        nodeHook.cleanups.add(cleanup);
+        widgetScope.cleanup(() => {
+            nodeHook.cleanups.delete(cleanup);
+            if (!nodeHook.cleanups.size) {
+                if (node.onRemoved === nodeHook.wrapped) node.onRemoved = nodeHook.original;
+                this.nodeHooks.delete(node);
+            }
+        });
         this.widgetCleanupMap.set(widget, cleanup);
         this.widgetCleanups.add(cleanup);
     }

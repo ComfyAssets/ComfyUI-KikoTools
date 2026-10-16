@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTagList, searchTags } from '../../web/autocomplete/tags.js';
+import { parseTagList, searchTags, tagQuery } from '../../web/autocomplete/tags.js';
 
 test('four-column packs preserve categories, popularity and quoted aliases', () => {
     const tags = parseTagList('\ufefftag,category,post_count,aliases\r\nblue_eyes,0,900,"blue_eye,azure_eyes"\r\nartist_name,1,700,"artist,artist_alias"\r\n');
@@ -61,4 +61,16 @@ test('worker reports parsed tag records and errors through its message boundary'
         assert.equal(messages[0].tags[0].frequency, 20);
         assert.match(messages[1].error, /post count/);
     } finally { delete globalThis.self; }
+});
+
+test('prompt query boundaries preserve Unicode, punctuation and surrounding weighting syntax', () => {
+    assert.deepEqual(tagQuery('sky, 日本'), { prefix: '日本', start: 5 });
+    assert.deepEqual(tagQuery('(o_o)'), { prefix: '(o_o)', start: 0 });
+    assert.deepEqual(tagQuery('<3'), { prefix: '<3', start: 0 });
+    assert.deepEqual(tagQuery('sky, (日本', true), { prefix: '日本', start: 6 });
+    assert.deepEqual(tagQuery('hatsune_miku_(vocaloid'), { prefix: 'hatsune_miku_(vocaloid', start: 0 });
+    assert.deepEqual(tagQuery('foo\nmiku/vocal'), { prefix: 'miku/vocal', start: 4 });
+    assert.deepEqual(tagQuery('🎨🎨'), { prefix: '🎨🎨', start: 0 });
+    assert.equal(tagQuery('sky, '), null);
+    assert.equal(tagQuery('(', true), null);
 });

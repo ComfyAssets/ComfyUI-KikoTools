@@ -1,4 +1,10 @@
 {
+  "autocomplete/tag-download.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
+  },
   "autocomplete/tag-storage.js": {
     "lines": 98,
     "branches": 98,
@@ -13,7 +19,7 @@
   },
   "autocomplete/tags.js": {
     "lines": 98,
-    "branches": 93,
+    "branches": 95,
     "functions": 98,
     "statements": 98
   },
@@ -48,10 +54,10 @@
     "statements": 52
   },
   "kikoEmbeddingAutocomplete.js": {
-    "lines": 81,
-    "branches": 72,
+    "lines": 82,
+    "branches": 74,
     "functions": 92,
-    "statements": 81
+    "statements": 82
   },
   "kiko_custom_colors.js": {
     "lines": 46,

@@ -694,3 +694,36 @@ test('embedding tag files import through real settings and complete canonical ta
         await expect(prompt).toHaveValue('highres, ');
     }
 });
+
+test('embedding Unicode and emoticon completion preserves prompt boundaries in both renderers', async ({ page }) => {
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const { parseTagList } = await import('/extensions/kikotools/autocomplete/tags.js');
+        const autocomplete = window.kikotools.autocomplete;
+        autocomplete.customWords = parseTagList('日本語,0,10,にほんご\nheart,0,20,<3');
+        Object.assign(autocomplete.settings, { showCustomWords: true, showEmbeddings: false, showLoras: false });
+        const node = LiteGraph.createNode('TextInput');
+        app.graph.add(node);
+        node.setSize([550, 350]);
+        app.canvas.centerOnNode(node);
+    });
+    const prompt = page.locator('textarea:visible');
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    for (const renderer of [false, true, false]) {
+        await page.evaluate(async renderer => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+            app.canvas.centerOnNode(app.graph._nodes[0]);
+        }, renderer);
+        await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        await prompt.focus();
+        await expect(prompt).toHaveAttribute('aria-autocomplete', 'list');
+        for (const [query, result] of [['sky, 日本', 'sky, 日本語, '], ['sky, <3', 'sky, heart, ']]) {
+            await prompt.fill(query);
+            await expect(list.getByRole('option')).toHaveCount(1);
+            await prompt.press('ArrowDown');
+            await prompt.press('Tab');
+            await expect(prompt).toHaveValue(result);
+        }
+    }
+});

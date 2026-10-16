@@ -1204,6 +1204,7 @@ test('autocomplete respects composition, read-only fields, custom words and keyb
         Object.assign(window.kikotools.autocomplete.settings, { showEmbeddings: false, showLoras: false, showCustomWords: true, insertOnEnter: false });
         window.kikotools.autocomplete.customWords = [{ name: 'blue_sky', value: 'blue_sky', display: 'blue_sky', type: 'custom' }];
     });
+    await expect(prompt).toHaveAttribute('aria-autocomplete', 'list');
     await prompt.fill('blue');
     const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
     await expect(list).toBeVisible();
@@ -1514,4 +1515,87 @@ test('autocomplete legacy URL loads retain the newest valid list when older requ
     expect(await page.evaluate(() => window.kikotools.autocomplete.loadCustomWords('file:///tmp/tags.csv'))).toBe(0);
     expect(await page.evaluate(() => window.kikotools.autocomplete.customWords.length)).toBe(2);
     expect(await page.evaluate(() => window.kikotools.autocomplete.customWordsError)).toContain('HTTP or HTTPS');
+});
+
+test('autocomplete shares one removable node hook across widgets in any cleanup order', async ({ page }) => {
+    await openHost(page);
+    const result = await page.evaluate(() => {
+        const autocomplete = window.kikotools.autocomplete;
+        const restored = [];
+        const calls = [];
+        const make = () => {
+            const original = function (...args) { calls.push([this === node, args]); return 'original-result'; };
+            const node = { onRemoved: original };
+            const widgets = [0, 1, 2].map(() => ({ inputEl: document.createElement('textarea') }));
+            widgets.forEach(widget => autocomplete.attachToWidget(widget, node));
+            return { node, original, widgets };
+        };
+        for (const order of [[0, 1, 2], [2, 0, 1]]) {
+            const { node, original, widgets } = make();
+            const hook = node.onRemoved;
+            autocomplete.detachFromWidget(widgets[order[0]]);
+            restored.push(node.onRemoved === hook);
+            autocomplete.detachFromWidget(widgets[order[1]]);
+            autocomplete.detachFromWidget(widgets[order[2]]);
+            restored.push(node.onRemoved === original);
+        }
+        const active = make();
+        const removal = active.node.onRemoved('removed', 7);
+        restored.push(active.node.onRemoved === active.original, active.widgets.every(widget => !autocomplete.activeWidgets.has(widget)));
+        const final = make();
+        autocomplete.cleanup();
+        restored.push(final.node.onRemoved === final.original);
+        return { restored, removal, calls };
+    });
+    expect(result).toEqual({ restored: Array(7).fill(true), removal: 'original-result', calls: [[true, ['removed', 7]]] });
+});
+
+test('autocomplete inserts Unicode and punctuation aliases at the correct prompt boundary', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'TextInput', { text: '' });
+    const prompt = page.getByLabel('text', { exact: true });
+    await expect(prompt).toHaveAttribute('aria-autocomplete', 'list');
+    await page.evaluate(async () => {
+        const autocomplete = window.kikotools.autocomplete;
+        const { parseTagList } = await import('/extensions/kikotools/autocomplete/tags.js');
+        autocomplete.customWords = parseTagList('日本語,0,10,にほんご\nheart,0,20,<3\nhatsune_miku_(vocaloid),4,100,miku/vocaloid\n🎨🎨,0,1,\n(o_o),0,1,');
+        Object.assign(autocomplete.settings, { showCustomWords: true, showEmbeddings: false, showLoras: false, replaceUnderscores: false });
+    });
+    const list = page.getByRole('listbox', { name: 'Prompt completions', exact: true });
+    for (const [query, label, value] of [
+        ['日本', '日本語', '日本語, '],
+        ['にほん', '日本語', '日本語, '],
+        ['sky, <3', 'heart', 'sky, heart, '],
+        ['miku/vocal', 'hatsune_miku_(vocaloid)', 'hatsune_miku_(vocaloid), '],
+        ['sky, (日本:1.2)', '日本語', 'sky, (日本語:1.2)'],
+        ['🎨🎨', '🎨🎨', '🎨🎨, '],
+        ['(o_o)', '(o_o)', '(o_o), '],
+    ]) {
+        await prompt.fill(query);
+        if (query.includes(':1.2')) await prompt.evaluate(element => { element.setSelectionRange(element.value.indexOf(':1.2'), element.value.indexOf(':1.2')); element.dispatchEvent(new Event('input', { bubbles: true })); });
+        await expect(list.getByRole('option').first()).toContainText(label);
+        await prompt.press('ArrowDown');
+        await prompt.press('Tab');
+        await expect(prompt).toHaveValue(value);
+    }
+});
+
+test('autocomplete stops an oversized URL stream before it reaches the parser', async ({ page }) => {
+    await openHost(page);
+    const result = await page.evaluate(async () => {
+        const autocomplete = window.kikotools.autocomplete;
+        let cancelled = false, sent = false;
+        const original = autocomplete.fetchWithAbort;
+        autocomplete.fetchWithAbort = async () => new Response(new ReadableStream({
+            pull(controller) { if (!sent) { sent = true; controller.enqueue(new Uint8Array(32 * 1024 * 1024 + 1).fill(97)); } else controller.close(); },
+            cancel() { cancelled = true; },
+        }, { highWaterMark: 0 }));
+        let error;
+        try { await autocomplete.fetchTagList('/__test__/oversized-tags.csv'); }
+        catch (failure) { error = failure.message; }
+        finally { autocomplete.fetchWithAbort = original; }
+        return { cancelled, error };
+    });
+    expect(result.cancelled).toBe(true);
+    expect(result.error).toMatch(/large/i);
 });

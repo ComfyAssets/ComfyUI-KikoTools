@@ -76,3 +76,11 @@ export function searchTags(tags, prefix, limit) {
     }
     return buckets.flat().slice(0, limit).map(tag => ({ ...tag, fullPath: tag.name, type: 'custom', display: tag.name, value: tag.name }));
 }
+
+export function tagQuery(text, weighted = false) {
+    const match = text.match(/[^\s,]+$/u);
+    if (!match) return null;
+    const leading = weighted ? match[0].match(/^[\[(]*/)[0].length : 0;
+    const prefix = match[0].slice(leading);
+    return prefix ? { prefix, start: match.index + leading } : null;
+}

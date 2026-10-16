@@ -182,3 +182,11 @@ URL, guards stale loads, and retains the active list when an import fails.
 Advanced trigger, matching and insertion controls use the existing settings key.
 For dataset provenance, format and installation, see
 [Tag packs](../../docs/tag-packs/README.md).
+
+Node removal uses one hook per node, shared by its active text widgets. Detaching
+widgets in any order restores the original hook after the last widget leaves.
+General queries accept Unicode and punctuation between whitespace/comma
+boundaries. Literal bracketed names are tried before interpreting leading
+parentheses/brackets as prompt weighting; insertion preserves surrounding
+weight syntax. URL downloads enforce their byte limit while reading the body,
+cancel oversized/aborted streams, and decode UTF-8 across chunk boundaries.
