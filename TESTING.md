@@ -73,6 +73,31 @@ The browser host is a test double; these workflows do not run the real ComfyUI
 frontend or certify every node's UI. Type checking and security jobs retain their
 existing advisory behavior.
 
+### Actual ComfyUI frontend smoke test
+
+The Local Image Loader also has an opt-in suite using the actual ComfyUI frontend,
+graph, DOM widgets, renderer switch and palette settings. Start a local ComfyUI
+0.39.0 with frontend 1.55.14 and KikoTools installed, then run:
+
+```sh
+KIKO_COMFY_URL=http://127.0.0.1:8188/ node \
+  tools/testing/node_modules/@playwright/test/cli.js test \
+  --config tools/testing/comfyui.config.mjs
+```
+
+The suite requires those exact versions and records them in its artifacts. It
+serves the current checkout's extensions to a separate browser context and loads
+only KikoTools extensions. Media requests use the existing real Python routes
+with disposable fixture data on port 8771. Other HTTP writes are intercepted,
+so user settings, saved workflows and selections are not written to the live
+server. It does not execute a workflow or download models.
+
+Checks cover Classic/Nodes 2.0/live switching, theme changes, workflow save/reload
+and removal. Screenshots/traces appear in
+`tools/testing/test-results/comfyui/`. This opt-in smoke suite is separate from
+the required fixture CI job; fully provisioned, pinned ComfyUI CI and testing
+alongside other node packs remain follow-up work in issue #81.
+
 ## Required merge checks
 
 The manifest in `.github/branch-protection.json` requires all Python matrix jobs,

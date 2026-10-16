@@ -98,9 +98,10 @@ jobs:
           node-version: "24"
 
       # Check every shipped module, including files without behavioral tests.
-      - name: Check web/*.js parse as ES modules
+      - name: Check all shipped JavaScript modules parse
         run: |
-          for f in web/*.js; do
+          shopt -s globstar nullglob
+          for f in web/**/*.js web/**/*.mjs; do
             node --input-type=module --check < "$f" || { echo "Syntax error in $f"; exit 1; }
           done
 

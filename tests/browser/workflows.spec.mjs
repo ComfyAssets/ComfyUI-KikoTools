@@ -40,6 +40,79 @@ test('plugin startup registers every frontend extension and exposes real autocom
     expect(embeddings).toContainEqual(expect.objectContaining({ name: 'cat', path: 'portraits/cat' }));
 });
 
+test('shared loader controls follow host themes, resize and support keyboard selection', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'KikoLocalImageLoader');
+    const loader = page.locator('.ca-image-browser');
+    await expect(loader).toBeVisible();
+    await page.evaluate(() => document.body.style.setProperty('--bg-color', '#202020'));
+    await expect(loader).toHaveAttribute('data-ca-theme', 'dark');
+    await page.evaluate(() => document.body.style.setProperty('--bg-color', '#fafafa'));
+    await expect(loader).toHaveAttribute('data-ca-theme', 'light');
+    const toggle = loader.getByRole('switch', { name: 'Hide dot folders' });
+    await toggle.focus();
+    await page.keyboard.press('Space');
+    await expect(toggle).not.toBeChecked();
+    await expect(page.locator('.kiko-folder-name').filter({ hasText: /^\.hidden$/ })).toBeVisible();
+    await loader.getByRole('button', { name: 'Select image cat & dog.png', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await expect(loader.locator('[data-selection]')).toContainText('cat & dog.png');
+    for (const width of [320, 480, 800]) {
+        await loader.evaluate((element, width) => { element.style.width = `${width}px`; }, width);
+        expect(await loader.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+    }
+    await loader.evaluate(element => element.style.removeProperty('width'));
+    await loader.getByRole('radio', { name: 'List', exact: true }).check();
+    await expect(loader.locator('.kiko-cardholder')).toHaveAttribute('data-view', 'list');
+    await loader.getByRole('searchbox', { name: 'Filter this page' }).fill('not-in-folder');
+    await expect(loader.getByText('No matching items on this page')).toBeVisible();
+    await loader.getByRole('searchbox', { name: 'Filter this page' }).fill('cat');
+    await expect(loader.locator('.kiko-gallery-card')).toHaveCount(1);
+});
+
+test('a slower directory response cannot overwrite the latest folder', async ({ page, request }) => {
+    await openHost(page);
+    await createNode(page, 'KikoLocalImageLoader');
+    await expect(page.getByAltText('cat & dog.png', { exact: true })).toBeVisible();
+    const info = await state(request);
+    const original = await (await request.get(`/kiko_local_image_loader/images?directory=${encodeURIComponent(info.input)}`)).json();
+    const held = [];
+    await page.route('**/kiko_local_image_loader/images?*', route => {
+        if (new URL(route.request().url()).searchParams.get('directory') === info.input) held.push(route);
+        else return route.continue();
+    });
+    await page.locator('.kiko-refresh').click();
+    await expect.poll(() => held.length).toBe(1);
+    await page.locator('.kiko-path-input').fill(`${info.input}/sub`);
+    await page.locator('.kiko-browse').click();
+    await expect(page.getByAltText('forest.png', { exact: true })).toBeVisible();
+    await held[0].fulfill({ json: original });
+    await page.waitForTimeout(80);
+    await expect(page.locator('.kiko-path-input')).toHaveValue(`${info.input}/sub`);
+    await expect(page.getByAltText('cat & dog.png', { exact: true })).toHaveCount(0);
+});
+
+test('removing a loader cancels delayed autocomplete and detaches theme observers', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'KikoLocalImageLoader');
+    await expect(page.getByAltText('cat & dog.png', { exact: true })).toBeVisible();
+    await page.evaluate(() => document.body.style.setProperty('--bg-color', '#202020'));
+    await expect(page.locator('.ca-image-browser')).toHaveAttribute('data-ca-theme', 'dark');
+    await page.clock.install();
+    const suggestions = [];
+    page.on('request', request => { if (request.url().includes('/list_directories?')) suggestions.push(request.url()); });
+    await page.locator('.kiko-path-input').fill('/pending');
+    await page.evaluate(id => {
+        window.removedGallery = document.querySelector('.ca-image-browser');
+        kikoHost.removeNode(id);
+        document.body.style.setProperty('--bg-color', '#fafafa');
+    }, id);
+    await page.clock.fastForward(500);
+    expect(suggestions).toEqual([]);
+    expect(await page.evaluate(() => window.removedGallery.dataset.caTheme)).toBe('dark');
+    await expect(page.locator('.ca-image-browser')).toHaveCount(0);
+});
+
 test('actual swap handlers preserve preset values and custom dimensions', async ({ page }) => {
     await openHost(page);
     const id = await createNode(page, 'WidthHeightSelector', { preset: '832×1216 - portrait', width: 832, height: 1216 });

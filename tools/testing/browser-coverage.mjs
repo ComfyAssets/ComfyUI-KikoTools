@@ -15,7 +15,7 @@ export async function saveCoverage(page, browserName) {
     const entries = await page.coverage.stopJSCoverage();
     const result = [];
     for (const entry of entries) {
-        const match = entry.url.match(/\/extensions\/kikotools\/([a-z0-9_-]+\.js)(?:\?.*)?$/i);
+        const match = entry.url.match(/\/extensions\/kikotools\/((?:[a-z0-9_-]+\/)*[a-z0-9_-]+\.(?:js|mjs))(?:\?.*)?$/i);
         if (match) result.push({ ...entry, url: pathToFileURL(join(repositoryRoot, 'web', match[1])).href });
     }
     mkdirSync(process.env.KIKO_JS_COVERAGE, { recursive: true });
