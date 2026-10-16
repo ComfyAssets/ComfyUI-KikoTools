@@ -56,7 +56,7 @@ app.registerExtension({
                 });
 
                 // Set initial size for the node
-                this.size = [800, 600];
+                this.size = [800, 900];
                 this.setSize(this.size);
 
                 // Initialize gallery functionality

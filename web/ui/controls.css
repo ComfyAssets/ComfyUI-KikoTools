@@ -59,7 +59,7 @@
 .ca-tools .ca-segments input:checked + span { background: var(--ca-accent); border-color: var(--ca-accent); color: #fff; }
 .ca-tools .ca-segments input:focus-visible + span { outline: 2px solid var(--ca-focus); outline-offset: 2px; }
 .ca-tools .ca-visually-hidden { position: absolute; inline-size: 1px; block-size: 1px; clip-path: inset(50%); overflow: hidden; white-space: nowrap; }
-.ca-image-browser { inline-size: 100%; block-size: 100%; min-block-size: 350px; overflow: hidden; border-radius: 6px; container-type: inline-size; }
+.ca-image-browser { inline-size: 100%; block-size: 100%; min-block-size: 350px; overflow: hidden; border-radius: 6px; container-type: inline-size; contain: size; }
 .ca-image-browser .kiko-container-wrapper { display: flex; flex-direction: column; gap: 12px; padding: 12px; block-size: 100%; min-block-size: 350px; overflow: auto; }
 .ca-image-browser .ca-browser-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-block-end: 1px solid var(--ca-line); padding-block-end: 8px; }
 .ca-image-browser .ca-browser-header strong { font-size: 13px; font-weight: 550; }
@@ -74,11 +74,11 @@
 .ca-image-browser .ca-sort select { font-size: 12px; }
 .ca-image-browser .ca-gallery-tools { flex-wrap: wrap; }
 .ca-image-browser .ca-file-filter { flex: 1; inline-size: 100px; }
-.ca-image-browser .kiko-cardholder { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); gap: 8px; align-content: start; overflow: auto; min-block-size: 100px; flex: 1; padding: 3px; }
+.ca-image-browser .kiko-cardholder { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--ca-thumbnail-size, 224px)), 1fr)); grid-auto-rows: max-content; gap: 8px; align-items: start; align-content: start; overflow: auto; min-block-size: 100px; flex: 1; padding: 3px; }
 .ca-image-browser .ca-empty { grid-column: 1 / -1; text-align: center; padding: 24px 8px; color: var(--ca-muted); font-size: 12px; }
 .ca-image-browser button.kiko-gallery-card { display: flex; flex-direction: column; justify-content: start; min-inline-size: 0; overflow: hidden; border: 1px solid var(--ca-border); padding: 4px; white-space: normal; background: var(--ca-field); }
 .ca-image-browser button.kiko-gallery-card.kiko-selected { border: 2px solid var(--ca-focus); padding: 3px; }
-.ca-image-browser .kiko-card-media-wrapper { position: relative; inline-size: 100%; aspect-ratio: 1.5; overflow: hidden; border-radius: 3px; }
+.ca-image-browser .kiko-card-media-wrapper { position: relative; inline-size: 100%; aspect-ratio: 1; flex-shrink: 0; overflow: hidden; border-radius: 3px; }
 .ca-image-browser .kiko-card-media-wrapper img { display: block; inline-size: 100%; block-size: 100%; object-fit: contain; }
 .ca-image-browser .kiko-card-info-panel { inline-size: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: start; padding: 6px 3px 3px; font-size: 11px; }
 .ca-image-browser :where(.kiko-folder-card, .kiko-audio-card) { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; block-size: 100%; inline-size: 100%; background: var(--ca-field); }
@@ -94,6 +94,9 @@
 .ca-image-browser .kiko-pagination button { font-size: 11px; min-inline-size: 30px; padding-inline: 5px; }
 .ca-image-browser .ca-selection { border-block-start: 1px solid var(--ca-line); padding-block-start: 8px; }
 .ca-image-browser .ca-selection strong { font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
+.ca-tools .ca-range { display: flex; align-items: center; gap: 10px; flex-shrink: 0; color: var(--ca-muted); font-size: 11px; }
+.ca-tools .ca-range input[type="range"] { flex: 1; inline-size: 60px; min-inline-size: 0; margin: 0; padding: 0; border: 0; min-block-size: 30px; cursor: pointer; }
+.ca-tools .ca-range output { min-inline-size: 44px; font-variant-numeric: tabular-nums; }
 .ca-image-browser .kiko-status-message { padding: 10px; color: var(--ca-muted); border: 1px solid var(--ca-line); border-radius: 5px; font-size: 12px; }
 .ca-image-browser .kiko-status-message[data-state="error"] { color: var(--ca-error-text); background: var(--ca-error-bg); border-color: var(--ca-error); }
 .ca-image-browser .kiko-status-message code { overflow-wrap: anywhere; }

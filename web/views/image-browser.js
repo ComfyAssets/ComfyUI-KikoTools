@@ -1,4 +1,4 @@
-import { createButton, createField, createSelect, createSegments, createSwitch, mountTheme } from '../ui/core.js';
+import { createButton, createField, createSelect, createSegments, createSlider, createSwitch, mountTheme } from '../ui/core.js';
 
 export function createImageBrowser(id, settings, scope) {
     const element = document.createElement('div');
@@ -37,6 +37,9 @@ export function createImageBrowser(id, settings, scope) {
     filter.className = 'ca-file-filter';
     filter.setAttribute('aria-label', 'Filter this page');
     element.querySelector('.ca-gallery-tools').append(filter, createSegments('Gallery layout', [['grid', 'Grid'], ['list', 'List']], `${id}-view`, scope, value => { element.querySelector('.kiko-cardholder').dataset.view = value; }));
+    element.querySelector('.ca-browser-footer').after(createSlider('Thumbnail size', { id: `${id}-thumbnail-size`, min: 128, max: 384, step: 16, value: 224, unit: 'px' }, scope, value => {
+        element.style.setProperty('--ca-thumbnail-size', `${value}px`);
+    }));
     mountTheme(element, settings, scope);
     return element;
 }

@@ -92,6 +92,32 @@ test('a slower directory response cannot overwrite the latest folder', async ({ 
     await expect(page.getByAltText('cat & dog.png', { exact: true })).toHaveCount(0);
 });
 
+test('large galleries scroll instead of squeezing thumbnails and size is adjustable', async ({ page, request }) => {
+    await expect(await request.post('/__test__/reset', { data: { extra_images: 52 } })).toBeOK();
+    await openHost(page);
+    await createNode(page, 'KikoLocalImageLoader');
+    await page.locator('.kiko-folder-name').filter({ hasText: /^bulk$/ }).click();
+    await expect(page.locator('.kiko-card-info-panel')).toHaveCount(50);
+    const loader = page.locator('.ca-image-browser');
+    await loader.evaluate(element => { element.style.width = '800px'; element.style.height = '650px'; });
+    const size = loader.getByRole('slider', { name: 'Thumbnail size' });
+    await expect(size).toHaveValue('224');
+    const media = loader.locator('.kiko-card-media-wrapper').nth(1);
+    const before = await media.boundingBox();
+    expect(before.height).toBeGreaterThanOrEqual(200);
+    expect(await loader.locator('.kiko-cardholder').evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+    await size.fill('320');
+    await size.dispatchEvent('input');
+    expect((await media.boundingBox()).height).toBeGreaterThan(before.height);
+    await expect(loader.locator('.ca-range output')).toHaveText('320 px');
+    await size.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(size).toHaveValue('304');
+    await loader.evaluate(element => { element.style.width = '320px'; });
+    expect(await loader.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+    await expect(media.locator('img')).toHaveCSS('object-fit', 'contain');
+});
+
 test('removing a loader cancels delayed autocomplete and detaches theme observers', async ({ page }) => {
     await openHost(page);
     const id = await createNode(page, 'KikoLocalImageLoader');

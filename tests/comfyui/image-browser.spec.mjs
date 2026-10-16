@@ -47,7 +47,8 @@ test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
     });
 });
 
-test('actual host preserves the widget through renderer changes, theme changes and save/reload', async ({ page }, testInfo) => {
+test('actual host preserves the widget through renderer changes, theme changes and save/reload', async ({ page, request }, testInfo) => {
+    await expect(await request.post(`${fixture}/__test__/reset`, { data: { extra_images: 52 } })).toBeOK();
     await page.evaluate(async () => {
         const { app } = await import('/scripts/app.js');
         await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', false);
@@ -75,7 +76,16 @@ test('actual host preserves the widget through renderer changes, theme changes a
         });
         expect(node).toBeTruthy();
         expect(node.widgets_values || []).not.toContainEqual(expect.objectContaining({ className: 'ca-image-browser' }));
+        await loader.getByRole('button', { name: 'Open folder bulk', exact: true }).click();
+        await expect(loader.locator('.kiko-card-info-panel')).toHaveCount(50);
+        const media = await loader.locator('.kiko-card-media-wrapper').nth(1).boundingBox();
+        expect(media.height / media.width).toBeCloseTo(1, 1);
+        expect(media.height).toBeGreaterThan(150);
+        expect(await loader.locator('.kiko-cardholder').evaluate(element => element.clientHeight)).toBeGreaterThanOrEqual(await loader.locator('.kiko-card-media-wrapper').nth(1).evaluate(element => element.offsetHeight));
+        expect(await loader.locator('.kiko-cardholder').evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
         await page.screenshot({ path: testInfo.outputPath(renderer ? 'nodes2.png' : 'classic.png') });
+        await loader.getByRole('button', { name: 'Open folder ..', exact: true }).click();
+        await expect(loader.getByAltText('cat & dog.png', { exact: true })).toBeVisible();
     }
     for (const theme of ['light', 'dark']) {
         await page.evaluate(async theme => {

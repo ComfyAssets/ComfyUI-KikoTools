@@ -66,6 +66,25 @@ export function createButton(text, className = '') {
     return element;
 }
 
+export function createSlider(label, { id, min, max, step, value, unit }, scope, onInput) {
+    const field = document.createElement('div');
+    field.className = 'ca-range';
+    const caption = document.createElement('label');
+    caption.htmlFor = id;
+    caption.textContent = label;
+    const input = document.createElement('input');
+    Object.assign(input, { type: 'range', id, min, max, step, value });
+    const output = document.createElement('output');
+    output.setAttribute('for', id);
+    output.value = `${value} ${unit}`;
+    scope.listen(input, 'input', () => {
+        output.value = `${input.value} ${unit}`;
+        onInput(Number(input.value));
+    });
+    field.append(caption, input, output);
+    return field;
+}
+
 export function createField(label, input, id) {
     const field = document.createElement('label');
     field.className = 'ca-field';
