@@ -414,6 +414,155 @@ test('workflow timer responds to execution events and detaches removed nodes', a
     await expect(page.locator('.kiko-timer-display')).toHaveCount(0);
 });
 
+async function showTimerColorSetting(page) {
+    await page.evaluate(() => {
+        const id = 'kikotools.workflow_timer.color';
+        const definition = kikoHost.settingDefinitions.get(id);
+        const setValue = value => {
+            kikoHost.app.ui.settings.setSettingValue(id, value);
+            const replacement = definition.type(definition.name, setValue, value);
+            timerColorSetting.replaceWith(replacement);
+            window.timerColorSetting = replacement;
+        };
+        window.timerColorSetting = definition.type(definition.name, setValue, kikoHost.settings.get(id));
+        document.body.append(timerColorSetting);
+    });
+}
+
+test('shared workflow timer follows themes, saved color and reduced motion', async ({ page }) => {
+    await openHost(page);
+    await page.evaluate(() => kikoHost.app.ui.settings.setSettingValue('kikotools.workflow_timer.color', '#ff9966'));
+    const id = await createNode(page, 'KikoWorkflowTimer');
+    const panel = page.locator('.ca-workflow-timer');
+    await expect(panel).toBeVisible();
+    const timer = panel.getByRole('timer', { name: 'Elapsed workflow time' });
+    await expect(timer).toHaveCSS('color', 'rgb(255, 153, 102)');
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(theme => document.body.style.setProperty('--bg-color', theme === 'light' ? '#ffffff' : '#202020'), theme);
+        await expect(panel).toHaveAttribute('data-ca-theme', theme);
+    }
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.evaluate(() => kikoHost.emit('execution_start'));
+    await expect(timer).toHaveCSS('animation-name', 'none');
+    await page.evaluate(() => kikoHost.emit('execution_interrupted'));
+    await expect(timer).toHaveCSS('animation-name', 'none');
+    await page.evaluate(id => kikoHost.nodes.get(String(id)).onConfigure({ properties: { elapsed_time_str: '02:03:456' } }), id);
+    await expect(timer).toHaveText('02:03:456');
+    expect(await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        const saved = { properties: { other: 'kept' } };
+        node.onSerialize(saved);
+        node.properties.elapsed_time_str = 'changed after saving';
+        return saved.properties;
+    }, id)).toEqual({ other: 'kept', elapsed_time_str: '02:03:456' });
+});
+
+test('workflow timers join active execution and apply live appearance until every end event', async ({ page }) => {
+    await openHost(page);
+    await page.clock.install();
+    await createNode(page, 'KikoWorkflowTimer');
+    await page.evaluate(() => kikoHost.emit('execution_start'));
+    await page.clock.runFor(1200);
+    await createNode(page, 'KikoWorkflowTimer');
+    const displays = page.locator('.kiko-timer-display');
+    await expect(displays.nth(1)).toHaveClass(/running/);
+    await expect.poll(() => displays.evaluateAll(elements => new Set(elements.map(element => element.textContent)).size)).toBe(1);
+    await page.evaluate(() => {
+        kikoHost.app.ui.settings.setSettingValue('kikotools.workflow_timer.color', '#123456');
+        kikoHost.app.ui.settings.setSettingValue('kikotools.workflow_timer.glow', false);
+    });
+    for (const display of await displays.all()) {
+        await expect(display).toHaveCSS('color', 'rgb(18, 52, 86)');
+        await expect(display).toHaveClass(/no-glow/);
+    }
+    for (const event of ['executing', 'execution_error', 'execution_interrupted']) {
+        await page.evaluate(() => kikoHost.emit('execution_start'));
+        await page.clock.runFor(1234);
+        await page.evaluate(event => kikoHost.emit(event, null), event);
+        await expect(displays.nth(0)).not.toHaveClass(/running/);
+        const stopped = await displays.nth(0).textContent();
+        await page.clock.runFor(1000);
+        await expect(displays.nth(1)).toHaveText(stopped);
+        expect(await page.evaluate(() => kikoHost.app.graph._nodes.map(node => node.properties.elapsed_time_str))).toEqual([stopped, stopped]);
+    }
+});
+
+test('timer color controls validate hex, support keyboard sliders and presets and close with Escape', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'KikoWorkflowTimer');
+    await showTimerColorSetting(page);
+    const trigger = page.getByRole('button', { name: 'Choose timer color', exact: true });
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', { name: 'Timer color', exact: true });
+    await expect(dialog).toBeVisible();
+    const hex = dialog.getByLabel('Hex color', { exact: true });
+    await hex.fill('not-a-color');
+    await hex.press('Tab');
+    await expect(hex).toHaveAttribute('aria-invalid', 'true');
+    expect(await page.evaluate(() => kikoHost.settings.get('kikotools.workflow_timer.color'))).toBe('#0877bb');
+    await hex.fill('112233');
+    await hex.press('Tab');
+    await expect(dialog).toBeVisible();
+    await expect(hex).toHaveAttribute('aria-invalid', 'false');
+    await expect(page.locator('.kiko-timer-display')).toHaveCSS('color', 'rgb(17, 34, 51)');
+    await dialog.getByRole('button', { name: 'Use color #4A90D9', exact: true }).focus();
+    await page.keyboard.press('Space');
+    await expect(dialog.getByRole('button', { name: 'Use color #4A90D9', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const before = await hex.inputValue();
+    const hue = dialog.getByRole('slider', { name: 'Hue', exact: true });
+    await hue.hover();
+    expect(await hex.inputValue()).toBe(before);
+    await hue.focus();
+    await page.keyboard.press('ArrowRight');
+    expect(await hex.inputValue()).not.toBe(before);
+    await expect(hue).toHaveAttribute('aria-valuetext', /degrees/);
+    for (const label of ['Saturation', 'Brightness']) {
+        const slider = dialog.getByRole('slider', { name: label, exact: true });
+        await slider.focus();
+        await page.keyboard.press('End');
+        await expect(slider).toHaveValue('100');
+    }
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(trigger).toBeFocused();
+    await trigger.click();
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(trigger).toBeFocused();
+});
+
+test('timer removal releases polling and color setting removal closes and disposes its dialog', async ({ page }) => {
+    await openHost(page);
+    await page.clock.install();
+    await page.evaluate(() => {
+        window.timerIntervals = new Set();
+        const start = window.setInterval;
+        const stop = window.clearInterval;
+        window.setInterval = (...args) => { const id = start(...args); timerIntervals.add(id); return id; };
+        window.clearInterval = id => { timerIntervals.delete(id); stop(id); };
+    });
+    const first = await createNode(page, 'KikoWorkflowTimer');
+    const second = await createNode(page, 'KikoWorkflowTimer');
+    await page.evaluate(() => kikoHost.emit('execution_start'));
+    expect(await page.evaluate(() => timerIntervals.size)).toBe(1);
+    await page.evaluate(id => kikoHost.removeNode(id), first);
+    expect(await page.evaluate(() => timerIntervals.size)).toBe(1);
+    await page.evaluate(id => { window.removedTimer = kikoHost.removeNode(id); }, second);
+    expect(await page.evaluate(() => ({ intervals: timerIntervals.size, aborted: removedTimer.timerScope?.signal.aborted }))).toEqual({ intervals: 0, aborted: true });
+    await showTimerColorSetting(page);
+    await page.getByRole('button', { name: 'Choose timer color', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Timer color', exact: true })).toBeVisible();
+    await page.evaluate(() => {
+        window.detachedTimerPicker = timerColorSetting;
+        timerColorSetting.remove();
+    });
+    await expect(page.getByRole('dialog', { name: 'Timer color', exact: true })).toHaveCount(0);
+    expect(await page.evaluate(() => detachedTimerPicker.scope.signal.aborted)).toBe(true);
+    await page.evaluate(() => document.body.append(detachedTimerPicker));
+    await page.getByRole('button', { name: 'Choose timer color', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Timer color', exact: true })).toHaveCount(1);
+});
+
 test('autocomplete inserts embedding paths from the real plugin endpoint and cleans up its widget', async ({ page }) => {
     await openHost(page);
     const id = await createNode(page, 'TextInput', { text: '' });

@@ -133,6 +133,37 @@
 .ca-seed-empty { margin: 0; padding: 12px 4px; color: var(--ca-muted); font-size: 12px; text-align: center; }
 .ca-seed-status { min-block-size: 20px; font-size: 11px; overflow-wrap: anywhere; color: var(--ca-muted); flex-shrink: 0; }
 .ca-seed-status[data-kind="error"] { color: var(--ca-error-text); background: var(--ca-error-bg); }
+.ca-workflow-timer { box-sizing: border-box; inline-size: 100%; block-size: 100%; min-block-size: 90px; padding: 10px; border: 1px solid var(--ca-line); border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; container-type: inline-size; contain: size; }
+.ca-timer-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-block-end: 1px solid var(--ca-line); padding-block-end: 6px; flex-shrink: 0; }
+.ca-timer-header h3 { font-size: 13px; font-weight: 550; margin: 0; }
+.ca-timer-header > span { color: var(--ca-muted); font-size: 10px; }
+.ca-workflow-timer .kiko-timer-display { flex: 1; min-block-size: 0; display: flex; align-items: center; justify-content: center; color: var(--ca-timer-color, var(--ca-accent)); font: 600 clamp(16px, 10cqi, 64px)/1.3 ui-monospace, monospace; font-variant-numeric: tabular-nums; white-space: nowrap; animation: ca-timer-glow 4s ease-in-out infinite; }
+.ca-workflow-timer .kiko-timer-display.running { animation-duration: 2s; }
+.ca-workflow-timer .kiko-timer-display.no-glow { animation: none; text-shadow: none; }
+@keyframes ca-timer-glow { 0%, 100% { text-shadow: 0 0 8px currentColor; } 50% { text-shadow: 0 0 16px currentColor; } }
+@media (prefers-reduced-motion: reduce) { .ca-workflow-timer .kiko-timer-display { animation: none; text-shadow: none; } }
+.ca-color-picker { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.ca-color-value { font-size: 12px; color: var(--ca-muted); font-family: ui-monospace, monospace; }
+.ca-color-swatch { inline-size: 24px; block-size: 20px; border: 1px solid var(--ca-border); border-radius: 3px; background: var(--ca-picked-color); }
+.ca-color-dialog { box-sizing: border-box; inline-size: 360px; max-inline-size: calc(100dvw - 32px); max-block-size: calc(100dvh - 32px); overflow: auto; padding: 16px; border: 1px solid var(--ca-border); border-radius: 8px; background: var(--ca-surface); color: var(--ca-text); box-shadow: 0 8px 28px #00000040; }
+.ca-color-dialog[open] { display: flex; flex-direction: column; gap: 12px; }
+.ca-color-dialog::backdrop { background: #0008; }
+.ca-color-dialog h2 { margin: 0; font-size: 16px; }
+.ca-color-dialog :where(.ca-color-hint, .ca-color-error) { margin: 0; font-size: 12px; }
+.ca-color-hint { color: var(--ca-muted); }
+.ca-color-error { color: var(--ca-error-text); }
+.ca-color-error:empty { display: none; }
+.ca-color-dialog .ca-field { justify-content: space-between; }
+.ca-color-dialog input[type="text"] { inline-size: 130px; font-family: ui-monospace, monospace; }
+.ca-color-dialog input[aria-invalid="true"] { border-color: var(--ca-error); }
+.ca-color-dialog .ca-range { display: grid; grid-template-columns: 75px minmax(0, 1fr) 65px; gap: 8px; align-items: center; }
+.ca-color-dialog .ca-range :where(label, output) { font-size: 11px; color: var(--ca-muted); }
+.ca-color-dialog .ca-range input[type="range"] { inline-size: 100%; padding: 0; border: 0; background: transparent; }
+.ca-color-presets { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; padding: 3px; }
+.ca-color-dialog button.ca-color-preset { min-inline-size: 24px; min-block-size: 30px; padding: 0; background: var(--ca-picked-color); border-color: var(--ca-border); }
+.ca-color-dialog button.ca-color-preset[aria-pressed="true"] { outline: 2px solid var(--ca-focus); outline-offset: 2px; }
+.ca-color-done { align-self: end; }
+@media (pointer: coarse) { .ca-color-dialog button.ca-color-preset { min-block-size: 40px; } }
 @media (forced-colors: active) {
     .ca-tools { --ca-accent: Highlight; --ca-focus: Highlight; --ca-border: ButtonText; --ca-line: CanvasText; }
     .ca-tools .ca-switch input:checked::before { background: HighlightText; }

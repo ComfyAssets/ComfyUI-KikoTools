@@ -1,6 +1,7 @@
 // A test double for the ComfyUI host; extension implementations load unchanged.
 const extensions = [];
 const settings = new Map();
+const settingDefinitions = new Map();
 const nodes = new Map();
 let nextId = 1;
 function el(tag, props = {}, children = []) {
@@ -19,8 +20,9 @@ const app = {
         extensions.push(extension);
     },
     ui: { settings: {
-        addSetting(setting) { if (!settings.has(setting.id)) settings.set(setting.id, setting.defaultValue); },
+        addSetting(setting) { settingDefinitions.set(setting.id, setting); if (!settings.has(setting.id)) settings.set(setting.id, setting.defaultValue); },
         getSettingValue: id => settings.get(id),
+        setSettingValue(id, value) { settings.set(id, value); settingDefinitions.get(id)?.onChange?.(value); },
     }, dialog: { show: text => { const dialog = el('div', { className: 'host-dialog', textContent: text }); document.body.append(dialog); } } },
     graph: {
         _nodes: [],
@@ -106,7 +108,7 @@ function removeNode(id) {
     app.graph._nodes = app.graph._nodes.filter(item => item !== node);
     return node;
 }
-window.kikoHost = { app, api, widgets, el, extensions, settings, nodes, createNode, removeNode,
+window.kikoHost = { app, api, widgets, el, extensions, settings, settingDefinitions, nodes, createNode, removeNode,
     emit: (name, detail) => api.dispatchEvent(new CustomEvent(name, { detail })) };
 const manifest = await (await fetch('/__test__/state')).json();
 for (const name of manifest.extensions) await import(`/extensions/kikotools/${name}`);

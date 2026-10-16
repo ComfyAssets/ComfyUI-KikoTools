@@ -100,6 +100,8 @@ Its `/view` requests also use disposable fixture output rather than live files.
 Seed History checks keyboard-operable rows through renderer switches, list growth
 and scrolling on resize, palettes, saved history/node dimensions, serialization
 and polling cleanup on removal.
+Workflow Timer covers execution events, Classic/Nodes 2.0 switching, themes,
+custom node colors, persisted time/dimensions and the actual settings picker.
 Screenshots/traces appear in
 `tools/testing/test-results/comfyui/`. This opt-in smoke suite is separate from
 the required fixture CI job; fully provisioned, pinned ComfyUI CI and testing
