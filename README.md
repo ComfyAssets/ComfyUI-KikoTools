@@ -432,8 +432,6 @@ Download models, LoRAs, and other assets directly from CivitAI, HuggingFace, and
 - Build reproducible workflows with automatic model fetching
 - Quickly test new models from the community
 
-![Model Downloader Example](examples/workflows/model_downloader_example.png)
-
 #### ⏱️ Workflow Timer
 Real-time execution timer that displays workflow duration with millisecond precision.
 
@@ -806,8 +804,8 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Gemini Prompt Engineer** | Legacy image analysis and prompt generation | Deprecated | [Docs](examples/documentation/gemini_prompt.md) |
 | **Display Any** | Universal debugging tool for any data type or tensor shapes | ✅ Complete | [Docs](examples/documentation/display_any.md) |
 | **Image to Multiple Of** | Adjust image dimensions to multiples for model compatibility | ✅ Complete | [Docs](examples/documentation/image_to_multiple_of.md) |
-| **Image Scale Down By** | Efficiently scale images down by a specified factor | ✅ Complete | [Docs](examples/documentation/image_scale_down_by.md) |
-| **Film Grain** | Add realistic analog film grain effects to images | ✅ Complete | [Docs](examples/documentation/film_grain.md) |
+| **Image Scale Down By** | Efficiently scale images down by a specified factor | ✅ Complete | [Docs](#-image-scale-down-by) |
+| **Film Grain** | Add realistic analog film grain effects to images | ✅ Complete | [Docs](#-film-grain) |
 | **Flux Sampler Params** | FLUX-optimized parameter generator with batch support | ✅ Complete | [Docs](examples/documentation/flux_sampler_params.md) |
 | **LoRA Folder Batch** | Batch process multiple LoRAs from folders | ✅ Complete | [Docs](examples/documentation/lora_folder_batch.md) |
 | **Plot Parameters** | Visualize parameter effects with graphs | ✅ Complete | [Docs](examples/documentation/plot_parameters.md) |
@@ -815,8 +813,8 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Scheduler Select Helper** | Optimal scheduler selection for samplers | ✅ Complete | [Docs](examples/documentation/scheduler_select_helper.md) |
 | **Text Encode Sampler Params** | Combined text encoding and parameter management | ✅ Complete | [Docs](examples/documentation/text_encode_sampler_params.md) |
 | **Local Image Loader** | Visual gallery browser for local media files | ✅ Complete | [Docs](examples/documentation/local_image_loader.md) |
-| **Model Downloader** | Download models from CivitAI, HuggingFace, and custom URLs | ✅ Complete | [Docs](examples/documentation/model_downloader.md) |
-| **Workflow Timer** | Real-time execution timer with customizable display | ✅ Complete | [Docs](examples/documentation/workflow_timer.md) |
+| **Model Downloader** | Download models from CivitAI, HuggingFace, and custom URLs | ✅ Complete | [Docs](#-model-downloader) |
+| **Workflow Timer** | Real-time execution timer with customizable display | ✅ Complete | [Docs](#️-workflow-timer) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
