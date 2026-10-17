@@ -1765,3 +1765,64 @@ test('custom colors handle absent settings, empty canvas menus, legacy groups an
     expect(await page.evaluate(() => kikoHost.app.graph._nodes[0].color)).toBe('#ffffff');
     await page.keyboard.press('Escape');
 });
+
+test('Follow Execution honors live settings, manual controls and repeated setup', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'TextInput');
+    expect(await page.evaluate(async id => {
+        const { app, extensions } = kikoHost;
+        const extension = extensions.find(item => item.name === 'kikotools.followExecution');
+        const node = app.graph._nodes[0];
+        node.getTitle = () => node.title;
+        const centered = [];
+        app.canvas.centerOnNode = node => centered.push(node.id);
+        app.runningNodeId = id;
+        const set = (name, value) => app.ui.settings.setSettingValue(`kikotools.follow_execution.${name}`, value);
+        set('enabled', true);
+        extension.getCanvasMenuItems()[1].callback();
+        kikoHost.emit('executing', id);
+        const afterManual = centered.length;
+        set('enabled', false);
+        kikoHost.emit('executing', id);
+        const afterDisable = centered.length;
+        set('enabled', true);
+        kikoHost.emit('executing', id);
+        const afterEnable = centered.length;
+        set('auto_start', true);
+        for (let i = 0; i < 3; i++) await extension.setup();
+        kikoHost.emit('execution_start');
+        kikoHost.emit('executing', id);
+        const afterRepeatedSetup = centered.length;
+        extension.getCanvasMenuItems()[1].callback();
+        kikoHost.emit('executing', id);
+        const afterStop = centered.length;
+        extension.getCanvasMenuItems().find(item => item?.content === '🫶 Show executing node').callback();
+        const afterShow = centered.length;
+        kikoHost.emit('executing', 'missing');
+        kikoHost.emit('executing', null);
+        return { afterManual, afterDisable, afterEnable, afterRepeatedSetup, afterStop, afterShow, final: centered.length };
+    }, id)).toEqual({ afterManual: 2, afterDisable: 2, afterEnable: 2, afterRepeatedSetup: 3, afterStop: 3, afterShow: 4, final: 4 });
+});
+
+test('Follow Execution retains safe sorted navigation menus and setting filters', async ({ page }) => {
+    await openHost(page);
+    for (let i = 0; i < 4; i++) await createNode(page, 'TextInput');
+    expect(await page.evaluate(() => {
+        const { app, extensions } = kikoHost;
+        const extension = extensions.find(item => item.name === 'kikotools.followExecution');
+        app.ui.settings.setSettingValue('kikotools.follow_execution.enabled', true);
+        ['constructor', '__proto__', 'toString', 'constructor'].forEach((type, index) => {
+            const node = app.graph._nodes[index];
+            Object.assign(node, { type, pos: [40 - index * 10, 0], getTitle: () => type });
+        });
+        const menu = extension.getCanvasMenuItems().find(item => item?.content === '🫶 Go to node');
+        const types = menu.submenu.options.map(item => item.content);
+        const constructors = menu.submenu.options[1].submenu.options;
+        constructors[0].callback();
+        const centered = app.centeredNode;
+        app.ui.settings.setSettingValue('kikotools.follow_execution.show_goto_node', false);
+        const hiddenGoTo = !extension.getCanvasMenuItems().some(item => item?.content === '🫶 Go to node');
+        app.ui.settings.setSettingValue('kikotools.follow_execution.enabled', false);
+        return { types, centered, hiddenGoTo, disabled: extension.getCanvasMenuItems() };
+    })).toEqual({ types: ['__proto__', 'constructor', 'toString'], centered: 4, hiddenGoTo: true, disabled: [] });
+});
