@@ -23,6 +23,7 @@ CONTRIBUTING.md
 CODE_OF_CONDUCT.md
 
 tools/
+.ci-comfyui/
 coverage/
 TESTING.md
 AGENTS.md

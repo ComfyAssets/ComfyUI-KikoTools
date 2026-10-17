@@ -5,6 +5,7 @@
   "engines": { "node": ">=24" },
   "scripts": {
     "test": "node --test ../../tests/js/*.test.mjs",
+    "test:comfyui": "playwright test --config comfyui.config.mjs",
     "test:browser": "playwright test --config playwright.config.mjs",
     "test:coverage": "node frontend-coverage.mjs",
     "coverage:update": "node frontend-coverage.mjs --update-baseline"

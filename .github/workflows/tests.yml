@@ -54,6 +54,62 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  comfyui:
+    name: real ComfyUI compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: tools/testing/package-lock.json
+      - name: Read the reviewed runtime pins
+        id: runtime
+        run: |
+          node --input-type=module <<'JS' >> "$GITHUB_OUTPUT"
+          import runtime from './tools/testing/comfyui-runtime.json' with { type: 'json' };
+          for (const [key, value] of Object.entries(runtime)) console.log(`${key}=${value}`);
+          JS
+      - name: Check out pinned ComfyUI
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ steps.runtime.outputs.repository }}
+          ref: ${{ steps.runtime.outputs.revision }}
+          path: .ci-comfyui
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ steps.runtime.outputs.pythonVersion }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            .ci-comfyui/requirements.txt
+            tools/testing/comfyui-runtime.json
+      - name: Install CPU runtime and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "torch==${{ steps.runtime.outputs.torchVersion }}" "torchvision==${{ steps.runtime.outputs.torchvisionVersion }}" --index-url https://download.pytorch.org/whl/cpu
+          pip install -r .ci-comfyui/requirements.txt -r requirements-dev.txt "torch==${{ steps.runtime.outputs.torchVersion }}" "torchvision==${{ steps.runtime.outputs.torchvisionVersion }}"
+      - run: npm ci --prefix tools/testing --ignore-scripts
+      - run: npx --prefix tools/testing playwright install --with-deps chromium
+      - name: Classic and Nodes 2.0 startup and compatibility
+        env:
+          KIKO_COMFY_ROOT: ${{ github.workspace }}/.ci-comfyui
+          KIKO_TEST_PYTHON: python
+        run: npm run --prefix tools/testing test:comfyui
+      - name: Upload real-host reports and startup logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: real-comfyui-reports
+          path: tools/testing/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   coverage:
     name: coverage gate (85%)
     runs-on: ubuntu-latest
