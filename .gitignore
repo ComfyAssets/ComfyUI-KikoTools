@@ -175,3 +175,6 @@ node_modules/
 coverage/
 playwright-report/
 test-results/
+
+# Disposable pinned host checkout used by CI
+.ci-comfyui/

@@ -1,7 +1,7 @@
 # ComfyUI-KikoTools
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 ![ComfyUI](https://img.shields.io/badge/ComfyUI-compatible-green.svg)
 ![Tests](https://github.com/ComfyAssets/ComfyUI-KikoTools/workflows/Tests/badge.svg)
 ![Code Quality](https://github.com/ComfyAssets/ComfyUI-KikoTools/workflows/Code%20Quality/badge.svg)
@@ -16,6 +16,13 @@ This project started out of frustration with keeping ComfyUI up to date and wait
 I tried forking, patching, and submitting merge requests, but eventually decided to create my own curated collection of tools—fully supported and maintained by me. That’s how Kiko’s Tools was born.
 
 I’m sharing them here with the community, and I hope you find them as useful as I do.
+
+## 1.2.0 — unified ComfyAssets UI
+
+A consistent interface across the KikoTools controls, with ComfyUI-following
+light/dark styling and Classic/Nodes 2.0 support. Existing workflow interfaces
+and settings are retained. See the [release notes](CHANGELOG.md),
+[migration overview](docs/ui-migration.md) and [screenshots](docs/screenshots/).
 
 ## ComfyUI Classic and Nodes 2.0
 
@@ -965,7 +972,7 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - ComfyUI installation
 - PyTorch 2.0+
 
@@ -1103,20 +1110,27 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📈 Stats
 
-- **Nodes**: 21 (15 core tools + 6 xyz-helpers)
-- **Features**: Embedding Autocomplete (settings-based, not a node)
-- **Categories**: 9 emoji-based categories for better organization
+- **Registered Nodes**: 33, including the deprecated Gemini node
+- **Extensions**: Embedding Autocomplete, Custom Colors and Follow Execution
+- **Organization**: Tools grouped under ComfyAssets
 - **Download Platforms**: 3 (CivitAI, HuggingFace, Custom URLs)
 - **Format Support**: 3 (PNG, JPEG, WebP with advanced controls)
 - **Presets**: 26 curated resolution presets
 - **Interactive Features**: 8+ (swap buttons, history UI, popup viewers, parameter visualization)
 - **Legacy AI Integration**: Deprecated Gemini node retained for saved workflows
 - **Test Coverage**: Enforced 85% Python statement/branch coverage and per-file frontend coverage floors
-- **Python Version**: 3.8+
-- **ComfyUI Compatibility**: Latest
+- **Python Version**: 3.10+
+- **ComfyUI Compatibility**: Classic and Nodes 2.0; tested runtime pins in [TESTING.md](TESTING.md)
 - **Dependencies**: Minimal (PyTorch, NumPy, Pillow, google-genai for Gemini)
 
 ## 🙏 Attribution
+
+### UI inspiration
+
+[Pixaroma's ComfyUI toolkit](https://github.com/pixaroma/ComfyUI-Pixaroma)
+inspired the reusable controls and editor organization. ComfyAssets uses its own
+implementation and styling; no Pixaroma toolkit code or assets are vendored.
+
 
 ### xyz-helpers Tools
 The xyz-helpers collection was adapted from [comfyui-essentials-nodes](https://github.com/cubiq/ComfyUI_essentials) by cubiq. The original project is in maintenance-only mode, and we've adopted these essential tools to ensure continued support and compatibility with modern ComfyUI workflows. We're grateful for cubiq's original work and contributions to the ComfyUI community.
