@@ -10,6 +10,7 @@ const web = resolve(fileURLToPath(new URL('../../web/', import.meta.url)));
 test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
     const info = await (await request.get(`${baseURL}system_stats`)).json();
     expect(info.system.comfyui_version).toBe(runtime.serverVersion);
+    if (process.env.KIKO_COMFY_ROOT) expect(info.system.pytorch_version).toBe(`${runtime.torchVersion}+cpu`);
     expect(info.system.required_frontend_version).toBe(runtime.frontendVersion);
     expect(info.system.comfy_package_versions.find(item => item.name === 'comfyui-frontend-package')?.installed).toBe(runtime.frontendVersion);
     await testInfo.attach('host-versions.json', { body: JSON.stringify(info.system, null, 2), contentType: 'application/json' });
