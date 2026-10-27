@@ -85,7 +85,12 @@ class HostNode {
     computeSize() { return this.size; }
     onResize(size) { this.size = size; }
     setDirtyCanvas() {}
-    configure(info) { this.properties = info.properties || {}; }
+    configure(info) {
+        this.properties = info.properties || {};
+        const editable = this.widgets.filter(entry => entry.inputEl);
+        (info.widgets_values || []).forEach((value, index) => { if (editable[index]) editable[index].value = value; });
+        this.onConfigure?.(info);
+    }
     onNodeCreated() { this.created = true; }
     onExecuted() { this.executions = (this.executions || 0) + 1; }
     onRemoved() { this.removed = true; }

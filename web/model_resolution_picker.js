@@ -14,6 +14,8 @@ const RATIO_ERROR = 'Enter a ratio like 16:9';
 const FALLBACK_STEP = 8;
 const NODE_SIZE = [340, 600];
 const MIN_PANEL_HEIGHT = 320;
+const LEGACY_VALUE_COUNT = 4;
+const LEGACY_WIDGET_ORDER = ['model', 'width', 'height', 'batch_size'];
 const WRAPPED_WIDGETS = ['model', 'resolution', 'width', 'height'];
 
 let familiesPromise;
@@ -254,6 +256,25 @@ function mountPicker(node) {
     node.onRemoved = function () {
         scope.dispose();
         return onRemoved?.apply(this, arguments);
+    };
+
+    // Workflows saved before the resolution widget carry four values
+    // (model, width, height, batch_size) and load shifted by one slot.
+    const onConfigure = node.onConfigure;
+    node.onConfigure = function (info) {
+        const result = onConfigure?.apply(this, arguments);
+        const values = info?.widgets_values;
+        if (Array.isArray(values) && values.length === LEGACY_VALUE_COUNT) {
+            LEGACY_WIDGET_ORDER.forEach((name, index) => {
+                const widget = widgetOf(node, name);
+                if (widget) widget.value = values[index];
+            });
+            const resolution = widgetOf(node, 'resolution');
+            if (resolution) resolution.value = 'custom';
+            modelLabel = widgetOf(node, 'model')?.value;
+            render();
+        }
+        return result;
     };
 
     const onConnectionsChange = node.onConnectionsChange;

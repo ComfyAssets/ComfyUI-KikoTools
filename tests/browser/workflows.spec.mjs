@@ -1940,6 +1940,31 @@ test('resolution picker fills the model dropdown from the payload and keeps a re
     expect(result.value).toBe('Anima');
 });
 
+test('resolution picker maps a four-value legacy workflow onto the native widgets', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SD 1.5', resolution: 'custom', width: 512, height: 512, batch_size: 1 });
+    await page.evaluate(id => kikoHost.nodes.get(String(id)).configure({ widgets_values: ['SDXL', 1216, 832, 2] }), id);
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    await expect(node.getByLabel('model', { exact: true })).toHaveValue('SDXL');
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('1216');
+    await expect(node.getByLabel('height', { exact: true })).toHaveValue('832');
+    await expect(node.getByLabel('batch_size', { exact: true })).toHaveValue('2');
+    // The shim resets resolution to custom; the render then syncs it to the listed label for this size.
+    await expect(node.getByLabel('resolution', { exact: true })).toHaveValue('1216×832 - 3:2 (1.0MP)');
+    await expect(page.locator('.ca-resolution-picker').getByRole('button', { name: '3:2', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await page.evaluate(id => kikoHost.nodes.get(String(id)).configure({ widgets_values: ['SDXL', 1000, 1000, 1] }), id);
+    await expect(node.getByLabel('resolution', { exact: true })).toHaveValue('custom');
+});
+
+test('resolution picker leaves five-value workflows untouched', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SD 1.5', resolution: 'custom', width: 512, height: 512, batch_size: 1 });
+    await page.evaluate(id => kikoHost.nodes.get(String(id)).configure({ widgets_values: ['SDXL', 'custom', 1216, 832, 2] }), id);
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('1216');
+    await expect(node.getByLabel('batch_size', { exact: true })).toHaveValue('2');
+});
+
 test('resolution picker mounting is idempotent and removal disposes its scope', async ({ page }) => {
     await openHost(page);
     const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1024, height: 1024, batch_size: 1 });
