@@ -1826,3 +1826,35 @@ test('Follow Execution retains safe sorted navigation menus and setting filters'
         return { types, centered, hiddenGoTo, disabled: extension.getCanvasMenuItems() };
     })).toEqual({ types: ['__proto__', 'constructor', 'toString'], centered: 4, hiddenGoTo: true, disabled: [] });
 });
+
+test('resolution picker renders chips from the families route and writes sizes to native widgets', async ({ page, request }) => {
+    await openHost(page);
+    const payload = await (await request.get('/kikotools/model_resolution/families')).json();
+    expect(payload.default).toBe('SDXL');
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(panel.locator('.ca-resolution-header')).toHaveText('1024 × 1024 · 1:1 · 1.0 MP');
+    await panel.getByRole('button', { name: '3:2', exact: true }).click();
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('1216');
+    await expect(node.getByLabel('height', { exact: true })).toHaveValue('832');
+    await expect(panel.getByRole('button', { name: '1216 × 832', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(panel.getByRole('button', { name: '21:9', exact: true })).toBeEnabled();
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(theme => document.body.style.setProperty('--bg-color', theme === 'light' ? '#fff' : '#202020'), theme);
+        await expect(panel).toHaveAttribute('data-ca-theme', theme);
+    }
+    expect(await panel.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
+test('resolution picker mounting is idempotent and removal disposes its scope', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1024, height: 1024, batch_size: 1 });
+    await page.evaluate(id => { const node = kikoHost.nodes.get(String(id)); node.createSwapButton(); node.createSwapButton(); }, id);
+    await expect(page.locator('.ca-resolution-picker')).toHaveCount(1);
+    await expect(page.locator('.ca-dimension-swap')).toHaveCount(1);
+    const aborted = await page.evaluate(id => { const node = kikoHost.nodes.get(String(id)); kikoHost.removeNode(id); return node.resolutionScope.signal.aborted; }, id);
+    expect(aborted).toBe(true);
+    await expect(page.locator('.ca-resolution-picker')).toHaveCount(0);
+});
