@@ -17,6 +17,13 @@ I tried forking, patching, and submitting merge requests, but eventually decided
 
 I’m sharing them here with the community, and I hope you find them as useful as I do.
 
+## 1.3.0 — Model Resolution Picker
+
+A new node that picks a native resolution for a model family from a chip grid of
+aspect ratios, with a synced `resolution` dropdown, a shipped family table and a
+user override file. See the [release notes](CHANGELOG.md) and the
+[node documentation](examples/documentation/model_resolution_picker.md).
+
 ## 1.2.0 — unified ComfyAssets UI
 
 A consistent interface across the KikoTools controls, with ComfyUI-following

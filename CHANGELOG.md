@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.3.0
+
+### Model Resolution Picker
+
+- New `Model Resolution Picker` node (🖼️ Resolution): pick a native size for a
+  model family from a chip grid of aspect ratios and output an empty latent plus
+  width/height. Fourteen shipped families (SD 1.5, SDXL, Illustrious XL, Anima,
+  Flux.1, Z-Image, Qwen-Image, Flux.2 / Klein / MOSS, Qwen-Image 2.1,
+  HunyuanImage 2.1 and four video keyframe rows), each rounded to its VAE step.
+- Native `resolution` dropdown that mirrors the chip grid both ways; typed or
+  wired sizes show `custom`.
+- Shipped family table in `families.json` with a validator, and a user override
+  file at `user/kikotools/model_resolutions.json` that can replace, add or remove
+  families and set the default. Invalid files are ignored whole with a warning
+  in the panel.
+- The node height follows the panel content, and workflows saved before the
+  dropdown existed still load.
+- `GET /kikotools/model_resolution/families` serves the merged table; the shared
+  dimension swap now works on nodes without a preset widget.
+
 ## 1.2.0
 
 ### Unified ComfyAssets UI
