@@ -9,6 +9,20 @@ function createToggle(text, pressed, disabled) {
     return button;
 }
 
+const SHAPE_LONG_SIDE = 18;
+const SHAPE_MIN_SIDE = 6;
+
+function createShape(chipId) {
+    const [w, h] = chipId.split(':').map(Number);
+    const short = Math.max(SHAPE_MIN_SIDE, Math.round((SHAPE_LONG_SIDE * Math.min(w, h)) / Math.max(w, h)));
+    const shape = document.createElement('span');
+    shape.className = 'ca-resolution-shape';
+    shape.setAttribute('aria-hidden', 'true');
+    shape.style.width = `${w >= h ? SHAPE_LONG_SIDE : short}px`;
+    shape.style.height = `${h >= w ? SHAPE_LONG_SIDE : short}px`;
+    return shape;
+}
+
 export function createResolutionPickerView(scope, actions) {
     const element = document.createElement('div');
     element.className = 'ca-tools ca-resolution-picker';
@@ -48,11 +62,24 @@ export function createResolutionPickerView(scope, actions) {
     });
     scope.listen(input, 'change', () => actions.commitRatio(input.value));
 
+    let message = '';
+    let isMessageError = false;
+    let warning = '';
+    const showStatus = () => {
+        status.textContent = message || warning;
+        status.dataset.error = String(Boolean(message) && isMessageError);
+    };
+
     return {
         element, input,
         setStatus(text, isError = false) {
-            status.textContent = text;
-            status.dataset.error = String(Boolean(isError));
+            message = text;
+            isMessageError = Boolean(isError);
+            showStatus();
+        },
+        setWarning(text) {
+            warning = text;
+            showStatus();
         },
         render(state) {
             const focused = document.activeElement;
@@ -62,6 +89,7 @@ export function createResolutionPickerView(scope, actions) {
             chips.replaceChildren(...state.chips.map(chip => {
                 const button = createToggle(chip.label, chip.active, state.disabled || chip.disabled);
                 button.dataset.chip = chip.id;
+                if (chip.id !== CUSTOM_CHIP) button.prepend(createShape(chip.id));
                 return button;
             }));
             input.hidden = !state.customOpen;

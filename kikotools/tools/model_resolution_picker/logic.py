@@ -1,6 +1,8 @@
 """Pure size math for the Model Resolution Picker node."""
 
 import math
+import re
+from typing import Optional
 
 MEGAPIXEL = 1_048_576
 
@@ -42,3 +44,22 @@ def ratio_label(width: int, height: int) -> str:
     divisor = math.gcd(width, height)
     label = f"{width // divisor}:{height // divisor}"
     return _ALIASES.get(label, label)
+
+
+_SIZE_LABEL = re.compile(r"^(\d+)×(\d+) - \S+ \(\d+\.\dMP\)$")
+
+
+def size_label(width: int, height: int, ratio_text: str) -> str:
+    """Return the dropdown label ``W×H - ratio (X.XMP)`` for a size."""
+    return f"{width}×{height} - {ratio_text} ({width * height / 1_000_000:.1f}MP)"
+
+
+def parse_size_label(text: object) -> Optional[tuple[int, int]]:
+    """Return ``(width, height)`` from a :func:`size_label` string, else None."""
+    if not isinstance(text, str):
+        return None
+    match = _SIZE_LABEL.match(text)
+    if match is None:
+        return None
+    width, height = int(match.group(1)), int(match.group(2))
+    return (width, height) if width > 0 and height > 0 else None

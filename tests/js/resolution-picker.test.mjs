@@ -2,10 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
     defaultEntry,
+    dropdownOptions,
     deriveSelection,
     effectiveSize,
     megapixels,
     parseRatio,
+    parseSizeLabel,
+    sizeLabel,
     sizesForRatio,
     sizeOnModelChange,
 } from '../../web/ui/resolution-picker.js';
@@ -58,4 +61,21 @@ test('model change keeps listed sizes, else the same chip default, else the fami
     assert.deepEqual(sizeOnModelChange(payload, 'HunyuanImage 2.1', 1344, 768, '16:9'), [2560, 1536]);
     assert.deepEqual(sizeOnModelChange(payload, 'HunyuanImage 2.1', 1216, 832, '3:2'), [2048, 2048]);
     assert.deepEqual(defaultEntry(payload.families[0], '21:9'), null);
+});
+test('size labels round-trip and mirror the Python format', () => {
+    assert.equal(sizeLabel(1216, 832, '3:2'), '1216×832 - 3:2 (1.0MP)');
+    assert.equal(sizeLabel(2560, 1536, '16:9'), '2560×1536 - 16:9 (3.9MP)');
+    assert.deepEqual(parseSizeLabel(sizeLabel(768, 1344, '9:16')), [768, 1344]);
+    for (const text of ['custom', 'garbage', '', null, undefined, '0×832 - 3:2 (1.0MP)']) assert.equal(parseSizeLabel(text), null);
+});
+test('dropdownOptions lists the active chip sizes, or every family size for custom', () => {
+    assert.deepEqual(dropdownOptions(payload, 'SDXL', '3:2'), ['custom', '1216×832 - 3:2 (1.0MP)']);
+    assert.deepEqual(dropdownOptions(payload, 'SDXL', null), [
+        'custom', '1024×1024 - 1:1 (1.0MP)', '832×1216 - 2:3 (1.0MP)', '1216×832 - 3:2 (1.0MP)',
+        '768×1344 - 9:16 (1.0MP)', '1344×768 - 16:9 (1.0MP)',
+    ]);
+    assert.deepEqual(dropdownOptions(payload, 'SDXL', 'custom'), dropdownOptions(payload, 'SDXL', null));
+    assert.deepEqual(dropdownOptions(payload, 'SDXL', '21:9'), ['custom']);
+    assert.deepEqual(dropdownOptions(payload, 'nope', '3:2'), ['custom']);
+    assert.deepEqual(dropdownOptions(null, 'SDXL', null), ['custom']);
 });

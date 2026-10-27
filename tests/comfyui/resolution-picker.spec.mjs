@@ -86,17 +86,18 @@ test('resolution picker survives renderers, swap, themes and workflow reload', a
         const { app } = await import('/scripts/app.js');
         const workflow = app.graph.serialize();
         const saved = workflow.nodes.find(node => node.type === 'ModelResolutionPicker');
-        if (saved.widgets_values.slice(4).some(value => value !== '' && value != null)) throw new Error('Picker UI leaked into workflow values');
+        if (saved.widgets_values.slice(5).some(value => value !== '' && value != null)) throw new Error('Picker UI leaked into workflow values');
         await app.loadGraphData(workflow);
         const node = app.graph._nodes.find(node => node.type === 'ModelResolutionPicker');
         return {
-            saved: saved.widgets_values.slice(0, 4),
-            restored: node.widgets.filter(widget => ['model', 'width', 'height', 'batch_size'].includes(widget.name)).map(widget => widget.value),
+            saved: saved.widgets_values.slice(0, 5),
+            restored: node.widgets.filter(widget => ['model', 'resolution', 'width', 'height', 'batch_size'].includes(widget.name)).map(widget => widget.value),
             size: Array.from(node.size),
             savedSize: Array.from(saved.size),
         };
     });
     expect(restored.restored).toEqual(restored.saved);
+    expect(restored.restored[1]).toMatch(/^\d+×\d+ - 9:16 \(\d\.\dMP\)$/);
     expect(restored.size).toEqual(restored.savedSize);
     await expect(panel.getByRole('button', { name: '9:16', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await page.evaluate(async () => {

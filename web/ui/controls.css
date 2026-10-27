@@ -235,6 +235,7 @@
 .ca-resolution-header { margin: 0; font-size: 12px; color: var(--ca-muted); overflow-wrap: anywhere; }
 .ca-resolution-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .ca-resolution-chips button { min-inline-size: 0; padding-inline: 4px; white-space: normal; overflow-wrap: anywhere; }
+.ca-resolution-shape { display: inline-block; border: 1px solid currentColor; border-radius: 2px; margin-inline-end: 6px; vertical-align: middle; }
 .ca-resolution-sizes { display: flex; flex-direction: column; gap: 6px; }
 .ca-resolution-sizes button { inline-size: 100%; }
 .ca-resolution-picker :where(.ca-resolution-chips, .ca-resolution-sizes) button[aria-pressed="true"] { background: var(--ca-accent); border-color: var(--ca-accent); color: #fff; }

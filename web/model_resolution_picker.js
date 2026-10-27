@@ -3,7 +3,7 @@ import { api } from '../../scripts/api.js';
 import { createScope, mountTheme } from './ui/core.js';
 import { swapDimensions } from './ui/dimensions.js';
 import { mountDimensionSwap } from './ui/dimension-swap.js';
-import { defaultEntry, deriveSelection, effectiveSize, megapixels, parseRatio, sizeOnModelChange, sizesForRatio } from './ui/resolution-picker.js';
+import { defaultEntry, deriveSelection, dropdownOptions, effectiveSize, megapixels, parseRatio, parseSizeLabel, sizeLabel, sizeOnModelChange, sizesForRatio } from './ui/resolution-picker.js';
 import { createResolutionPickerView } from './views/resolution-picker.js';
 
 const FAMILIES_ROUTE = '/kikotools/model_resolution/families';
@@ -14,7 +14,7 @@ const RATIO_ERROR = 'Enter a ratio like 16:9';
 const FALLBACK_STEP = 8;
 const NODE_SIZE = [340, 600];
 const MIN_PANEL_HEIGHT = 320;
-const WRAPPED_WIDGETS = ['model', 'width', 'height'];
+const WRAPPED_WIDGETS = ['model', 'resolution', 'width', 'height'];
 
 let familiesPromise;
 
@@ -52,6 +52,7 @@ function mountPicker(node) {
     let modelLabel = widgetOf(node, 'model')?.value;
     let pendingModel = null;
     let view;
+    let optionsKey = '';
 
     const readSize = () => ['width', 'height'].map(name => Number(widgetOf(node, name)?.value));
 
@@ -95,10 +96,26 @@ function mountPicker(node) {
         };
     }
 
+    function syncResolution(state) {
+        const widget = widgetOf(node, 'resolution');
+        const selection = state.selection;
+        if (!widget || !selection) return;
+        const chip = state.customOpen || selection.custom ? null : selection.chip;
+        const key = `${selection.family?.label}|${chip}`;
+        if (key !== optionsKey) {
+            optionsKey = key;
+            widget.options.values = dropdownOptions(payload, selection.family?.label, chip);
+        }
+        const [width, height] = readSize();
+        const label = selection.entryIndex >= 0 ? sizeLabel(width, height, selection.chip) : 'custom';
+        widget.value = widget.options.values.includes(label) ? label : 'custom';
+    }
+
     function render() {
         if (scope.signal.aborted) return;
         const state = buildState();
         view.render(state);
+        syncResolution(state);
         const swap = node.swapButtonWidget?.element?.querySelector('button');
         if (swap) swap.disabled = state.wired;
     }
@@ -189,7 +206,12 @@ function mountPicker(node) {
         widget.callback = function () {
             const result = callback?.apply(this, arguments);
             if (writing) return result;
-            if (name === 'model') {
+            if (name === 'resolution') {
+                const size = isWiredIn(node, 'width') || isWiredIn(node, 'height')
+                    ? null : parseSizeLabel(arguments[0] ?? this.value);
+                if (size) writeSize(size[0], size[1]);
+                else render();
+            } else if (name === 'model') {
                 const label = arguments[0] ?? this.value;
                 if (!payload && !failed) {
                     pendingModel = { from: pendingModel ? pendingModel.from : modelLabel, to: label };
@@ -229,6 +251,7 @@ function mountPicker(node) {
     loadFamilies(api).then(
         loaded => {
             payload = loaded;
+            view.setWarning(loaded.warnings?.[0] || '');
             if (pendingModel) applyPendingModelChange();
             else render();
         },

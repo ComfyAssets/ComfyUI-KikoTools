@@ -8,6 +8,7 @@ validation is a startup error.
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from .logic import size_label
 from .override import current_table
 from .table import (
     CHIPS,
@@ -29,6 +30,7 @@ __all__ = [
     "family_labels",
     "resolve_family",
     "families_payload",
+    "resolution_labels",
     "SHIPPED_DATA",
     "load_shipped_families",
 ]
@@ -61,6 +63,17 @@ def _current() -> Tuple[Tuple[Family, ...], str, List[str]]:
 def family_labels() -> List[str]:
     """Return every family label in display order."""
     return [family.label for family in FAMILIES]
+
+
+def resolution_labels() -> List[str]:
+    """Return the sorted distinct size labels across the shipped families."""
+    labels = {
+        size_label(width, height, chip)
+        for family in FAMILIES
+        for chip, sizes in family.sizes.items()
+        for width, height in sizes
+    }
+    return sorted(labels)
 
 
 def resolve_family(label: str) -> Optional[Family]:

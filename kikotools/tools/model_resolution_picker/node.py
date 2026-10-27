@@ -11,9 +11,10 @@ from .families import (
     DEFAULT_FAMILY,
     families_payload,
     family_labels,
+    resolution_labels,
     resolve_family,
 )
-from .logic import round_to_step
+from .logic import parse_size_label, round_to_step
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,14 @@ class ModelResolutionPickerNode(ComfyAssetsBaseNode):
                     {
                         "default": DEFAULT_FAMILY,
                         "tooltip": "Model family; the chips list its preferred sizes",
+                    },
+                ),
+                "resolution": (
+                    ["custom"] + resolution_labels(),
+                    {
+                        "default": "custom",
+                        "tooltip": "Sizes for the selected model and ratio; "
+                        "custom uses width/height",
                     },
                 ),
                 "width": (
@@ -66,7 +75,7 @@ class ModelResolutionPickerNode(ComfyAssetsBaseNode):
         }
 
     @classmethod
-    def VALIDATE_INPUTS(cls, model: str) -> bool:
+    def VALIDATE_INPUTS(cls, model: str, resolution: str) -> bool:
         """Accept any label so renamed or future families still execute (create() falls back)."""
         return True
 
@@ -76,9 +85,16 @@ class ModelResolutionPickerNode(ComfyAssetsBaseNode):
     CATEGORY = "🫶 ComfyAssets/🖼️ Resolution"
 
     def create(
-        self, model: str, width: int, height: int, batch_size: int
+        self, model: str, resolution: str, width: int, height: int, batch_size: int
     ) -> Tuple[Dict[str, Any], int, int]:
-        """Round the size to the family's step and build the empty latent."""
+        """Round the size to the family's step and build the empty latent.
+
+        A listed ``resolution`` label overrides ``width``/``height``; ``custom``
+        or any label that does not parse leaves them alone.
+        """
+        listed = parse_size_label(resolution) if resolution != "custom" else None
+        if listed is not None:
+            width, height = listed
         family = resolve_family(model)
         if family is None:
             logger.warning(

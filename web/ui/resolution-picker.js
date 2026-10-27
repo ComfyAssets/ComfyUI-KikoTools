@@ -114,3 +114,24 @@ export function sizeOnModelChange(payload, newLabel, width, height, chip) {
     if (listed) return [width, height];
     return defaultEntry(family, chip) || family.default;
 }
+
+const SIZE_LABEL = /^(\d+)×(\d+) - \S+ \(\d+\.\dMP\)$/;
+
+export function sizeLabel(width, height, ratioText) {
+    return `${width}×${height} - ${ratioText} (${((width * height) / 1000000).toFixed(1)}MP)`;
+}
+
+export function parseSizeLabel(text) {
+    const match = typeof text === 'string' ? SIZE_LABEL.exec(text) : null;
+    if (!match) return null;
+    const [width, height] = [Number(match[1]), Number(match[2])];
+    return width > 0 && height > 0 ? [width, height] : null;
+}
+
+export function dropdownOptions(payload, label, chip) {
+    const family = findFamily(payload, label);
+    if (!family) return ['custom'];
+    const chips = chip && chip !== 'custom' ? [chip] : payload.chips || [];
+    const labels = chips.flatMap((id) => (family.sizes[id] || []).map(([w, h]) => sizeLabel(w, h, id)));
+    return ['custom', ...new Set(labels)];
+}
