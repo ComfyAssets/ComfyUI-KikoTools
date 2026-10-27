@@ -311,3 +311,74 @@ result in the PR.
 - Node default size fine-tuning and the status line's wording.
 - File split inside `kikotools/tools/model_resolution_picker/` (`node.py`,
   `logic.py`, `families.py`, `routes.py`).
+
+## Addendum (2026-10-27, after first hands-on test): JSON table, user override, resolution dropdown
+
+Decided with the owner after testing the first build. Three changes, same branch.
+
+### 1. The family table is a shipped JSON file
+
+`kikotools/tools/model_resolution_picker/families.json` replaces the Python
+literals. Its shape is exactly the payload the route already serves:
+
+```json
+{ "version": 1, "chips": [...], "mirror": {...}, "default": "SDXL",
+  "families": [ { "label": "SDXL", "aliases": [], "models": "...", "group": "image",
+                  "vaeRatio": 8, "step": 64, "megapixels": [1.0], "default": [1024, 1024],
+                  "sizes": { "1:1": [[1024, 1024]], "4:5": [[832, 1024]], ... } } ] }
+```
+
+`families.py` loads it at import, validates it with a runtime validator that
+enforces the same invariants the tests enforce today (step multiples, 7% chip
+tolerance, exact mirrors, ascending order, one chip per size, unique labels
+and aliases, default present, every chip key present), and builds the same
+`Family` records. A shipped file that fails validation is a startup error.
+The file is package data (`[tool.setuptools.package-data]`), and the git
+checkout is what ComfyUI loads, so the file simply lives next to the module.
+
+### 2. A user override file
+
+`<ComfyUI user directory>/kikotools/model_resolutions.json` (via
+`folder_paths.get_user_directory()`; when that is unavailable there is no
+override). Same schema as the shipped file; top-level `chips`/`mirror` are
+ignored if present. Merge rules, by `label`:
+
+- same label as a shipped family → the override record **replaces** it whole;
+- new label → appended after the shipped families, in file order;
+- optional `"remove": ["label", ...]` hides shipped families;
+- `default` in the override, if present, becomes the combo default.
+
+The merged table is validated with the same validator. An unreadable or
+invalid override is **ignored entirely** (never partially applied), logged at
+warning level, and reported to the panel: the payload gains
+`"warnings": ["Override ignored: <reason>"]` and the panel shows the first
+warning in its status line. The override is re-read when its mtime changes,
+so edits apply on the next node mount or page reload without a restart.
+The shipped file is never modified by the node.
+
+### 3. A native `resolution` dropdown
+
+A COMBO widget named `resolution` sits between `model` and `width`. It lists
+the sizes that fit the **active ratio chip** for the selected model, plus
+`custom` first; with `Custom ratio` active or no chip matched it lists every
+size for the model. Labels use the old node's format:
+`1216×832 - 3:2 (1.0MP)` (ratio label = the chip the size is listed under,
+else the reduced ratio; megapixels to one decimal, 1 MP = 1024²).
+
+Sync rules (the panel remains a projection of the native widgets):
+
+- Picking from the dropdown writes `width`/`height` through their callbacks,
+  exactly like a size-list click.
+- Any size change (chip list, swap, typed width/height, model change) sets
+  `resolution` to the matching label, or `custom` when the size is not in the
+  active list. The dropdown's option list is rebuilt whenever the model or the
+  active chip changes.
+- Python: when `resolution` is not `custom` and parses as `W×H`, those
+  dimensions win over `width`/`height` (same precedence as the old preset
+  dropdown); then the family-step rounding applies as before. The combo's
+  Python option list is `custom` plus every distinct size label across all
+  shipped families, and `VALIDATE_INPUTS` accepts `resolution` as it does
+  `model`, so override-added sizes and old labels still execute.
+- Workflows now serialize five native widgets; nothing else changes.
+
+Non-goals unchanged. The chip grid, Custom ratio and Swap stay as built.

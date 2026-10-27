@@ -668,3 +668,66 @@ Expected: all green; Python coverage ≥ 85%; frontend floors met; Width Height 
 - [ ] **Step 2: Manual generation check on the user's ComfyUI** (spec: "Verification before merge"): one queued image each for `Flux.2 / Klein / MOSS` at 1248×832 and `HunyuanImage 2.1` at 2560×1536 through this node → KSampler → VAE Decode → Save; confirm the saved PNGs are exactly those sizes. Record both results in the PR description. This step needs the user's GPU box; if it cannot run, say so in the PR and mark it as a pre-merge TODO.
 
 - [ ] **Step 3: Hand off** — use `superpowers:finishing-a-development-branch` (push with the explicit refspec, PR against `main`).
+
+---
+
+## Addendum tasks (spec addendum 2026-10-27: JSON table, user override, resolution dropdown)
+
+Global Constraints additions: the shipped file is `kikotools/tools/model_resolution_picker/families.json`; the override is `<user_dir>/kikotools/model_resolutions.json`; dropdown label format `{w}×{h} - {ratio} ({mp:.1f}MP)` with `custom` first; `resolution` COMBO sits between `model` and `width`; `VALIDATE_INPUTS(cls, model, resolution)` returns True; an invalid override is ignored whole, logged, and surfaced as `warnings` in the payload; workflows serialize five native widgets.
+
+### Task 11: Shipped JSON table with a runtime validator
+
+**Files:**
+- Create: `kikotools/tools/model_resolution_picker/families.json`, `kikotools/tools/model_resolution_picker/table.py`
+- Modify: `kikotools/tools/model_resolution_picker/families.py` (becomes a thin loader), `pyproject.toml` (package-data for `*.json` under `kikotools`)
+- Test: `tests/unit/tools/model_resolution_picker/test_table.py`; `test_families.py` keeps passing unchanged
+
+**Interfaces:**
+- Produces in `table.py`: `load_table(path: Path) -> dict` (JSON load; raises `ValueError` with the path on bad JSON); `validate_table(data: dict) -> list[str]` (returns human-readable problems, empty when valid; checks: top-level keys and `version == 1`, chips equal `CHIPS`, mirror consistent, unique labels/aliases across families, every chip key present per family, sizes on step, 7% tolerance, exact mirrors, ascending order, one chip per size, default present in sizes, `group` in {image, video}, `vaeRatio` in {8, 16, 32}, `step` > 0, non-empty `megapixels`); `build_families(data: dict) -> tuple[Family, ...]`.
+- `families.py` keeps exporting `CHIPS`, `MIRROR`, `Family`, `FAMILIES`, `DEFAULT_FAMILY`, `family_labels`, `resolve_family`, `families_payload`, now built from `families.json` at import; a validation failure raises `RuntimeError` listing the problems.
+
+- [ ] **Step 1: Write the failing tests** — `test_validate_table_accepts_the_shipped_file` (loads the shipped path, `validate_table` returns `[]`), `test_validate_table_reports_each_invariant` (parametrized: a copy of the shipped data mutated to break one rule each — off-step size, >7% size, missing mirror, unsorted list, duplicate size under two chips, duplicate label, missing chip key, default not listed, bad vaeRatio — must produce exactly one message naming the family and chip), `test_load_table_bad_json_names_the_path`, `test_families_module_is_built_from_json` (`FAMILIES` labels equal the JSON labels in order).
+- [ ] **Step 2: Run to verify failure** — `$V/bin/python -m pytest tests/unit/tools/model_resolution_picker/test_table.py -p no:cacheprovider -q` → ImportError.
+- [ ] **Step 3: Generate `families.json` from the current `FAMILIES`** with a one-off snippet (`families_payload()` plus `"version": 1`), indent 2, then rewrite `families.py` to load/validate/build; delete the literals; keep the source comments as a `"notes"` string per family (the validator ignores unknown keys).
+- [ ] **Step 4: Run** the new tests, `test_families.py`, the full suite with coverage, black and flake8.
+- [ ] **Step 5: Commit** — `refactor(model_resolution_picker): move the family table to families.json with a validator`.
+
+### Task 12: User override file
+
+**Files:**
+- Create: `kikotools/tools/model_resolution_picker/override.py`
+- Modify: `families.py` (resolution and payload consult the merged table), `node.py` (route payload includes `warnings`)
+- Test: `tests/unit/tools/model_resolution_picker/test_override.py`, `test_node.py`
+
+**Interfaces:**
+- Produces: `override_path() -> Path | None` (uses `folder_paths.get_user_directory()`; `None` when `folder_paths` or the function is unavailable); `merge_override(shipped: dict, override: dict) -> dict` (rules from the spec: replace by label, append new, `remove`, `default`); `current_table() -> tuple[dict, list[str]]` (shipped merged with a valid override, cached by override mtime; returns `(merged_data, warnings)`; an unreadable/invalid override yields the shipped data plus one `"Override ignored: <reason>"` warning and a `logger.warning`).
+- `families.py`: `resolve_family(label)` and `families_payload()` use `current_table()`; `families_payload()["warnings"]` is the warnings list; `FAMILIES` remains the shipped tuple for tests.
+
+- [ ] **Step 1: Write the failing tests** — with `tmp_path` as a fake user directory (patch `folder_paths` in `sys.modules` with `get_user_directory`): override replaces SDXL's `sizes` and `resolve_family("SDXL")` reflects it; a new family `My Model` appears last in `families_payload()["families"]` and resolves; `"remove": ["SD 1.5"]` hides it; invalid JSON → shipped data, `warnings == ["Override ignored: <path>: <json error>"]` and a warning log; an override whose merged result breaks an invariant (e.g. off-step size) → ignored whole with the validator message in the warning; editing the file (newer mtime) is picked up on the next call; no `folder_paths` → no override, no warnings; `get_families` route JSON includes `warnings`.
+- [ ] **Step 2: Run to verify failure.**
+- [ ] **Step 3: Implement** `override.py` and wire `families.py`/`node.py`. `current_table()` caches on `(path, mtime_ns)`.
+- [ ] **Step 4: Run** the picker tests, full suite with coverage, black, flake8.
+- [ ] **Step 5: Commit** — `feat(model_resolution_picker): merge a user override file into the family table`.
+
+### Task 13: Native `resolution` dropdown synced with the panel
+
+**Files:**
+- Modify: `node.py` (input, `VALIDATE_INPUTS`, execution precedence), `logic.py` (`size_label(w, h, ratio_label) -> str`, `parse_size_label(text) -> tuple[int, int] | None`), `web/ui/resolution-picker.js` (`sizeLabel`, `parseSizeLabel`, `dropdownOptions(payload, label, chip) -> string[]`), `web/model_resolution_picker.js` (rebuild options and sync value; dropdown callback writes size), `web/views/resolution-picker.js` (status shows the first payload warning), `tests/js/resolution-picker.test.mjs`, `tests/browser/workflows.spec.mjs`, `tests/comfyui/resolution-picker.spec.mjs` (five native widgets: `slice(5)`, include `resolution` in the round-trip), `tools/testing/frontend-coverage-baseline.json` if floors move
+- Test: `test_node.py`, `test_logic.py`
+
+**Interfaces:**
+- Python: `INPUT_TYPES` adds `resolution` COMBO (`["custom"] + sorted distinct labels across shipped families`, default `custom`, tooltip "Sizes for the selected model and ratio; custom uses width/height") between `model` and `width`; `create(self, model, resolution, width, height, batch_size)`: when `resolution != "custom"` and `parse_size_label` succeeds, those dims replace `width`/`height` before rounding; `VALIDATE_INPUTS(cls, model, resolution) -> bool`.
+- JS: `dropdownOptions` returns `['custom', ...labels]` for the active chip's sizes, or all family sizes when `chip` is null/custom; the extension sets `resolution.options.values` (array) on every render where model or active chip changed, sets `resolution.value` to the current size's label or `custom`, and wraps the `resolution` widget callback: a label value writes the parsed size through `width`/`height` callbacks (re-entrancy guarded), `custom` leaves sizes alone.
+- Fixture host note: the fixture renders `resolution` as a text input; tests set its value and dispatch `change`.
+
+- [ ] **Step 1: Write the failing tests** — Python: `test_resolution_label_overrides_width_height` (`create("SDXL", "1216×832 - 3:2 (1.0MP)", 1024, 1024, 1)` → `(1216, 832)`), `test_custom_uses_width_height`, `test_validate_inputs_accepts_unlisted_resolution`, `size_label(1216, 832, "3:2") == "1216×832 - 3:2 (1.0MP)"`, `parse_size_label("1216×832 - 3:2 (1.0MP)") == (1216, 832)` and `None` for `custom`/garbage. JS unit: `dropdownOptions(payload, 'SDXL', '3:2')` → `['custom', '1216×832 - 3:2 (1.0MP)']`; `dropdownOptions(payload, 'SDXL', null)` lists all five SDXL sizes with ratio labels; `parseSizeLabel` round-trips `sizeLabel`. Browser: creating the node with `resolution: 'custom'` and clicking `3:2` sets the `resolution` input to `1216×832 - 3:2 (1.0MP)`; setting `resolution` to `1344×768 - 16:9 (1.0MP)` and dispatching `change` writes width/height 1344/768 and activates `16:9`; a swap sets `resolution` to the mirrored label; a typed width of 1000 sets it to `custom`; with the families route fulfilled by a payload carrying `warnings: ['Override ignored: test']` the status line shows that text. Real host: the existing spec asserts `widgets_values.slice(5)` is empty and that `resolution` survives reload.
+- [ ] **Step 2: Run to verify failure** (Python, JS unit, chromium focused).
+- [ ] **Step 3: Implement** Python then JS. The option list is set as a plain array on `widget.options.values`; the sibling `dimensions.js` already reads array or function options.
+- [ ] **Step 4: Run** Python suite with coverage, black/flake8, JS unit, chromium+touch browser suite (`env KIKO_TEST_PYTHON=…`), coverage gate, real host on both projects.
+- [ ] **Step 5: Commit** — `feat(model_resolution_picker): add a resolution dropdown synced with the chip grid`.
+
+### Task 14: Docs and final verification for the addendum
+
+- [ ] Update `README.md` section bullets (dropdown; override file path and rules), `examples/documentation/model_resolution_picker.md` (JSON schema, override example with `remove` and a new family, warning behavior, dropdown precedence), `web/ui/README.md` (dropdown sync rule). Verify links.
+- [ ] Run every suite as in Task 10 Step 1 (Python, black/flake8, JS unit, coverage gate, chromium+touch, real host). WebKit is a known local environment limitation.
+- [ ] Commit — `docs(model_resolution_picker): document the JSON table, override file and resolution dropdown`.
