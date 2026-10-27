@@ -201,6 +201,17 @@ def test_deeply_nested_json_is_ignored_without_raising(tmp_path):
     assert families.families_payload()["warnings"] == warnings
 
 
+def test_override_step_off_the_latent_grid_is_ignored_whole(tmp_path):
+    # A step that is not a multiple of 8 would make the empty latent allocation
+    # raise at execution; the override is dropped and the shipped table stays.
+    entry = {**sdxl_entry({"1:1": [[1023, 1023]]}), "step": 3, "default": [1023, 1023]}
+    write_override(tmp_path, {"families": [entry]})
+    data, warnings = override.current_table()
+    assert data is families.SHIPPED_DATA
+    assert len(warnings) == 1 and "multiple of 8" in warnings[0]
+    assert families.resolve_family("SDXL").step == 64
+
+
 def test_remove_wins_over_families_with_the_same_label(tmp_path):
     entry = sdxl_entry({"1:1": [[1024, 1024], [1280, 1280]]})
     entry = {**entry, "label": "Illustrious XL"}
