@@ -15,7 +15,7 @@ A light-theme capture is at `docs/screenshots/resolution-picker/ModelResolutionP
 - **Category**: `🫶 ComfyAssets/🖼️ Resolution`
 
 ### Inputs
-- **model**: Dropdown of the 14 family labels (default `SDXL`)
+- **model**: Dropdown of the 14 shipped family labels (default `SDXL`)
 - **resolution**: Dropdown of `custom` plus size labels such as `1216×832 - 3:2 (1.0MP)` (default `custom`); see [Resolution dropdown](#resolution-dropdown)
 - **width**: Width in pixels (64-8192, step 8)
 - **height**: Height in pixels (64-8192, step 8)
@@ -83,7 +83,7 @@ To change sizes without editing the shipped file, create `model_resolutions.json
 - Families are matched by `label`. A family with a shipped label replaces that family whole; a new label is appended after the shipped ones, in file order.
 - `remove` is a list of labels that deletes shipped families. It wins over `families` when both name the same label.
 - `default` is an optional label or alias that becomes the default family; it must name a family that survives the merge.
-- The file is read again when its modification time changes, so a new node or a page reload picks up edits without restarting ComfyUI.
+- The file is read again when its modification time changes, so a page reload (or ComfyUI's "Refresh node definitions") picks up edits, including the `model` dropdown, without restarting ComfyUI.
 - The shipped file is never modified.
 
 This example replaces SDXL with a shorter list, adds a new family, hides two shipped ones and makes the new family the default:

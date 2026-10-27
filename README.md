@@ -159,7 +159,7 @@ Advanced empty latent creation with preset support and batch processing capabili
 #### 🎯 Model Resolution Picker
 Choose a model family and a size from ratio chips, and get an empty latent plus width and height.
 
-- **Model Dropdown**: 14 families (SD 1.5, SDXL, Illustrious XL, Flux.1, Flux.2, Qwen-Image and more) with their preferred sizes
+- **Model Dropdown**: 14 shipped families (SD 1.5, SDXL, Illustrious XL, Flux.1, Flux.2, Qwen-Image and more) with their preferred sizes
 - **Chips and List**: Pick an aspect ratio chip, then a size from the list under it; the header shows `W × H · ratio · MP`
 - **Resolution Dropdown**: A native `resolution` dropdown (`custom` plus size labels like `1216×832 - 3:2 (1.0MP)`) lists the active chip's sizes and stays in sync with the chips; a listed size wins over width and height when the node runs
 - **Swap W×H**: Exchanges width and height and lands on the mirrored chip

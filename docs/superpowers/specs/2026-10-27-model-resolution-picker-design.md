@@ -353,7 +353,7 @@ invalid override is **ignored entirely** (never partially applied), logged at
 warning level, and reported to the panel: the payload gains
 `"warnings": ["Override ignored: <reason>"]` and the panel shows the first
 warning in its status line. The override is re-read when its mtime changes,
-so edits apply on the next node mount or page reload without a restart.
+so edits are picked up on a page reload (or ComfyUI's "Refresh node definitions"), which also refreshes the `model` dropdown, without a restart. The frontend caches the families payload per page.
 The shipped file is never modified by the node.
 
 ### 3. A native `resolution` dropdown
