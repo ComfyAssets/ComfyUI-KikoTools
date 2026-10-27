@@ -156,6 +156,26 @@ def test_validate_table_never_raises_on_garbage():
     assert validate_table(data) != []
 
 
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda d: d.update(default=["SDXL"]),
+        lambda d: d["families"][0].update(label=["SD 1.5"]),
+        lambda d: d["families"][0].update(aliases=[["x"]]),
+        lambda d: d["families"][0].update(step=float("inf")),
+        lambda d: d["families"][0].update(step=float("nan")),
+        lambda d: d["families"][0].update(megapixels=[float("inf")]),
+    ],
+)
+def test_validate_table_survives_unhashable_and_non_finite_values(
+    mutate: Callable[[Dict[str, Any]], None],
+):
+    data = shipped_data()
+    mutate(data)
+
+    assert validate_table(data) != []
+
+
 def test_validate_table_ignores_unknown_keys():
     data = shipped_data()
     data["extra"] = 1

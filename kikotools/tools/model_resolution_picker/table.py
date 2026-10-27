@@ -7,6 +7,7 @@ Unknown keys, such as a per-family ``"notes"`` string, are ignored.
 """
 
 import json
+import math
 from pathlib import Path
 from typing import Any, Dict, List, NamedTuple, Tuple
 
@@ -81,6 +82,12 @@ def _is_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
+def _is_step(value: Any) -> bool:
+    return (
+        _is_number(value) and math.isfinite(value) and value > 0 and value == int(value)
+    )
+
+
 def _chip_ratio(chip: str) -> float:
     left, right = chip.split(":")
     return int(left) / int(right)
@@ -132,11 +139,14 @@ def _validate_scalars(label: str, fam: Dict[str, Any]) -> List[str]:
         problems.append(f"family {label!r}: group must be one of {list(GROUPS)}")
     if fam.get("vaeRatio") not in VAE_RATIOS:
         problems.append(f"family {label!r}: vaeRatio must be one of {list(VAE_RATIOS)}")
-    step = fam.get("step")
-    if not _is_number(step) or step <= 0 or int(step) != step:
+    if not _is_step(fam.get("step")):
         problems.append(f"family {label!r}: step must be a positive integer")
     mp = fam.get("megapixels")
-    if not isinstance(mp, list) or not mp or not all(_is_number(m) for m in mp):
+    if (
+        not isinstance(mp, list)
+        or not mp
+        or not all(_is_number(m) and math.isfinite(m) for m in mp)
+    ):
         problems.append(f"family {label!r}: megapixels must be a non-empty number list")
     return problems
 
@@ -149,7 +159,7 @@ def _validate_chip(
         return [f"{where}: sizes must be a list of [width, height] integer pairs"]
     problems: List[str] = []
     step = fam.get("step")
-    step_ok = _is_number(step) and step > 0 and int(step) == step
+    step_ok = _is_step(step)
     target = _chip_ratio(chip)
     for w, h in entries:
         if step_ok and (w % step or h % step):
@@ -216,6 +226,18 @@ def _validate_default(
     return []
 
 
+def _validate_default_label(default: Any, entries: List[Dict[str, Any]]) -> List[str]:
+    names = set()
+    for fam in entries:
+        if isinstance(fam.get("label"), str):
+            names.add(fam["label"])
+        if isinstance(fam.get("aliases"), list):
+            names.update(a for a in fam["aliases"] if isinstance(a, str))
+    if isinstance(default, str) and default in names:
+        return []
+    return [f"default {default!r} is not a family label"]
+
+
 def validate_table(data: Any) -> List[str]:
     """Return every problem found in ``data``; an empty list means it is valid."""
     if not isinstance(data, dict):
@@ -235,12 +257,7 @@ def validate_table(data: Any) -> List[str]:
             continue
         problems.extend(_validate_scalars(label, fam))
         problems.extend(_validate_sizes(label, fam))
-    labels = {f.get("label") for f in entries}
-    aliases = {
-        a for f in entries if isinstance(f.get("aliases"), list) for a in f["aliases"]
-    }
-    if data.get("default") not in labels | aliases:
-        problems.append(f"default {data.get('default')!r} is not a family label")
+    problems.extend(_validate_default_label(data.get("default"), entries))
     return problems
 
 
