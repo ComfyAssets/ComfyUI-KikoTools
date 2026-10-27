@@ -28,6 +28,7 @@ __all__ = [
     "FAMILIES",
     "DEFAULT_FAMILY",
     "family_labels",
+    "default_family",
     "resolve_family",
     "families_payload",
     "resolution_labels",
@@ -57,12 +58,26 @@ def _current() -> Tuple[Tuple[Family, ...], str, List[str]]:
     data, warnings = current_table()
     if data is SHIPPED_DATA:
         return FAMILIES, DEFAULT_FAMILY, warnings
-    return build_families(data), data["default"], warnings
+    built = build_families(data)
+    return built, _default_label(built, data["default"]), warnings
+
+
+def _default_label(built: Tuple[Family, ...], default: str) -> str:
+    """Return the label of the family named by ``default`` (label or alias)."""
+    for family in built:
+        if default == family.label or default in family.aliases:
+            return family.label
+    return default
 
 
 def family_labels() -> List[str]:
-    """Return every family label in display order."""
-    return [family.label for family in FAMILIES]
+    """Return every family label of the merged table in display order."""
+    return [family.label for family in _current()[0]]
+
+
+def default_family() -> str:
+    """Return the merged table's default family label."""
+    return _current()[1]
 
 
 def resolution_labels() -> List[str]:

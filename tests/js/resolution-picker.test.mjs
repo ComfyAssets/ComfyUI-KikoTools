@@ -6,6 +6,7 @@ import {
     deriveSelection,
     effectiveSize,
     megapixels,
+    modelOptions,
     parseRatio,
     parseSizeLabel,
     sizeLabel,
@@ -79,4 +80,12 @@ test('dropdownOptions lists the active chip sizes, or every family size for cust
     assert.deepEqual(dropdownOptions(payload, 'SDXL', '21:9'), ['custom']);
     assert.deepEqual(dropdownOptions(payload, 'nope', '3:2'), ['custom']);
     assert.deepEqual(dropdownOptions(null, 'SDXL', null), ['custom']);
+});
+
+test('modelOptions lists payload labels in order and keeps an absent current value', () => {
+    const payload = { families: [{ label: 'A' }, { label: 'B' }] };
+    assert.deepEqual(modelOptions(payload, 'B'), ['A', 'B']);
+    assert.deepEqual(modelOptions(payload, 'Gone'), ['A', 'B', 'Gone']);
+    assert.deepEqual(modelOptions(payload, undefined), ['A', 'B']);
+    assert.deepEqual(modelOptions(null, 'Gone'), ['Gone']);
 });

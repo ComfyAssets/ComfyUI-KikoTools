@@ -8,7 +8,7 @@ from aiohttp import web
 from ...base.base_node import ComfyAssetsBaseNode
 from ..empty_latent_batch.logic import create_empty_latent_batch
 from .families import (
-    DEFAULT_FAMILY,
+    default_family,
     families_payload,
     family_labels,
     resolution_labels,
@@ -33,7 +33,7 @@ class ModelResolutionPickerNode(ComfyAssetsBaseNode):
                 "model": (
                     family_labels(),
                     {
-                        "default": DEFAULT_FAMILY,
+                        "default": default_family(),
                         "tooltip": "Model family; the chips list its preferred sizes",
                     },
                 ),

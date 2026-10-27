@@ -135,3 +135,8 @@ export function dropdownOptions(payload, label, chip) {
     const labels = chips.flatMap((id) => (family.sizes[id] || []).map(([w, h]) => sizeLabel(w, h, id)));
     return ['custom', ...new Set(labels)];
 }
+
+export function modelOptions(payload, current) {
+    const labels = ((payload && payload.families) || []).map((family) => family.label);
+    return typeof current === 'string' && current && !labels.includes(current) ? [...labels, current] : labels;
+}

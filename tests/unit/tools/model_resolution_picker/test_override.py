@@ -9,7 +9,10 @@ from pathlib import Path
 import pytest
 
 from kikotools.tools.model_resolution_picker import families, override
-from kikotools.tools.model_resolution_picker.node import get_families
+from kikotools.tools.model_resolution_picker.node import (
+    ModelResolutionPickerNode,
+    get_families,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -71,7 +74,7 @@ def test_new_family_is_appended_and_resolvable(tmp_path):
     write_override(tmp_path, {"families": [entry]})
     labels = [f["label"] for f in families.families_payload()["families"]]
     assert labels[-1] == "My Model"
-    assert labels[:-1] == families.family_labels()
+    assert labels[:-1] == [f.label for f in families.FAMILIES]
     assert families.resolve_family("My Model").label == "My Model"
 
 
@@ -212,3 +215,39 @@ def test_default_naming_a_removed_family_ignores_override(tmp_path):
     data, warnings = override.current_table()
     assert data is families.SHIPPED_DATA
     assert len(warnings) == 1 and "Anima" in warnings[0]
+
+
+def docs_example(tmp_path):
+    entry = {**sdxl_entry({"1:1": [[1024, 1024]]}), "label": "My SDXL"}
+    return write_override(
+        tmp_path, {"families": [entry], "remove": ["Anima"], "default": "My SDXL"}
+    )
+
+
+def test_combo_reflects_override_families_and_default(tmp_path):
+    docs_example(tmp_path)
+    options, config = ModelResolutionPickerNode.INPUT_TYPES()["required"]["model"]
+    assert "My SDXL" in options
+    assert "Anima" not in options
+    assert config["default"] == "My SDXL"
+    assert families.DEFAULT_FAMILY != "My SDXL"
+    assert any(f.label == "Anima" for f in families.FAMILIES)
+
+
+def test_family_labels_match_payload_order(tmp_path):
+    docs_example(tmp_path)
+    payload = families.families_payload()
+    assert families.family_labels() == [f["label"] for f in payload["families"]]
+
+
+def test_alias_default_is_normalised_to_its_label(tmp_path):
+    entry = {
+        **sdxl_entry({"1:1": [[1024, 1024]]}),
+        "label": "My SDXL",
+        "aliases": ["my-sdxl"],
+    }
+    write_override(tmp_path, {"families": [entry], "default": "my-sdxl"})
+    assert families.families_payload()["default"] == "My SDXL"
+    config = ModelResolutionPickerNode.INPUT_TYPES()["required"]["model"][1]
+    assert config["default"] == "My SDXL"
+

@@ -1918,6 +1918,28 @@ test('resolution picker shows the first families warning in the status line', as
     await expect(panel.locator('.ca-resolution-status')).toHaveText('Override ignored: test');
 });
 
+test('resolution picker fills the model dropdown from the payload and keeps a removed saved family', async ({ page }) => {
+    await page.route('**/kikotools/model_resolution/families', async route => {
+        const response = await route.fetch();
+        const payload = await response.json();
+        const sdxl = payload.families.find(family => family.label === 'SDXL');
+        const families = [...payload.families.filter(family => family.label !== 'Anima'), { ...sdxl, label: 'My SDXL', aliases: [] }];
+        await route.fulfill({ response, json: { ...payload, families } });
+    });
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'Anima', resolution: 'custom', width: 1024, height: 1024, batch_size: 1 });
+    await expect(page.locator('.ca-resolution-picker .ca-resolution-header')).toContainText('1024 × 1024 ·');
+    const result = await page.evaluate(id => {
+        const widget = kikoHost.nodes.get(String(id)).widgets.find(entry => entry.name === 'model');
+        return { values: widget.options.values, value: widget.value };
+    }, id);
+    expect(result.values).toContain('My SDXL');
+    expect(result.values).toContain('Anima');
+    expect(result.values.indexOf('My SDXL')).toBeLessThan(result.values.indexOf('Anima'));
+    expect(result.values.filter(label => label === 'Anima')).toHaveLength(1);
+    expect(result.value).toBe('Anima');
+});
+
 test('resolution picker mounting is idempotent and removal disposes its scope', async ({ page }) => {
     await openHost(page);
     const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1024, height: 1024, batch_size: 1 });

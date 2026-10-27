@@ -3,7 +3,7 @@ import { api } from '../../scripts/api.js';
 import { createScope, mountTheme } from './ui/core.js';
 import { swapDimensions } from './ui/dimensions.js';
 import { mountDimensionSwap } from './ui/dimension-swap.js';
-import { defaultEntry, deriveSelection, dropdownOptions, effectiveSize, megapixels, parseRatio, parseSizeLabel, sizeLabel, sizeOnModelChange, sizesForRatio } from './ui/resolution-picker.js';
+import { defaultEntry, deriveSelection, dropdownOptions, effectiveSize, megapixels, modelOptions, parseRatio, parseSizeLabel, sizeLabel, sizeOnModelChange, sizesForRatio } from './ui/resolution-picker.js';
 import { createResolutionPickerView } from './views/resolution-picker.js';
 
 const FAMILIES_ROUTE = '/kikotools/model_resolution/families';
@@ -116,8 +116,19 @@ function mountPicker(node) {
         widget.value = widget.options.values.includes(label) ? label : 'custom';
     }
 
+    function syncModelOptions() {
+        const widget = widgetOf(node, 'model');
+        if (!widget || !payload) return;
+        const values = modelOptions(payload, widget.value);
+        const current = widget.options.values;
+        if (!Array.isArray(current) || current.length !== values.length || current.some((item, index) => item !== values[index])) {
+            widget.options.values = values;
+        }
+    }
+
     function render() {
         if (scope.signal.aborted) return;
+        syncModelOptions();
         const state = buildState();
         view.render(state);
         syncResolution(state);
