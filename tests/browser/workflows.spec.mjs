@@ -1855,6 +1855,63 @@ test('resolution picker renders chips from the families route and writes sizes t
     await expect(panel.getByRole('button', { name: 'Custom ratio', exact: true }).locator('.ca-resolution-shape')).toHaveCount(0);
 });
 
+test('resolution picker refits the node when its stylesheet arrives after the first render', async ({ page }) => {
+    // Hold the panel stylesheet so the families payload renders (and fits) an unstyled layout first.
+    let held = null;
+    await page.route('**/controls.css', route => { held = route; });
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', resolution: 'custom', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const heights = () => page.evaluate(id => {
+        const widget = kikoHost.nodes.get(String(id)).widgets.find(entry => entry.name === 'resolution_picker');
+        return { min: widget.options.getMinHeight(), content: Math.ceil(widget.element.getBoundingClientRect().height), styled: getComputedStyle(widget.element).display === 'flex' };
+    }, id);
+    await expect.poll(async () => (await heights()).styled).toBe(false);
+    const unstyled = await heights();
+    await expect.poll(() => held !== null).toBe(true);
+    await held.continue();
+    await expect.poll(async () => (await heights()).styled).toBe(true);
+    await expect.poll(async () => { const h = await heights(); return Math.abs(h.min - h.content); }).toBeLessThanOrEqual(3);
+    expect((await heights()).min).not.toBe(unstyled.min);
+});
+
+test('resolution picker fits the node height to the panel content', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', resolution: 'custom', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const heights = () => page.evaluate(id => {
+        const widget = kikoHost.nodes.get(String(id)).widgets.find(entry => entry.name === 'resolution_picker');
+        return { min: widget.options.getMinHeight?.(), max: widget.options.getMaxHeight?.(), content: Math.ceil(widget.element.getBoundingClientRect().height) };
+    }, id);
+    const settled = async () => { await expect.poll(async () => { const h = await heights(); return Math.abs(h.min - h.content); }).toBeLessThanOrEqual(3); return heights(); };
+    const closed = await settled();
+    expect(closed.min).toBe(closed.max);
+    await panel.getByRole('button', { name: 'Custom ratio', exact: true }).click();
+    const open = await settled();
+    expect(open.min).toBeGreaterThan(closed.min);
+    // the node height follows the host's computed size on every render and the width is kept
+    await page.evaluate(id => { kikoHost.nodes.get(String(id)).computeSize = () => [1, 777]; }, id);
+    await panel.getByRole('button', { name: '3:2', exact: true }).click();
+    expect(await page.evaluate(id => Array.from(kikoHost.nodes.get(String(id)).size), id)).toEqual([340, 777]);
+    expect(await heights()).toEqual(closed); // 3:2 lists one SDXL size, like 1:1
+    // a hidden (not laid out) panel is not measured: the reported height and the node size stay put
+    await page.evaluate(id => {
+        const target = kikoHost.nodes.get(String(id));
+        target.widgets.find(entry => entry.name === 'resolution_picker').element.style.display = 'none';
+        target.computeSize = () => [1, 50];
+    }, id);
+    const resolution = page.locator('[data-node="ModelResolutionPicker"]').getByLabel('resolution', { exact: true });
+    await resolution.fill('1344×768 - 16:9 (1.0MP)');
+    await resolution.dispatchEvent('change');
+    await expect(page.locator('[data-node="ModelResolutionPicker"]').getByLabel('width', { exact: true })).toHaveValue('1344');
+    expect(await page.evaluate(id => ({ size: Array.from(kikoHost.nodes.get(String(id)).size), min: kikoHost.nodes.get(String(id)).widgets.find(entry => entry.name === 'resolution_picker').options.getMinHeight() }), id)).toEqual({ size: [340, 777], min: closed.min });
+    await page.evaluate(id => { kikoHost.nodes.get(String(id)).widgets.find(entry => entry.name === 'resolution_picker').element.style.display = ''; }, id);
+    await panel.getByRole('button', { name: '1:1', exact: true }).click();
+    expect(await page.evaluate(id => Array.from(kikoHost.nodes.get(String(id)).size), id)).toEqual([340, 50]);
+});
+
 test('resolution picker mirrors the panel in a native resolution dropdown', async ({ page }) => {
     await openHost(page);
     await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', resolution: 'custom', width: 1024, height: 1024, batch_size: 1 });

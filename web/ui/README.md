@@ -122,6 +122,17 @@ matching size, and a size outside the list, wired inputs or a failed families
 load show `custom`. Each ratio chip also carries an `aria-hidden` outline of its
 shape.
 
+The panel reports its measured content height (padding, visible children and
+gaps) as both the minimum and the maximum DOM-widget height, and after every
+render the extension sets the node height to the host's `computeSize()` while
+keeping the width. The measurement is retried for up to 60 frames when the
+element is not attached yet (fresh mount, workflow load), skipped while the
+family table is still loading, and ignored when the panel is hidden by the
+host. A `ResizeObserver` on the panel's children refits the node when their
+boxes change later, for example when the stylesheet arrives after the first
+render, so the panel children must carry no vertical margins (the stylesheet
+zeroes them).
+
 ## Node Dimensions and modal dialogs
 
 The ComfyAssets-only Node Dimensions context menu uses `dialog.js` for a native

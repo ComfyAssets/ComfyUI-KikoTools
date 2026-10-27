@@ -71,7 +71,7 @@ class HostNode {
             if (key === 'preset') entry.options.values = ['custom', '832×1216 - portrait', '1216×832 - landscape'];
         }
     }
-    addDOMWidget(name, type, element) { this.element.append(element); const result = { name, element, onRemove: () => element.remove() }; this.widgets.push(result); return result; }
+    addDOMWidget(name, type, element, options = {}) { this.element.append(element); const result = { name, element, options, onRemove: () => element.remove() }; this.widgets.push(result); return result; }
     addWidget(type, name, value, callback, options = {}) {
         if (type !== 'button') { const entry = widget(this, name, value); entry.callback = callback; return entry; }
         const button = el('button', { textContent: name, onclick: () => callback() });

@@ -87,7 +87,11 @@ for free in both renderers. **My call**; the builder may move the panel
 directly under `model` only if it proves stable in both renderers under the
 real-host tests.
 
-New nodes start at 340 × 600. Saved workflows keep their node size.
+New nodes are 340 px wide. The node height is fitted to the panel content (the
+chip grid plus the active chip's list) after every render, so no empty space is
+left under the list; it grows and shrinks with the list. Saved workflows keep
+their width and are re-fitted on load. **Changed by the owner after testing**: the
+original 340 × 600 default left a large gap under one-entry lists.
 
 ## Behavior
 

@@ -74,6 +74,18 @@ test('resolution picker survives renderers, swap, themes and workflow reload', a
     });
     await expect(swap).toBeEnabled();
     await expect(panel.locator('.ca-resolution-header')).not.toHaveText('Dimensions are wired in');
+    // the node height is fitted to the panel content: no empty space under the list, and it follows the list
+    const heights = () => page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = app.graph._nodes.find(item => item.type === 'ModelResolutionPicker');
+        return { size: node.size[1], computed: node.computeSize()[1] };
+    });
+    await expect.poll(async () => { const h = await heights(); return Math.abs(h.size - h.computed) < 1 && h.size < 600; }).toBe(true);
+    const fitted = (await heights()).size;
+    await panel.getByRole('button', { name: 'Custom ratio', exact: true }).click();
+    await expect.poll(async () => (await heights()).size).toBeGreaterThan(fitted);
+    await panel.getByRole('button', { name: '9:16', exact: true }).click();
+    await expect.poll(async () => (await heights()).size).toBe(fitted);
     for (const theme of ['light', 'dark']) {
         await page.evaluate(async theme => {
             const { app } = await import('/scripts/app.js');

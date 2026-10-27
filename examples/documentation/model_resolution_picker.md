@@ -169,7 +169,7 @@ When width or height is driven by another node, the panel and Swap are disabled.
 ### Sizes unavailable
 If the families route fails, the panel shows "Sizes unavailable; type width and height" with the chips disabled. The node still works through the native widgets.
 
-Panel state is derived from the native widgets, so nothing extra is saved in the workflow. New nodes start at 340 × 600.
+Panel state is derived from the native widgets, so nothing extra is saved in the workflow. New nodes are 340 px wide and the node height follows the panel content: it is re-fitted whenever the list changes (a chip click, a model change, opening Custom ratio), so there is no empty space under the list. A saved workflow keeps its width; the height is fitted again on load.
 
 ## Keyframe Note for Video Families
 

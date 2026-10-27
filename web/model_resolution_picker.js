@@ -12,8 +12,10 @@ const CHIP_IDS = ['1:1', '4:5', '5:4', '3:4', '4:3', '2:3', '3:2', '9:16', '16:9
 const UNAVAILABLE_STATUS = 'Sizes unavailable; type width and height';
 const RATIO_ERROR = 'Enter a ratio like 16:9';
 const FALLBACK_STEP = 8;
-const NODE_SIZE = [340, 600];
-const MIN_PANEL_HEIGHT = 320;
+const NODE_WIDTH = 340;
+const FALLBACK_PANEL_HEIGHT = 320;
+const FIT_RETRY_FRAMES = 60;
+const FIT_SLACK = 1;
 const LEGACY_VALUE_COUNT = 4;
 const LEGACY_WIDGET_ORDER = ['model', 'width', 'height', 'batch_size'];
 const WRAPPED_WIDGETS = ['model', 'resolution', 'width', 'height'];
@@ -55,6 +57,8 @@ function mountPicker(node) {
     let pendingModel = null;
     let view;
     let optionsKey = '';
+    let panelHeight = FALLBACK_PANEL_HEIGHT;
+    let fitRetryPending = false;
 
     const readSize = () => ['width', 'height'].map(name => Number(widgetOf(node, name)?.value));
 
@@ -136,6 +140,44 @@ function mountPicker(node) {
         syncResolution(state);
         const swap = node.swapButtonWidget?.element?.querySelector('button');
         if (swap) swap.disabled = state.wired;
+        fitNodeHeight();
+    }
+
+    // Natural height of the panel: padding plus the visible children and the gaps between them.
+    // The element itself may be stretched by the host, so its own height is not the content height.
+    // Returns 0 when the element is detached or not laid out (hidden by the host while off-screen).
+    function measurePanel() {
+        const element = view.element;
+        if (!element.isConnected || element.offsetParent === null) return 0;
+        const style = getComputedStyle(element);
+        const visible = Array.from(element.children).filter(child => getComputedStyle(child).display !== 'none');
+        if (!visible.length || visible.every(child => child.offsetHeight === 0)) return 0;
+        const gap = parseFloat(style.rowGap) || 0;
+        const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+        return Math.ceil(padding + visible.reduce((sum, child) => sum + child.offsetHeight, 0) + gap * (visible.length - 1)) + FIT_SLACK;
+    }
+
+    // The panel reports its content height as both minimum and maximum widget height, so the node
+    // never shows empty space under the list; the node height then follows the host's computed size.
+    function fitNodeHeight(attempt = 0) {
+        if (scope.signal.aborted || (!payload && !failed)) return;
+        const measured = measurePanel();
+        if (!measured) {
+            // Not attached to the document yet (fresh mount, workflow load): retry on the next frames.
+            if (attempt < FIT_RETRY_FRAMES && !fitRetryPending && typeof requestAnimationFrame === 'function') {
+                fitRetryPending = true;
+                requestAnimationFrame(() => {
+                    fitRetryPending = false;
+                    fitNodeHeight(attempt + 1);
+                });
+            }
+            return;
+        }
+        panelHeight = measured;
+        const target = node.computeSize?.()?.[1];
+        if (!Number.isFinite(target) || Math.abs(target - node.size[1]) < 1) return;
+        node.setSize([node.size[0], target]);
+        node.graph?.setDirtyCanvas?.(true, true);
     }
 
     function writeSize(w, h) {
@@ -210,10 +252,22 @@ function mountPicker(node) {
     };
 
     view = createResolutionPickerView(scope, actions);
-    node.setSize(NODE_SIZE);
     node.addDOMWidget('resolution_picker', 'div', view.element, {
-        serialize: false, hideOnZoom: false, getMinHeight: () => MIN_PANEL_HEIGHT,
+        serialize: false, hideOnZoom: false, getMinHeight: () => panelHeight, getMaxHeight: () => panelHeight,
     });
+    node.setSize([NODE_WIDTH, node.computeSize?.()?.[1] ?? node.size[1]]);
+    // The stylesheet, fonts or a wrapped status line can change the content height after a render
+    // (the first fit may even see an unstyled panel): refit whenever a child's box changes. The
+    // children are created once by the view, so observing them at mount covers every render.
+    if (typeof ResizeObserver === 'function') {
+        const observer = new ResizeObserver(() => {
+            if (scope.signal.aborted) return;
+            const measured = measurePanel();
+            if (measured && measured !== panelHeight) fitNodeHeight();
+        });
+        for (const child of view.element.children) observer.observe(child);
+        scope.cleanup(() => observer.disconnect());
+    }
     mountTheme(view.element, app.ui.settings, scope);
     scope.cleanup(() => view.element.remove());
 
