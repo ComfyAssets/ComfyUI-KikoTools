@@ -128,10 +128,11 @@ render the extension sets the node height to the host's `computeSize()` while
 keeping the width. The measurement is retried for up to 60 frames when the
 element is not attached yet (fresh mount, workflow load), skipped while the
 family table is still loading, and ignored when the panel is hidden by the
-host. A `ResizeObserver` on the panel's children refits the node when their
-boxes change later, for example when the stylesheet arrives after the first
-render, so the panel children must carry no vertical margins (the stylesheet
-zeroes them).
+host. A `ResizeObserver` on the panel's children schedules a refit on the next
+frame when their boxes change later, for example when the stylesheet arrives
+after the first render; measuring inside the observer delivery would make WebKit
+report an undelivered-notifications loop error. The panel children must carry no
+vertical margins (the stylesheet zeroes them).
 
 ## Node Dimensions and modal dialogs
 

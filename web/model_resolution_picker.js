@@ -259,11 +259,20 @@ function mountPicker(node) {
     // The stylesheet, fonts or a wrapped status line can change the content height after a render
     // (the first fit may even see an unstyled panel): refit whenever a child's box changes. The
     // children are created once by the view, so observing them at mount covers every render.
+    // The refit runs on the next frame, never inside the observer delivery: measuring there forces a
+    // layout while the stylesheet may be applying, and WebKit then reports an undelivered-notifications
+    // loop error for the observed children.
     if (typeof ResizeObserver === 'function') {
+        let refitScheduled = false;
         const observer = new ResizeObserver(() => {
-            if (scope.signal.aborted) return;
-            const measured = measurePanel();
-            if (measured && measured !== panelHeight) fitNodeHeight();
+            if (scope.signal.aborted || refitScheduled) return;
+            refitScheduled = true;
+            requestAnimationFrame(() => {
+                refitScheduled = false;
+                if (scope.signal.aborted) return;
+                const measured = measurePanel();
+                if (measured && measured !== panelHeight) fitNodeHeight();
+            });
         });
         for (const child of view.element.children) observer.observe(child);
         scope.cleanup(() => observer.disconnect());
