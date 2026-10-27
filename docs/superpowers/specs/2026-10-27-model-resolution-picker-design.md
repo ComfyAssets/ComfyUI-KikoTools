@@ -382,3 +382,14 @@ Sync rules (the panel remains a projection of the native widgets):
 - Workflows now serialize five native widgets; nothing else changes.
 
 Non-goals unchanged. The chip grid, Custom ratio and Swap stay as built.
+
+### 4. Ratio shape on each chip
+
+Each ratio chip shows a small outlined box shaped like its ratio before the
+label (wide for 16:9, tall for 9:16, square for 1:1). It is drawn with the
+toolkit's own markup and tokens: a `<span class="ca-resolution-shape">`
+sized from the ratio (longest side 18 px, shortest side at least 6 px,
+rounded to whole pixels), `border: 1px solid currentColor`, with the active
+chip's white text colour showing through. Purely decorative: `aria-hidden`,
+no effect on the accessible name, hidden on `Custom ratio`. No Pixaroma
+code or assets.
