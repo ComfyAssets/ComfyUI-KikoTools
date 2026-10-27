@@ -8,6 +8,7 @@ validation is a startup error.
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from .override import current_table
 from .table import (
     CHIPS,
     MIRROR,
@@ -28,6 +29,7 @@ __all__ = [
     "family_labels",
     "resolve_family",
     "families_payload",
+    "SHIPPED_DATA",
     "load_shipped_families",
 ]
 
@@ -44,7 +46,16 @@ def load_shipped_families(path: Path = TABLE_PATH) -> Tuple[Tuple[Family, ...], 
     return build_families(data), data["default"]
 
 
+SHIPPED_DATA = load_table(TABLE_PATH)
 FAMILIES, DEFAULT_FAMILY = load_shipped_families()
+
+
+def _current() -> Tuple[Tuple[Family, ...], str, List[str]]:
+    """Return families, default label and warnings for the merged table."""
+    data, warnings = current_table()
+    if data is SHIPPED_DATA:
+        return FAMILIES, DEFAULT_FAMILY, warnings
+    return build_families(data), data["default"], warnings
 
 
 def family_labels() -> List[str]:
@@ -54,7 +65,7 @@ def family_labels() -> List[str]:
 
 def resolve_family(label: str) -> Optional[Family]:
     """Return the family matching ``label`` or one of its aliases, else None."""
-    for family in FAMILIES:
+    for family in _current()[0]:
         if label == family.label or label in family.aliases:
             return family
     return None
@@ -62,10 +73,12 @@ def resolve_family(label: str) -> Optional[Family]:
 
 def families_payload() -> Dict[str, Any]:
     """Return the JSON-shaped table the frontend consumes."""
+    current, default, warnings = _current()
     return {
         "chips": list(CHIPS),
         "mirror": dict(MIRROR),
-        "default": DEFAULT_FAMILY,
+        "default": default,
+        "warnings": list(warnings),
         "families": [
             {
                 "label": family.label,
@@ -81,6 +94,6 @@ def families_payload() -> Dict[str, Any]:
                     for chip in CHIPS
                 },
             }
-            for family in FAMILIES
+            for family in current
         ],
     }
