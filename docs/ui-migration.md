@@ -12,6 +12,7 @@ Pixaroma's toolkit inspired the organization; its code/assets are not vendored.
 | Seed History | `views/seed-history.js`, scoped watcher and disclosure | [History](screenshots/seed-history/) |
 | Workflow Timer | Shared clock, controls and color picker | [Timer](screenshots/workflow-timer/) |
 | Width Height / Empty Latent swaps | `ui/dimension-swap.js`, `ui/dimensions.js` | [Swaps](screenshots/dimension-swap/) |
+| Model Resolution Picker | `views/resolution-picker.js`, `ui/resolution-picker.js`, shared swap | [Picker](screenshots/resolution-picker/) |
 | Node Dimensions | `views/node-dimensions.js`, native dialog shell | [Dimensions](screenshots/node-dimensions/) |
 | Display Text / Any | Shared output view, controller and widget adapter | [Output](screenshots/display-output/) |
 | Embedding Autocomplete | Shared suggestions/settings, worker parsing and cache | [Autocomplete](screenshots/embedding-autocomplete/) |

@@ -104,6 +104,15 @@ The control does not change node dimensions, batch size, native input order or
 backend interfaces. Workflow persistence remains with ComfyUI's native widgets;
 the DOM control does not serialize its UI state.
 
+## Model Resolution Picker
+
+The picker's chips, size list and header are derived from the native `model`,
+`width` and `height` widgets on every change; no panel state is saved in the
+workflow. The only extra state is an in-memory custom-ratio flag, lost on
+reload. The family table comes from `GET /kikotools/model_resolution/families`,
+and a chip whose family lists no sizes for it is disabled. Swap reuses
+`dimension-swap.js` and `dimensions.js`, and node removal disposes the scope.
+
 ## Node Dimensions and modal dialogs
 
 The ComfyAssets-only Node Dimensions context menu uses `dialog.js` for a native
