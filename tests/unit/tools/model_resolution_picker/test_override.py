@@ -252,7 +252,6 @@ def test_alias_default_is_normalised_to_its_label(tmp_path):
     assert config["default"] == "My SDXL"
 
 
-
 def test_same_mtime_replacement_with_different_size_is_reread(tmp_path):
     path = write_override(tmp_path, {"remove": ["SD 1.5"]})
     old = path.stat()
