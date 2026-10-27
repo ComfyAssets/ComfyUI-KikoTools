@@ -16,6 +16,7 @@ A light-theme capture is at `docs/screenshots/resolution-picker/ModelResolutionP
 
 ### Inputs
 - **model**: Dropdown of the 14 family labels (default `SDXL`)
+- **resolution**: Dropdown of `custom` plus size labels such as `1216×832 - 3:2 (1.0MP)` (default `custom`); see [Resolution dropdown](#resolution-dropdown)
 - **width**: Width in pixels (64-8192, step 8)
 - **height**: Height in pixels (64-8192, step 8)
 - **batch_size**: Number of empty latents (1-64)
@@ -25,11 +26,11 @@ A light-theme capture is at `docs/screenshots/resolution-picker/ModelResolutionP
 - **width**: Rounded width (INT)
 - **height**: Rounded height (INT)
 
-Width and height are rounded to the selected family's step at execution and never go below 64. An unknown family label (for example from an old workflow) falls back to step 8 and logs a warning.
+A `resolution` label other than `custom` that parses as `W×H` takes precedence over width and height; `custom` or an unparseable label uses width and height. Width and height are rounded to the selected family's step at execution and never go below 64. An unknown family label (for example from an old workflow) falls back to step 8 and logs a warning.
 
 The latent is the shared 4-channel 8x empty latent. It carries `downscale_ratio_spacial: 8`, which lets ComfyUI resize it for 16x and 32x VAEs, so the same output works with every family below.
 
-The frontend reads the family table from `GET /kikotools/model_resolution/families`.
+The frontend reads the family table from `GET /kikotools/model_resolution/families`. The response carries the table, plus a `warnings` list that is empty unless an override file was ignored.
 
 ## Model Families
 
@@ -52,14 +53,64 @@ The frontend reads the family table from `GET /kikotools/model_resolution/famili
 
 The family steps and megapixel tiers are the grid the node rounds to and the tiers custom ratios use. Video families are suffixed `(keyframes)`; see the keyframe note below.
 
+## Family Table File
+
+The families live in `kikotools/tools/model_resolution_picker/families.json`, loaded and checked by `table.py` when ComfyUI starts. A shipped file that fails the check is a startup error. Top-level keys:
+
+- `version`: must be `1`
+- `chips`: exactly the 11 chips listed above, in that order
+- `mirror`: pairs every chip with its mirrored chip (`4:5` with `5:4`, `1:1` with itself)
+- `default`: label or alias of the family selected by default
+- `families`: a non-empty list of family objects
+
+Each family object has:
+
+- `label`: unique name shown in the dropdown; `aliases` (optional list) are old names that still resolve to it
+- `models`: description string; `notes` (optional string) is ignored by the node
+- `group`: `image` or `video`
+- `vaeRatio`: `8`, `16` or `32`
+- `step`: positive integer grid step (at most 4096)
+- `megapixels`: non-empty list of tiers used by custom ratios (each above 0, at most 64)
+- `default`: a `[width, height]` pair that appears in `sizes`
+- `sizes`: an object with one key per chip, each a list of `[width, height]` pairs in ascending pixel order (an empty list disables the chip)
+
+Every size must be a multiple of `step`, within 7% of its chip's ratio, listed under one chip only, and have its swapped size under the mirrored chip. `validate_table` returns every problem as text and never raises.
+
+## User Override File
+
+To change sizes without editing the shipped file, create `model_resolutions.json` in a `kikotools` folder inside ComfyUI's user directory (`folder_paths.get_user_directory()`; typically `ComfyUI/user/kikotools/model_resolutions.json`). It uses the same schema as the shipped file, and any top-level `chips` or `mirror` are ignored. Rules:
+
+- Families are matched by `label`. A family with a shipped label replaces that family whole; a new label is appended after the shipped ones, in file order.
+- `remove` is a list of labels that deletes shipped families. It wins over `families` when both name the same label.
+- `default` is an optional label that becomes the default family; it must name a family that survives the merge.
+- The file is read again when its modification time changes, so a new node or a page reload picks up edits without restarting ComfyUI.
+- The shipped file is never modified.
+
+This example replaces SDXL with a shorter list, adds a new family, hides two shipped ones and makes the new family the default:
+
+```json
+{ex}
+```
+
+The merged table is checked with the same `validate_table`. If the file is unreadable, is not valid JSON, nests too deeply, or fails the check, the whole file is ignored and the shipped table is used. ComfyUI logs a warning `Override ignored: <path>: <reason>`, the same text is returned in the `warnings` list of `GET /kikotools/model_resolution/families`, and the panel's status line shows the first warning. Fix the file and reload to clear it.
+
 ## How to Use
 
 ### Chips and size list
 1. **Pick a model** in the dropdown.
-2. **Click a ratio chip** (`1:1 4:5 5:4 3:4 4:3 2:3 3:2 9:16 16:9 21:9 9:21`). The size list under the active chip shows that family's sizes for the ratio.
+2. **Click a ratio chip** (`1:1 4:5 5:4 3:4 4:3 2:3 3:2 9:16 16:9 21:9 9:21`; each shows a small outline of its shape). The size list under the active chip shows that family's sizes for the ratio.
 3. **Click a size** to write it to width and height. The header shows `W × H · ratio · MP` for the current values.
 
 A chip is disabled when the family lists no sizes for that ratio.
+
+### Resolution dropdown
+The native `resolution` dropdown sits between `model` and `width` and mirrors the panel. Its options are `custom` plus every size label from the shipped families (sorted as text), written `{w}×{h} - {ratio} ({mp}MP)` with 1 MP = 1,048,576 pixels, for example `1216×832 - 3:2 (1.0MP)`.
+
+- In the UI the dropdown lists the sizes of the active ratio chip, or every size of the family when `Custom ratio` is active or no chip matches.
+- Picking a label writes width and height and activates the matching chip.
+- Clicking a chip or a size, or swapping, sets the label to match.
+- Typing a size that is not in the list, wiring width or height, or a failed families load shows `custom`.
+- On execution a non-`custom` label that parses wins over width and height; `custom` or an unparseable label uses width and height. Labels that only an override file adds are accepted too.
 
 ### Swap
 The Swap W×H button (the same control Width Height Selector and Empty Latent Batch use) exchanges width and height and lands on the mirrored chip, for example 3:4 becomes 4:3.

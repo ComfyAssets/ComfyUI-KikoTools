@@ -113,6 +113,15 @@ reload. The family table comes from `GET /kikotools/model_resolution/families`,
 and a chip whose family lists no sizes for it is disabled. Swap reuses
 `dimension-swap.js` and `dimensions.js`, and node removal disposes the scope.
 
+The native `resolution` combo is another projection of the same state. Its
+options are rebuilt whenever the model or the active chip changes: `custom` plus
+the active chip's sizes (all family sizes for Custom ratio or no chip). Picking
+a label writes `width`/`height` through their callbacks and the matching chip
+activates; a chip click, swap, typed size or model change sets the label to the
+matching size, and a size outside the list, wired inputs or a failed families
+load show `custom`. Each ratio chip also carries an `aria-hidden` outline of its
+shape.
+
 ## Node Dimensions and modal dialogs
 
 The ComfyAssets-only Node Dimensions context menu uses `dialog.js` for a native

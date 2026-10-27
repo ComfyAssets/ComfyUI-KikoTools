@@ -161,8 +161,10 @@ Choose a model family and a size from ratio chips, and get an empty latent plus 
 
 - **Model Dropdown**: 14 families (SD 1.5, SDXL, Illustrious XL, Flux.1, Flux.2, Qwen-Image and more) with their preferred sizes
 - **Chips and List**: Pick an aspect ratio chip, then a size from the list under it; the header shows `W × H · ratio · MP`
+- **Resolution Dropdown**: A native `resolution` dropdown (`custom` plus size labels like `1216×832 - 3:2 (1.0MP)`) lists the active chip's sizes and stays in sync with the chips; a listed size wins over width and height when the node runs
 - **Swap W×H**: Exchanges width and height and lands on the mirrored chip
 - **Custom Ratio and Resolution**: Enter a ratio like 16:9 or type width and height; sizes are rounded to the family's step
+- **Your Own Sizes**: An optional override file at `ComfyUI/user/kikotools/model_resolutions.json` (under the default user directory) can replace a family by label, add new ones, hide shipped ones with `remove`, or set `default`; an invalid file is ignored and the panel shows why ([details](examples/documentation/model_resolution_picker.md#user-override-file))
 - **Outputs**: `latent` (4-channel 8x, resizable for 16x and 32x VAEs), `width` and `height`
 - **Keyframe Rows**: Video families (Wan 2.2, LTX-2, HunyuanVideo 1.5, MiniMax H3) are first/last-frame sizes; the latent is an image latent, never fed to a video model
 
