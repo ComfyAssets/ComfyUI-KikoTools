@@ -65,6 +65,11 @@ class ModelResolutionPickerNode(ComfyAssetsBaseNode):
             }
         }
 
+    @classmethod
+    def VALIDATE_INPUTS(cls, model: str) -> bool:
+        """Accept any label so renamed or future families still execute (create() falls back)."""
+        return True
+
     RETURN_TYPES = ("LATENT", "INT", "INT")
     RETURN_NAMES = ("latent", "width", "height")
     FUNCTION = "create"

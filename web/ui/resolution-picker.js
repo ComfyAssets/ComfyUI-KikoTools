@@ -3,11 +3,12 @@ const MIN_SIDE = 64;
 const DEFAULT_STEP = 8;
 const NEAREST_CHIP_TOLERANCE = 0.07;
 const MAX_RATIO_TERM = 10000;
+const MAX_SIDE = 8192;
 const RATIO_ALIASES = { '8:5': '16:10', '5:8': '10:16', '7:3': '21:9', '3:7': '9:21' };
 
 export function parseRatio(text) {
     if (typeof text !== 'string') return null;
-    const match = /^\s*(\d+)\s*[:/x×]\s*(\d+)\s*$/.exec(text);
+    const match = /^\s*(\d+)\s*[:/x×]\s*(\d+)\s*$/i.exec(text);
     if (!match) return null;
     const [w, h] = [Number(match[1]), Number(match[2])];
     if (w < 1 || h < 1 || w > MAX_RATIO_TERM || h > MAX_RATIO_TERM) return null;
@@ -78,6 +79,7 @@ export function sizesForRatio(family, [rw, rh]) {
         const height = Math.sqrt((mp * PIXELS_PER_MEGAPIXEL * rh) / rw);
         const width = (height * rw) / rh;
         const size = [roundToStep(width, family.step), roundToStep(height, family.step)];
+        if (size[0] > MAX_SIDE || size[1] > MAX_SIDE) continue;
         const key = size.join('x');
         if (seen.has(key)) continue;
         seen.add(key);

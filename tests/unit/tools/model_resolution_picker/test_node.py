@@ -1,7 +1,9 @@
 import asyncio
 import json
 import logging
+from unittest import mock
 
+from kikotools.tools.model_resolution_picker import families
 from kikotools.tools.model_resolution_picker.node import (
     ModelResolutionPickerNode,
     get_families,
@@ -37,9 +39,24 @@ def test_exact_sizes_pass_through():
 
 def test_unknown_label_keeps_size_and_warns(caplog):
     with caplog.at_level(logging.WARNING):
-        _, w, h = ModelResolutionPickerNode().create("Renamed Family", 1000, 1000, 1)
-    assert (w, h) == (1000, 1000)
+        _, w, h = ModelResolutionPickerNode().create("Renamed Family", 1003, 1003, 1)
+    assert (w, h) == (1000, 1000)  # fallback step 8
     assert "Renamed Family" in caplog.text
+
+
+def test_validate_inputs_accepts_any_label():
+    assert ModelResolutionPickerNode.VALIDATE_INPUTS("Renamed Family") is True
+
+
+def test_alias_label_resolves_to_its_family():
+    sdxl = families.resolve_family("SDXL")
+    patched = sdxl._replace(aliases=("SDXL 1.0",))
+    others = tuple(f for f in families.FAMILIES if f.label != "SDXL")
+    with mock.patch.object(families, "FAMILIES", (patched,) + others):
+        assert families.resolve_family("SDXL 1.0").label == "SDXL"
+        latent, w, h = ModelResolutionPickerNode().create("SDXL 1.0", 1216, 832, 1)
+    assert (w, h) == (1216, 832)
+    assert latent["samples"].shape[-2:] == (104, 152)
 
 
 def test_families_route_returns_payload():

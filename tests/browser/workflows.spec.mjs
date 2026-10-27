@@ -1863,6 +1863,7 @@ test('resolution picker keeps keyboard focus on activation and refreshes wired-i
     await openHost(page);
     const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1024, height: 1024, batch_size: 1 });
     const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeEnabled();
     const chip = panel.getByRole('button', { name: '3:2', exact: true });
     await chip.focus();
     await page.keyboard.press('Enter');
@@ -1882,6 +1883,7 @@ test('resolution picker swap lands on the mirrored chip and entry', async ({ pag
     await openHost(page);
     await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1344, height: 768, batch_size: 1 });
     const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeEnabled();
     await page.locator('.ca-dimension-swap').getByRole('button', { name: 'Swap width and height', exact: true }).click();
     await expect(panel.getByRole('button', { name: '9:16', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await expect(panel.getByRole('button', { name: '768 × 1344', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -1890,6 +1892,8 @@ test('resolution picker swap lands on the mirrored chip and entry', async ({ pag
 test('resolution picker model change keeps listed sizes or falls back to the chip default', async ({ page }) => {
     await openHost(page);
     await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1344, height: 768, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeEnabled();
     const node = page.locator('[data-node="ModelResolutionPicker"]');
     await node.getByLabel('model', { exact: true }).fill('HunyuanImage 2.1');
     await node.getByLabel('model', { exact: true }).dispatchEvent('change');
@@ -1898,10 +1902,25 @@ test('resolution picker model change keeps listed sizes or falls back to the chi
     await expect(page.locator('.ca-resolution-header')).toHaveText('2560 × 1536 · 16:9 · 3.8 MP');
 });
 
+test('resolution picker applies a model change made before the families payload loads', async ({ page }) => {
+    let release;
+    const held = new Promise(resolve => { release = resolve; });
+    await page.route('**/kikotools/model_resolution/families', async route => { await held; await route.continue(); });
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1344, height: 768, batch_size: 1 });
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    await node.getByLabel('model', { exact: true }).fill('HunyuanImage 2.1');
+    await node.getByLabel('model', { exact: true }).dispatchEvent('change');
+    release();
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('2560');
+    await expect(node.getByLabel('height', { exact: true })).toHaveValue('1536');
+});
+
 test('resolution picker custom ratio field computes tiers and rejects bad input', async ({ page }) => {
     await openHost(page);
     await createNode(page, 'ModelResolutionPicker', { model: 'Flux.1', width: 1024, height: 1024, batch_size: 1 });
     const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeEnabled();
     await panel.getByRole('button', { name: 'Custom ratio', exact: true }).click();
     const field = panel.getByLabel('Custom ratio', { exact: true });
     await expect(field).toHaveValue('1:1');

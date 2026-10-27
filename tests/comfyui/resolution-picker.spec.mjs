@@ -24,6 +24,56 @@ test('resolution picker survives renderers, swap, themes and workflow reload', a
     }
     // three swaps from 16:9
     await expect(panel.getByRole('button', { name: '9:16', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    // model change in Nodes 2.0 lands on the new family's default for the derived chip
+    const payload = await page.evaluate(async () => (await fetch('/kikotools/model_resolution/families')).json());
+    const hunyuan = payload.families.find(family => family.label === 'HunyuanImage 2.1');
+    const target = hunyuan.default[0] * hunyuan.default[1];
+    const [expectedWidth, expectedHeight] = [...hunyuan.sizes['9:16']].sort(
+        (a, b) => Math.abs(a[0] * a[1] - target) - Math.abs(b[0] * b[1] - target),
+    )[0];
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', true);
+    });
+    await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(true);
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = app.graph._nodes.find(item => item.type === 'ModelResolutionPicker');
+        const widget = node.widgets.find(item => item.name === 'model');
+        widget.value = 'HunyuanImage 2.1';
+        widget.callback(widget.value, app.canvas, node, [0, 0], null);
+    });
+    await expect.poll(() => page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = app.graph._nodes.find(item => item.type === 'ModelResolutionPicker');
+        return ['width', 'height'].map(name => node.widgets.find(widget => widget.name === name).value);
+    })).toEqual([expectedWidth, expectedHeight]);
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', false);
+    });
+    await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(false);
+    await expect(panel.getByRole('button', { name: '9:16', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    // wired-in state disables the chips and Swap, and clears when the link goes away
+    const swap = page.locator('.ca-dimension-swap').getByRole('button', { name: 'Swap width and height', exact: true });
+    await expect(swap).toBeEnabled();
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = app.graph._nodes.find(item => item.type === 'ModelResolutionPicker');
+        window.wiredEntry = { name: 'width', widget: { name: 'width' }, link: 7 };
+        node.inputs.push(window.wiredEntry);
+        node.onConnectionsChange();
+    });
+    await expect(panel.locator('.ca-resolution-header')).toHaveText('Dimensions are wired in');
+    await expect(swap).toBeDisabled();
+    await page.evaluate(async () => {
+        const { app } = await import('/scripts/app.js');
+        const node = app.graph._nodes.find(item => item.type === 'ModelResolutionPicker');
+        node.inputs.splice(node.inputs.indexOf(window.wiredEntry), 1);
+        node.onConnectionsChange();
+    });
+    await expect(swap).toBeEnabled();
+    await expect(panel.locator('.ca-resolution-header')).not.toHaveText('Dimensions are wired in');
     for (const theme of ['light', 'dark']) {
         await page.evaluate(async theme => {
             const { app } = await import('/scripts/app.js');

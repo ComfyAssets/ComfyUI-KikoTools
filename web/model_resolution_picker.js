@@ -49,6 +49,8 @@ function mountPicker(node) {
     let failed = false;
     let writing = false;
     let lastChip = null;
+    let modelLabel = widgetOf(node, 'model')?.value;
+    let pendingModel = null;
     let view;
 
     const readSize = () => ['width', 'height'].map(name => Number(widgetOf(node, name)?.value));
@@ -61,7 +63,7 @@ function mountPicker(node) {
             id, label: id === CUSTOM_CHIP ? 'Custom ratio' : id, active: false, disabled: true,
         }));
         const empty = { disabled: true, chips: staticChips(), customOpen: false, ratioText: '', entries: [] };
-        if (wired) return { ...empty, header: 'Dimensions are wired in' };
+        if (wired) return { ...empty, wired, header: 'Dimensions are wired in' };
         if (failed || (payload && !Number.isFinite(width + height))) {
             const [w, h] = effectiveSize(null, width, height);
             return { ...empty, header: `${w} × ${h}` };
@@ -82,6 +84,7 @@ function mountPicker(node) {
         }));
         chips.push({ id: CUSTOM_CHIP, label: 'Custom ratio', active: showCustom, disabled: !family });
         return {
+            wired: false,
             disabled: false,
             header: `${w} × ${h} · ${chip || selection.ratioText} · ${megapixels(w, h)} MP`,
             chips,
@@ -97,7 +100,7 @@ function mountPicker(node) {
         const state = buildState();
         view.render(state);
         const swap = node.swapButtonWidget?.element?.querySelector('button');
-        if (swap) swap.disabled = state.header === 'Dimensions are wired in';
+        if (swap) swap.disabled = state.wired;
     }
 
     function writeSize(w, h) {
@@ -130,9 +133,20 @@ function mountPicker(node) {
         else render();
     }
 
+    function applyPendingModelChange() {
+        const pending = pendingModel;
+        pendingModel = null;
+        if (!pending || scope.signal.aborted || widgetOf(node, 'model')?.value !== pending.to) return;
+        const [width, height] = readSize();
+        const { chip } = deriveSelection(payload, pending.from, width, height);
+        lastChip = chip;
+        applyModelChange(pending.to);
+    }
+
     const actions = {
         selectChip(chip) {
             if (!payload) return;
+            view.setStatus('');
             node.resolutionCustom.open = false;
             const [width, height] = readSize();
             const { family } = currentSelection();
@@ -175,7 +189,17 @@ function mountPicker(node) {
         widget.callback = function () {
             const result = callback?.apply(this, arguments);
             if (writing) return result;
-            if (name === 'model') applyModelChange(arguments[0] ?? this.value);
+            if (name === 'model') {
+                const label = arguments[0] ?? this.value;
+                if (!payload && !failed) {
+                    pendingModel = { from: pendingModel ? pendingModel.from : modelLabel, to: label };
+                    modelLabel = label;
+                    render();
+                } else {
+                    modelLabel = label;
+                    applyModelChange(label);
+                }
+            }
             else render();
             return result;
         };
@@ -205,7 +229,8 @@ function mountPicker(node) {
     loadFamilies(api).then(
         loaded => {
             payload = loaded;
-            render();
+            if (pendingModel) applyPendingModelChange();
+            else render();
         },
         () => {
             if (scope.signal.aborted) return;

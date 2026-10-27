@@ -34,7 +34,7 @@ const payload = {
 };
 
 test('parseRatio accepts the documented forms and rejects malformed input', () => {
-    for (const text of ['16:9', ' 16 / 9 ', '16x9', '16×9']) assert.deepEqual(parseRatio(text), [16, 9]);
+    for (const text of ['16:9', ' 16 / 9 ', '16x9', '16×9', '16X9']) assert.deepEqual(parseRatio(text), [16, 9]);
     for (const text of ['0:5', '16:', 'a:b', '99999999:1', '', null]) assert.equal(parseRatio(text), null);
 });
 test('deriveSelection prefers authored membership, then the 7% band, then custom', () => {
@@ -48,6 +48,7 @@ test('deriveSelection prefers authored membership, then the 7% band, then custom
 });
 test('sizesForRatio follows the core formula per tier and effectiveSize rounds to the step', () => {
     assert.deepEqual(sizesForRatio({ step: 16, megapixels: [1, 2] }, [16, 9]), [[1360, 768], [1936, 1088]]);
+    assert.deepEqual(sizesForRatio({ step: 16, megapixels: [1, 4] }, [20, 1]), [[4576, 224]]); // 4 MP tier would exceed 8192
     assert.deepEqual(effectiveSize(payload.families[1], 70, 1000), [64, 992]);
     assert.deepEqual(effectiveSize(null, 1001, 1001), [1000, 1000]);
     assert.equal(megapixels(1216, 832), '1.0');

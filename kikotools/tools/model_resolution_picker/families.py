@@ -78,12 +78,12 @@ FAMILIES: Tuple[Family, ...] = (
                 (832, 640),
             ),
             "3:4": (
-                (448, 576),
-                (640, 832),
+                (576, 768),
+                (768, 1024),
             ),
             "4:3": (
-                (576, 448),
-                (832, 640),
+                (768, 576),
+                (1024, 768),
             ),
             "2:3": (
                 (448, 640),
@@ -398,7 +398,9 @@ FAMILIES: Tuple[Family, ...] = (
             ),
         },
     ),
-    # Qwen-Image model card resolution list
+    # Qwen-Image model card resolution list. 4:3 is 1472x1104, the project
+    # maintainer's correction of the README's 1140 (QwenLM/Qwen-Image issue #7,
+    # "resolutions used in our final training stage").
     Family(
         label="Qwen-Image",
         aliases=(),
@@ -651,14 +653,8 @@ FAMILIES: Tuple[Family, ...] = (
                 (640, 640),
                 (960, 960),
             ),
-            "4:5": (
-                (576, 736),
-                (864, 1088),
-            ),
-            "5:4": (
-                (736, 576),
-                (1088, 864),
-            ),
+            "4:5": ((864, 1088),),
+            "5:4": ((1088, 864),),
             "3:4": (
                 (576, 736),
                 (832, 1120),
@@ -779,14 +775,8 @@ FAMILIES: Tuple[Family, ...] = (
                 (640, 640),
                 (1024, 1024),
             ),
-            "4:5": (
-                (576, 736),
-                (928, 1152),
-            ),
-            "5:4": (
-                (736, 576),
-                (1152, 928),
-            ),
+            "4:5": ((928, 1152),),
+            "5:4": ((1152, 928),),
             "3:4": (
                 (576, 736),
                 (896, 1184),

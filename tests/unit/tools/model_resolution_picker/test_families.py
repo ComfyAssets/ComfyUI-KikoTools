@@ -66,20 +66,37 @@ def test_defaults_labels_and_must_includes():
         assert any(
             family.default in entries for entries in family.sizes.values()
         ), family.label
+    flux2 = [(1248, 832), (832, 1248), (2048, 2048), (1920, 1088), (1088, 1920)]
     must = {
-        "SDXL": ("16:9", (1344, 768)),
-        "Flux.1": ("16:9", (1920, 1088)),
-        "Flux.2 / Klein / MOSS": ("3:2", (1248, 832)),
-        "Z-Image": ("21:9", (1680, 720)),
-        "Qwen-Image": ("16:9", (1664, 928)),
-        "Qwen-Image 2.1": ("16:9", (2752, 1536)),
-        "HunyuanImage 2.1": ("16:9", (2560, 1536)),
-        "Illustrious XL": ("2:3", (1248, 1824)),
-        "Wan 2.2 (keyframes)": ("16:9", (1280, 704)),
-        "MiniMax H3 (keyframes)": ("16:9", (864, 480)),
+        "SDXL": [(1344, 768)],
+        "Flux.1": [(1920, 1088), (1088, 1920)],
+        "Flux.2 / Klein / MOSS": flux2,
+        "Z-Image": [(1680, 720), (1280, 1280)],
+        "Qwen-Image": [(1664, 928)],
+        "Qwen-Image 2.1": [(2048, 2048), (2400, 1792), (2528, 1696), (2752, 1536)],
+        "HunyuanImage 2.1": [(2560, 1536), (2304, 1792)],
+        "Illustrious XL": [(1248, 1824), (1536, 1536), (1152, 2048)],
+        "Wan 2.2 (keyframes)": [(1280, 704), (640, 640), (960, 960)],
+        "LTX-2 (keyframes)": [(960, 544), (768, 512)],
+        "HunyuanVideo 1.5 (keyframes)": [(848, 480)],
+        "MiniMax H3 (keyframes)": [(864, 480)],
+        "SD 1.5": [(512, 512), (768, 768), (512, 768), (768, 512)],
     }
-    for label, (chip, size) in must.items():
-        assert size in resolve_family(label).sizes[chip], label
+    for label, required in must.items():
+        listed = {
+            size for entries in resolve_family(label).sizes.values() for size in entries
+        }
+        for size in required:
+            assert size in listed, (label, size)
+
+
+def test_no_size_is_listed_under_two_chips():
+    for family in FAMILIES:
+        seen = {}
+        for chip, entries in family.sizes.items():
+            for size in entries:
+                assert size not in seen, (family.label, size, seen[size], chip)
+                seen[size] = chip
 
 
 def test_resolve_family_by_alias_and_unknown():

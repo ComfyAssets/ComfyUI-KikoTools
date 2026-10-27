@@ -83,7 +83,7 @@ Panel state is derived from the native widgets, so nothing extra is saved in the
 
 ## Keyframe Note for Video Families
 
-`Wan 2.2`, `LTX-2`, `HunyuanVideo 1.5` and `MiniMax H3` (all suffixed `(keyframes)`) are listed for first/last-frame generation at the video model's frame size. The latent output is still an image latent and is never fed to a video model.
+`Wan 2.2`, `LTX-2`, `HunyuanVideo 1.5` and `MiniMax H3` (all suffixed `(keyframes)`) are listed for first/last-frame generation at the video model's frame size. The latent output is still an image latent and is never fed to a video model. The image latent decodes to the listed size when the keyframe image model's VAE ratio divides the video family's step (for example an 8x or 16x image model for Wan 2.2's 1280×720; a 32x model would not land on 720).
 
 ## Manual GPU Check Before Merge
 
