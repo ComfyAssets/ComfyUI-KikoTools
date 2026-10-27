@@ -3,11 +3,14 @@ import { api } from '../../scripts/api.js';
 import { createScope, mountTheme } from './ui/core.js';
 import { swapDimensions } from './ui/dimensions.js';
 import { mountDimensionSwap } from './ui/dimension-swap.js';
-import { defaultEntry, deriveSelection, effectiveSize, megapixels, parseRatio, sizesForRatio } from './ui/resolution-picker.js';
+import { defaultEntry, deriveSelection, effectiveSize, megapixels, parseRatio, sizeOnModelChange, sizesForRatio } from './ui/resolution-picker.js';
 import { createResolutionPickerView } from './views/resolution-picker.js';
 
 const FAMILIES_ROUTE = '/kikotools/model_resolution/families';
 const CUSTOM_CHIP = 'custom';
+const CHIP_IDS = ['1:1', '4:5', '5:4', '3:4', '4:3', '2:3', '3:2', '9:16', '16:9', '21:9', '9:21'];
+const UNAVAILABLE_STATUS = 'Sizes unavailable; type width and height';
+const RATIO_ERROR = 'Enter a ratio like 16:9';
 const FALLBACK_STEP = 8;
 const NODE_SIZE = [340, 600];
 const MIN_PANEL_HEIGHT = 320;
@@ -45,6 +48,7 @@ function mountPicker(node) {
     let payload = null;
     let failed = false;
     let writing = false;
+    let lastChip = null;
     let view;
 
     const readSize = () => ['width', 'height'].map(name => Number(widgetOf(node, name)?.value));
@@ -53,12 +57,11 @@ function mountPicker(node) {
         const [width, height] = readSize();
         const wired = isWiredIn(node, 'width') || isWiredIn(node, 'height');
         const model = widgetOf(node, 'model')?.value;
-        const empty = { disabled: true, chips: [], customOpen: false, ratioText: '', entries: [] };
-        if (wired) {
-            const ids = payload ? [...payload.chips, CUSTOM_CHIP] : [];
-            const chips = ids.map(id => ({ id, label: id === CUSTOM_CHIP ? 'Custom ratio' : id, active: false, disabled: true }));
-            return { ...empty, chips, header: 'Dimensions are wired in' };
-        }
+        const staticChips = () => [...CHIP_IDS, CUSTOM_CHIP].map(id => ({
+            id, label: id === CUSTOM_CHIP ? 'Custom ratio' : id, active: false, disabled: true,
+        }));
+        const empty = { disabled: true, chips: staticChips(), customOpen: false, ratioText: '', entries: [] };
+        if (wired) return { ...empty, header: 'Dimensions are wired in' };
         if (failed || (payload && !Number.isFinite(width + height))) {
             const [w, h] = effectiveSize(null, width, height);
             return { ...empty, header: `${w} × ${h}` };
@@ -66,6 +69,7 @@ function mountPicker(node) {
         if (!payload) return { ...empty, header: 'Loading sizes…' };
         const selection = deriveSelection(payload, model, width, height);
         const { family, chip } = selection;
+        lastChip = chip;
         const [w, h] = effectiveSize(family, width, height);
         const custom = node.resolutionCustom;
         const ratio = custom.open ? parseRatio(custom.text) : null;
@@ -73,7 +77,7 @@ function mountPicker(node) {
         if (family && custom.open) list = ratio ? sizesForRatio(family, ratio) : [];
         else if (family && chip) list = family.sizes[chip] || [];
         const showCustom = custom.open || selection.custom;
-        const chips = payload.chips.map(id => ({
+        const chips = CHIP_IDS.map(id => ({
             id, label: id, active: !showCustom && chip === id, disabled: !family?.sizes[id]?.length,
         }));
         chips.push({ id: CUSTOM_CHIP, label: 'Custom ratio', active: showCustom, disabled: !family });
@@ -117,6 +121,15 @@ function mountPicker(node) {
         return deriveSelection(payload, widgetOf(node, 'model')?.value, width, height);
     };
 
+    function applyModelChange(label) {
+        const [width, height] = readSize();
+        const wired = isWiredIn(node, 'width') || isWiredIn(node, 'height');
+        if (!payload || wired || !Number.isFinite(width + height)) return render();
+        const [w, h] = sizeOnModelChange(payload, label, width, height, lastChip);
+        if (w !== width || h !== height) writeSize(w, h);
+        else render();
+    }
+
     const actions = {
         selectChip(chip) {
             if (!payload) return;
@@ -134,7 +147,14 @@ function mountPicker(node) {
             render();
         },
         commitRatio(text) {
-            node.resolutionCustom.text = text;
+            const custom = node.resolutionCustom;
+            if (!parseRatio(text)) {
+                view.setStatus(RATIO_ERROR, true);
+                return;
+            }
+            view.setStatus('');
+            if (text.trim() === custom.text) return;
+            custom.text = text.trim();
             render();
         },
         selectSize: writeSize,
@@ -154,7 +174,9 @@ function mountPicker(node) {
         const callback = widget.callback;
         widget.callback = function () {
             const result = callback?.apply(this, arguments);
-            if (!writing) render();
+            if (writing) return result;
+            if (name === 'model') applyModelChange(arguments[0] ?? this.value);
+            else render();
             return result;
         };
     }
@@ -188,7 +210,7 @@ function mountPicker(node) {
         () => {
             if (scope.signal.aborted) return;
             failed = true;
-            view.setStatus('Sizes unavailable; type width and height', true);
+            view.setStatus(UNAVAILABLE_STATUS, true);
             render();
         },
     );

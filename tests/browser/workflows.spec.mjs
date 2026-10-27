@@ -1877,3 +1877,53 @@ test('resolution picker keeps keyboard focus on activation and refreshes wired-i
     await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeDisabled();
     await expect(page.locator('.ca-dimension-swap button')).toBeDisabled();
 });
+
+test('resolution picker swap lands on the mirrored chip and entry', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1344, height: 768, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await page.locator('.ca-dimension-swap').getByRole('button', { name: 'Swap width and height', exact: true }).click();
+    await expect(panel.getByRole('button', { name: '9:16', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(panel.getByRole('button', { name: '768 × 1344', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('resolution picker model change keeps listed sizes or falls back to the chip default', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1344, height: 768, batch_size: 1 });
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    await node.getByLabel('model', { exact: true }).fill('HunyuanImage 2.1');
+    await node.getByLabel('model', { exact: true }).dispatchEvent('change');
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('2560');
+    await expect(node.getByLabel('height', { exact: true })).toHaveValue('1536');
+    await expect(page.locator('.ca-resolution-header')).toHaveText('2560 × 1536 · 16:9 · 3.8 MP');
+});
+
+test('resolution picker custom ratio field computes tiers and rejects bad input', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'Flux.1', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await panel.getByRole('button', { name: 'Custom ratio', exact: true }).click();
+    const field = panel.getByLabel('Custom ratio', { exact: true });
+    await expect(field).toHaveValue('1:1');
+    await field.fill('16:10');
+    await field.press('Enter');
+    await expect(panel.getByRole('button', { name: '1296 × 816', exact: true })).toBeVisible();
+    await panel.getByRole('button', { name: '1296 × 816', exact: true }).click();
+    await expect(page.locator('[data-node="ModelResolutionPicker"]').getByLabel('width', { exact: true })).toHaveValue('1296');
+    await field.fill('a:b');
+    await field.press('Enter');
+    await expect(panel.locator('.ca-resolution-status')).toHaveText(/Enter a ratio like 16:9/);
+    await expect(panel.getByRole('button', { name: '1296 × 816', exact: true })).toBeVisible();
+});
+
+test('route failure keeps native widgets usable', async ({ page }) => {
+    await page.route('**/kikotools/model_resolution/families', route => route.fulfill({ status: 404, body: 'nope' }));
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.locator('.ca-resolution-status')).toHaveText('Sizes unavailable; type width and height');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeDisabled();
+    await expect(panel.locator('.ca-resolution-header')).toHaveText('1024 × 1024');
+    await page.locator('.ca-dimension-swap').getByRole('button').click();
+    await expect(page.locator('[data-node="ModelResolutionPicker"]').getByLabel('width', { exact: true })).toHaveValue('1024');
+});
