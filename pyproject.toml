@@ -37,6 +37,9 @@ Repository = "https://github.com/ComfyAssets/ComfyUI-KikoTools"
 include = ["kikotools*"]
 exclude = ["tests*", "web*"]
 
+[tool.setuptools.package-data]
+kikotools = ["**/*.json"]
+
 [tool.comfy]
 PublisherId = "kiko9"
 DisplayName = "ComfyUI-KikoTools"
