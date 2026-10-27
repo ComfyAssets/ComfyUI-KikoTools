@@ -165,6 +165,10 @@ def test_validate_table_never_raises_on_garbage():
         lambda d: d["families"][0].update(step=float("inf")),
         lambda d: d["families"][0].update(step=float("nan")),
         lambda d: d["families"][0].update(megapixels=[float("inf")]),
+        lambda d: d["families"][0].update(step=10**400),
+        lambda d: d["families"][0].update(megapixels=[10**400]),
+        lambda d: d["families"][0].update(default=[10**400, 1]),
+        lambda d: d["families"][0]["sizes"]["1:1"].append([10**400, 1]),
     ],
 )
 def test_validate_table_survives_unhashable_and_non_finite_values(

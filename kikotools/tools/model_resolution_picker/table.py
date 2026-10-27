@@ -41,6 +41,10 @@ TABLE_VERSION = 1
 GROUPS = ("image", "video")
 VAE_RATIOS = (8, 16, 32)
 CHIP_TOLERANCE = 0.07
+# Generous sanity bounds so absurd values are reported instead of overflowing.
+MAX_STEP = 4096
+MAX_MEGAPIXELS = 64
+MAX_SIDE = 65536
 
 Size = Tuple[int, int]
 
@@ -74,7 +78,10 @@ def _is_size(value: Any) -> bool:
     return (
         isinstance(value, (list, tuple))
         and len(value) == 2
-        and all(isinstance(v, int) and not isinstance(v, bool) and v > 0 for v in value)
+        and all(
+            isinstance(v, int) and not isinstance(v, bool) and 0 < v <= MAX_SIDE
+            for v in value
+        )
     )
 
 
@@ -82,9 +89,17 @@ def _is_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
+def _is_finite(value: Any) -> bool:
+    """Return True for finite numbers; ints are always finite (and may be huge)."""
+    return isinstance(value, int) or math.isfinite(value)
+
+
 def _is_step(value: Any) -> bool:
     return (
-        _is_number(value) and math.isfinite(value) and value > 0 and value == int(value)
+        _is_number(value)
+        and _is_finite(value)
+        and 0 < value <= MAX_STEP
+        and value == int(value)
     )
 
 
@@ -145,7 +160,9 @@ def _validate_scalars(label: str, fam: Dict[str, Any]) -> List[str]:
     if (
         not isinstance(mp, list)
         or not mp
-        or not all(_is_number(m) and math.isfinite(m) for m in mp)
+        or not all(
+            _is_number(m) and _is_finite(m) and 0 < m <= MAX_MEGAPIXELS for m in mp
+        )
     ):
         problems.append(f"family {label!r}: megapixels must be a non-empty number list")
     return problems
@@ -239,7 +256,10 @@ def _validate_default_label(default: Any, entries: List[Dict[str, Any]]) -> List
 
 
 def validate_table(data: Any) -> List[str]:
-    """Return every problem found in ``data``; an empty list means it is valid."""
+    """Return every problem found in ``data``; an empty list means it is valid.
+
+    Bounds: step <= 4096, megapixels in (0, 64], each side <= 65536.
+    """
     if not isinstance(data, dict):
         return ["table must be a JSON object"]
     problems = _validate_top_level(data)
