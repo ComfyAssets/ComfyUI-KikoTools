@@ -43,7 +43,8 @@ def create_empty_latent_batch(
     # Standard VAE uses 4 channels
     latent_tensor = torch.zeros(batch_size, 4, latent_height, latent_width)
 
-    return {"samples": latent_tensor}
+    # Same mark as core EmptyLatentImage: lets the sampler resize this empty latent for 16x VAEs
+    return {"samples": latent_tensor, "downscale_ratio_spacial": 8}
 
 
 def validate_dimensions(width: int, height: int) -> bool:

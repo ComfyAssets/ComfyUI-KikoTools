@@ -24,6 +24,12 @@ class TestEmptyLatentBatchLogic:
         assert samples.shape == (1, 4, 64, 64)  # 512/8 = 64
         assert torch.all(samples == 0)  # Should be all zeros
 
+    def test_marks_spatial_ratio_for_other_vaes(self):
+        """The 8x mark lets ComfyUI resize the empty latent for 16x VAEs (Flux.2, Qwen-Image 2.1)."""
+        result = create_empty_latent_batch(1024, 1024, 1)
+
+        assert result["downscale_ratio_spacial"] == 8
+
     def test_create_empty_latent_batch_with_batch_size(self):
         """Test empty latent creation with larger batch size."""
         batch_size = 4
