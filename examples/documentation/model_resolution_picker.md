@@ -87,12 +87,12 @@ Panel state is derived from the native widgets, so nothing extra is saved in the
 
 ## Manual GPU Check Before Merge
 
-The real-host CI never queues a generation, so the latent path is only unit-tested. Core `EmptyLatentImage` is the same 4-channel, 8x, marked latent this node emits, and the official Anima template already runs that path (channel repeat 4 → 16). Confirm two cases by hand on a GPU box, each with one queued image:
+The real-host CI never queues a generation, so the latent path is only unit-tested. Core `EmptyLatentImage` is the same 4-channel, 8x, marked latent this node emits, and the official Anima template already runs that path (channel repeat 4 → 16). Confirm two cases by hand on a GPU box. Each is one queued image through this node → KSampler → VAE Decode → Save:
 
-1. A 16x family (Flux.2 or Qwen-Image 2.1).
-2. The 32x family (HunyuanImage 2.1).
+1. `Flux.2 / Klein / MOSS` (16x) at 1248×832.
+2. `HunyuanImage 2.1` (32x) at 2560×1536.
 
-Use a non-square size in each case and check that the saved image's dimensions equal the node's width and height outputs. Record the result in the PR.
+For each case, the saved PNG's dimensions must equal the node's width and height outputs. Record both results in the PR description.
 
 ## Related Nodes
 
