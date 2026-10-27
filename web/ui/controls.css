@@ -241,3 +241,4 @@
 .ca-resolution-ratio { inline-size: 100%; }
 .ca-resolution-status { margin: 0; min-block-size: 17px; font-size: 11px; color: var(--ca-muted); overflow-wrap: anywhere; }
 .ca-resolution-status[data-error="true"] { color: var(--ca-error-text); }
+.ca-resolution-picker :where(.ca-resolution-chips, .ca-resolution-sizes) button[aria-pressed="true"]:hover:not(:disabled) { background: #096ba6; border-color: #096ba6; color: #fff; }

@@ -55,6 +55,9 @@ export function createResolutionPickerView(scope, actions) {
             status.dataset.error = String(Boolean(isError));
         },
         render(state) {
+            const focused = document.activeElement;
+            const focusSelector = chips.contains(focused) ? `button[data-chip="${focused.dataset.chip}"]`
+                : sizes.contains(focused) ? `button[data-width="${focused.dataset.width}"][data-height="${focused.dataset.height}"]` : null;
             header.textContent = state.header;
             chips.replaceChildren(...state.chips.map(chip => {
                 const button = createToggle(chip.label, chip.active, state.disabled || chip.disabled);
@@ -70,6 +73,7 @@ export function createResolutionPickerView(scope, actions) {
                 button.dataset.height = entry.h;
                 return button;
             }));
+            if (focusSelector) element.querySelector(focusSelector)?.focus();
             if (state.error !== undefined) this.setStatus(state.error || '', Boolean(state.error));
         },
     };

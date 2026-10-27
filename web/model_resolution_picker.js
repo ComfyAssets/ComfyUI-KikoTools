@@ -54,7 +54,11 @@ function mountPicker(node) {
         const wired = isWiredIn(node, 'width') || isWiredIn(node, 'height');
         const model = widgetOf(node, 'model')?.value;
         const empty = { disabled: true, chips: [], customOpen: false, ratioText: '', entries: [] };
-        if (wired) return { ...empty, header: 'Dimensions are wired in' };
+        if (wired) {
+            const ids = payload ? [...payload.chips, CUSTOM_CHIP] : [];
+            const chips = ids.map(id => ({ id, label: id === CUSTOM_CHIP ? 'Custom ratio' : id, active: false, disabled: true }));
+            return { ...empty, chips, header: 'Dimensions are wired in' };
+        }
         if (failed || (payload && !Number.isFinite(width + height))) {
             const [w, h] = effectiveSize(null, width, height);
             return { ...empty, header: `${w} × ${h}` };
@@ -117,9 +121,11 @@ function mountPicker(node) {
         selectChip(chip) {
             if (!payload) return;
             node.resolutionCustom.open = false;
-            const { family, entryIndex, chip: current } = currentSelection();
+            const [width, height] = readSize();
+            const { family } = currentSelection();
             const entry = family && defaultEntry(family, chip);
-            if (!entry || (current === chip && entryIndex >= 0)) return render();
+            const listed = family?.sizes[chip]?.some(([w, h]) => w === width && h === height);
+            if (!entry || listed) return render();
             writeSize(entry[0], entry[1]);
         },
         openCustom() {
@@ -164,6 +170,13 @@ function mountPicker(node) {
     node.onRemoved = function () {
         scope.dispose();
         return onRemoved?.apply(this, arguments);
+    };
+
+    const onConnectionsChange = node.onConnectionsChange;
+    node.onConnectionsChange = function () {
+        const result = onConnectionsChange?.apply(this, arguments);
+        render();
+        return result;
     };
 
     render();

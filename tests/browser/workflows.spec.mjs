@@ -1858,3 +1858,22 @@ test('resolution picker mounting is idempotent and removal disposes its scope', 
     expect(aborted).toBe(true);
     await expect(page.locator('.ca-resolution-picker')).toHaveCount(0);
 });
+
+test('resolution picker keeps keyboard focus on activation and refreshes wired-in state', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    const chip = panel.getByRole('button', { name: '3:2', exact: true });
+    await chip.focus();
+    await page.keyboard.press('Enter');
+    await expect(panel.getByRole('button', { name: '1216 × 832', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(chip).toBeFocused();
+    await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        node.inputs.push({ name: 'width', widget: { name: 'width' }, link: 7 });
+        node.onConnectionsChange?.();
+    }, id);
+    await expect(panel.locator('.ca-resolution-header')).toHaveText('Dimensions are wired in');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeDisabled();
+    await expect(page.locator('.ca-dimension-swap button')).toBeDisabled();
+});
