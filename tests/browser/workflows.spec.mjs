@@ -1826,3 +1826,297 @@ test('Follow Execution retains safe sorted navigation menus and setting filters'
         return { types, centered, hiddenGoTo, disabled: extension.getCanvasMenuItems() };
     })).toEqual({ types: ['__proto__', 'constructor', 'toString'], centered: 4, hiddenGoTo: true, disabled: [] });
 });
+
+test('resolution picker renders chips from the families route and writes sizes to native widgets', async ({ page, request }) => {
+    await openHost(page);
+    const payload = await (await request.get('/kikotools/model_resolution/families')).json();
+    expect(payload.default).toBe('SDXL');
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(panel.locator('.ca-resolution-header')).toHaveText('1024 × 1024 · 1:1 · 1.0 MP');
+    await panel.getByRole('button', { name: '3:2', exact: true }).click();
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('1216');
+    await expect(node.getByLabel('height', { exact: true })).toHaveValue('832');
+    await expect(panel.getByRole('button', { name: '1216 × 832', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(panel.getByRole('button', { name: '21:9', exact: true })).toBeEnabled();
+    for (const theme of ['light', 'dark']) {
+        await page.evaluate(theme => document.body.style.setProperty('--bg-color', theme === 'light' ? '#fff' : '#202020'), theme);
+        await expect(panel).toHaveAttribute('data-ca-theme', theme);
+    }
+    expect(await panel.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    const box = async name => panel.getByRole('button', { name, exact: true }).locator('.ca-resolution-shape').evaluate(shape => {
+        const rect = shape.getBoundingClientRect();
+        return { wide: rect.width > rect.height, tall: rect.height > rect.width, hidden: shape.getAttribute('aria-hidden') };
+    });
+    expect(await box('16:9')).toMatchObject({ wide: true, hidden: 'true' });
+    expect(await box('9:16')).toMatchObject({ tall: true, hidden: 'true' });
+    await expect(panel.getByRole('button', { name: 'Custom ratio', exact: true }).locator('.ca-resolution-shape')).toHaveCount(0);
+});
+
+test('resolution picker refits the node when its stylesheet arrives after the first render', async ({ page }) => {
+    // Hold the panel stylesheet so the families payload renders (and fits) an unstyled layout first.
+    let held = null;
+    await page.route('**/controls.css', route => { held = route; });
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', resolution: 'custom', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const heights = () => page.evaluate(id => {
+        const widget = kikoHost.nodes.get(String(id)).widgets.find(entry => entry.name === 'resolution_picker');
+        return { min: widget.options.getMinHeight(), content: Math.ceil(widget.element.getBoundingClientRect().height), styled: getComputedStyle(widget.element).display === 'flex' };
+    }, id);
+    await expect.poll(async () => (await heights()).styled).toBe(false);
+    const unstyled = await heights();
+    await expect.poll(() => held !== null).toBe(true);
+    await held.continue();
+    await expect.poll(async () => (await heights()).styled).toBe(true);
+    await expect.poll(async () => { const h = await heights(); return Math.abs(h.min - h.content); }).toBeLessThanOrEqual(3);
+    expect((await heights()).min).not.toBe(unstyled.min);
+});
+
+test('resolution picker fits the node height to the panel content', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', resolution: 'custom', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const heights = () => page.evaluate(id => {
+        const widget = kikoHost.nodes.get(String(id)).widgets.find(entry => entry.name === 'resolution_picker');
+        return { min: widget.options.getMinHeight?.(), max: widget.options.getMaxHeight?.(), content: Math.ceil(widget.element.getBoundingClientRect().height) };
+    }, id);
+    const settled = async () => { await expect.poll(async () => { const h = await heights(); return Math.abs(h.min - h.content); }).toBeLessThanOrEqual(3); return heights(); };
+    const closed = await settled();
+    expect(closed.min).toBe(closed.max);
+    await panel.getByRole('button', { name: 'Custom ratio', exact: true }).click();
+    const open = await settled();
+    expect(open.min).toBeGreaterThan(closed.min);
+    // the node height follows the host's computed size on every render and the width is kept
+    await page.evaluate(id => { kikoHost.nodes.get(String(id)).computeSize = () => [1, 777]; }, id);
+    await panel.getByRole('button', { name: '3:2', exact: true }).click();
+    expect(await page.evaluate(id => Array.from(kikoHost.nodes.get(String(id)).size), id)).toEqual([340, 777]);
+    expect(await heights()).toEqual(closed); // 3:2 lists one SDXL size, like 1:1
+    // a hidden (not laid out) panel is not measured: the reported height and the node size stay put
+    await page.evaluate(id => {
+        const target = kikoHost.nodes.get(String(id));
+        target.widgets.find(entry => entry.name === 'resolution_picker').element.style.display = 'none';
+        target.computeSize = () => [1, 50];
+    }, id);
+    const resolution = page.locator('[data-node="ModelResolutionPicker"]').getByLabel('resolution', { exact: true });
+    await resolution.fill('1344×768 - 16:9 (1.0MP)');
+    await resolution.dispatchEvent('change');
+    await expect(page.locator('[data-node="ModelResolutionPicker"]').getByLabel('width', { exact: true })).toHaveValue('1344');
+    expect(await page.evaluate(id => ({ size: Array.from(kikoHost.nodes.get(String(id)).size), min: kikoHost.nodes.get(String(id)).widgets.find(entry => entry.name === 'resolution_picker').options.getMinHeight() }), id)).toEqual({ size: [340, 777], min: closed.min });
+    await page.evaluate(id => { kikoHost.nodes.get(String(id)).widgets.find(entry => entry.name === 'resolution_picker').element.style.display = ''; }, id);
+    await panel.getByRole('button', { name: '1:1', exact: true }).click();
+    expect(await page.evaluate(id => Array.from(kikoHost.nodes.get(String(id)).size), id)).toEqual([340, 50]);
+});
+
+test('resolution picker mirrors the panel in a native resolution dropdown', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', resolution: 'custom', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    const resolution = node.getByLabel('resolution', { exact: true });
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeEnabled();
+    await expect(resolution).toHaveValue('1024×1024 - 1:1 (1.0MP)');
+    await panel.getByRole('button', { name: '3:2', exact: true }).click();
+    await expect(resolution).toHaveValue('1216×832 - 3:2 (1.0MP)');
+    await resolution.fill('1344×768 - 16:9 (1.0MP)');
+    await resolution.dispatchEvent('change');
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('1344');
+    await expect(node.getByLabel('height', { exact: true })).toHaveValue('768');
+    await expect(panel.getByRole('button', { name: '16:9', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('.ca-dimension-swap').getByRole('button', { name: 'Swap width and height', exact: true }).click();
+    await expect(resolution).toHaveValue('768×1344 - 9:16 (1.0MP)');
+    await node.getByLabel('width', { exact: true }).fill('1000');
+    await node.getByLabel('width', { exact: true }).dispatchEvent('change');
+    await expect(resolution).toHaveValue('custom');
+    await resolution.fill('custom');
+    await resolution.dispatchEvent('change');
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('1000');
+});
+
+test('resolution picker resets a stale label to custom when width is wired in', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', resolution: 'custom', width: 1024, height: 1024, batch_size: 1 });
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    const resolution = node.getByLabel('resolution', { exact: true });
+    await page.locator('.ca-resolution-picker').getByRole('button', { name: '3:2', exact: true }).click();
+    await expect(resolution).toHaveValue('1216×832 - 3:2 (1.0MP)');
+    await page.evaluate(id => {
+        const target = kikoHost.nodes.get(String(id));
+        target.inputs.push({ name: 'width', widget: { name: 'width' }, link: 7 });
+        target.onConnectionsChange?.();
+    }, id);
+    await expect(resolution).toHaveValue('custom');
+});
+
+test('resolution picker resets a saved label to custom when the families route fails', async ({ page }) => {
+    await page.route('**/kikotools/model_resolution/families', route => route.fulfill({ status: 404, body: 'nope' }));
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', resolution: '1216×832 - 3:2 (1.0MP)', width: 1024, height: 1024, batch_size: 1 });
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    await expect(page.locator('.ca-resolution-status')).toHaveText('Sizes unavailable; type width and height');
+    await expect(node.getByLabel('resolution', { exact: true })).toHaveValue('custom');
+});
+
+test('resolution picker shows the first families warning in the status line', async ({ page }) => {
+    await page.route('**/kikotools/model_resolution/families', async route => {
+        const response = await route.fetch();
+        const payload = await response.json();
+        await route.fulfill({ response, json: { ...payload, warnings: ['Override ignored: test'] } });
+    });
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', resolution: 'custom', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.locator('.ca-resolution-status')).toHaveText('Override ignored: test');
+    await panel.getByRole('button', { name: '3:2', exact: true }).click();
+    await expect(panel.locator('.ca-resolution-status')).toHaveText('Override ignored: test');
+});
+
+test('resolution picker fills the model dropdown from the payload and keeps a removed saved family', async ({ page }) => {
+    await page.route('**/kikotools/model_resolution/families', async route => {
+        const response = await route.fetch();
+        const payload = await response.json();
+        const sdxl = payload.families.find(family => family.label === 'SDXL');
+        const families = [...payload.families.filter(family => family.label !== 'Anima'), { ...sdxl, label: 'My SDXL', aliases: [] }];
+        await route.fulfill({ response, json: { ...payload, families } });
+    });
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'Anima', resolution: 'custom', width: 1024, height: 1024, batch_size: 1 });
+    await expect(page.locator('.ca-resolution-picker .ca-resolution-header')).toContainText('1024 × 1024 ·');
+    const result = await page.evaluate(id => {
+        const widget = kikoHost.nodes.get(String(id)).widgets.find(entry => entry.name === 'model');
+        return { values: widget.options.values, value: widget.value };
+    }, id);
+    expect(result.values).toContain('My SDXL');
+    expect(result.values).toContain('Anima');
+    expect(result.values.indexOf('My SDXL')).toBeLessThan(result.values.indexOf('Anima'));
+    expect(result.values.filter(label => label === 'Anima')).toHaveLength(1);
+    expect(result.value).toBe('Anima');
+});
+
+test('resolution picker maps a four-value legacy workflow onto the native widgets', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SD 1.5', resolution: 'custom', width: 512, height: 512, batch_size: 1 });
+    await page.evaluate(id => kikoHost.nodes.get(String(id)).configure({ widgets_values: ['SDXL', 1216, 832, 2] }), id);
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    await expect(node.getByLabel('model', { exact: true })).toHaveValue('SDXL');
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('1216');
+    await expect(node.getByLabel('height', { exact: true })).toHaveValue('832');
+    await expect(node.getByLabel('batch_size', { exact: true })).toHaveValue('2');
+    // The shim resets resolution to custom; the render then syncs it to the listed label for this size.
+    await expect(node.getByLabel('resolution', { exact: true })).toHaveValue('1216×832 - 3:2 (1.0MP)');
+    await expect(page.locator('.ca-resolution-picker').getByRole('button', { name: '3:2', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await page.evaluate(id => kikoHost.nodes.get(String(id)).configure({ widgets_values: ['SDXL', 1000, 1000, 1] }), id);
+    await expect(node.getByLabel('resolution', { exact: true })).toHaveValue('custom');
+});
+
+test('resolution picker leaves five-value workflows untouched', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SD 1.5', resolution: 'custom', width: 512, height: 512, batch_size: 1 });
+    await page.evaluate(id => kikoHost.nodes.get(String(id)).configure({ widgets_values: ['SDXL', 'custom', 1216, 832, 2] }), id);
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('1216');
+    await expect(node.getByLabel('batch_size', { exact: true })).toHaveValue('2');
+});
+
+test('resolution picker mounting is idempotent and removal disposes its scope', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1024, height: 1024, batch_size: 1 });
+    await page.evaluate(id => { const node = kikoHost.nodes.get(String(id)); node.createSwapButton(); node.createSwapButton(); }, id);
+    await expect(page.locator('.ca-resolution-picker')).toHaveCount(1);
+    await expect(page.locator('.ca-dimension-swap')).toHaveCount(1);
+    const aborted = await page.evaluate(id => { const node = kikoHost.nodes.get(String(id)); kikoHost.removeNode(id); return node.resolutionScope.signal.aborted; }, id);
+    expect(aborted).toBe(true);
+    await expect(page.locator('.ca-resolution-picker')).toHaveCount(0);
+});
+
+test('resolution picker keeps keyboard focus on activation and refreshes wired-in state', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeEnabled();
+    const chip = panel.getByRole('button', { name: '3:2', exact: true });
+    await chip.focus();
+    await page.keyboard.press('Enter');
+    await expect(panel.getByRole('button', { name: '1216 × 832', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(chip).toBeFocused();
+    await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        node.inputs.push({ name: 'width', widget: { name: 'width' }, link: 7 });
+        node.onConnectionsChange?.();
+    }, id);
+    await expect(panel.locator('.ca-resolution-header')).toHaveText('Dimensions are wired in');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeDisabled();
+    await expect(page.locator('.ca-dimension-swap button')).toBeDisabled();
+});
+
+test('resolution picker swap lands on the mirrored chip and entry', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1344, height: 768, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeEnabled();
+    await page.locator('.ca-dimension-swap').getByRole('button', { name: 'Swap width and height', exact: true }).click();
+    await expect(panel.getByRole('button', { name: '9:16', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(panel.getByRole('button', { name: '768 × 1344', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('resolution picker model change keeps listed sizes or falls back to the chip default', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1344, height: 768, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeEnabled();
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    await node.getByLabel('model', { exact: true }).fill('HunyuanImage 2.1');
+    await node.getByLabel('model', { exact: true }).dispatchEvent('change');
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('2560');
+    await expect(node.getByLabel('height', { exact: true })).toHaveValue('1536');
+    await expect(page.locator('.ca-resolution-header')).toHaveText('2560 × 1536 · 16:9 · 3.8 MP');
+});
+
+test('resolution picker applies a model change made before the families payload loads', async ({ page }) => {
+    let release;
+    const held = new Promise(resolve => { release = resolve; });
+    await page.route('**/kikotools/model_resolution/families', async route => { await held; await route.continue(); });
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1344, height: 768, batch_size: 1 });
+    const node = page.locator('[data-node="ModelResolutionPicker"]');
+    await node.getByLabel('model', { exact: true }).fill('HunyuanImage 2.1');
+    await node.getByLabel('model', { exact: true }).dispatchEvent('change');
+    release();
+    await expect(node.getByLabel('width', { exact: true })).toHaveValue('2560');
+    await expect(node.getByLabel('height', { exact: true })).toHaveValue('1536');
+});
+
+test('resolution picker custom ratio field computes tiers and rejects bad input', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'Flux.1', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeEnabled();
+    await panel.getByRole('button', { name: 'Custom ratio', exact: true }).click();
+    const field = panel.getByLabel('Custom ratio', { exact: true });
+    await expect(field).toHaveValue('1:1');
+    await field.fill('16:10');
+    await field.press('Enter');
+    await expect(panel.getByRole('button', { name: '1296 × 816', exact: true })).toBeVisible();
+    await panel.getByRole('button', { name: '1296 × 816', exact: true }).click();
+    await expect(page.locator('[data-node="ModelResolutionPicker"]').getByLabel('width', { exact: true })).toHaveValue('1296');
+    await field.fill('a:b');
+    await field.press('Enter');
+    await expect(panel.locator('.ca-resolution-status')).toHaveText(/Enter a ratio like 16:9/);
+    await expect(panel.getByRole('button', { name: '1296 × 816', exact: true })).toBeVisible();
+});
+
+test('route failure keeps native widgets usable', async ({ page }) => {
+    await page.route('**/kikotools/model_resolution/families', route => route.fulfill({ status: 404, body: 'nope' }));
+    await openHost(page);
+    await createNode(page, 'ModelResolutionPicker', { model: 'SDXL', width: 1024, height: 1024, batch_size: 1 });
+    const panel = page.locator('.ca-resolution-picker');
+    await expect(panel.locator('.ca-resolution-status')).toHaveText('Sizes unavailable; type width and height');
+    await expect(panel.getByRole('button', { name: '1:1', exact: true })).toBeDisabled();
+    await expect(panel.locator('.ca-resolution-header')).toHaveText('1024 × 1024');
+    await page.locator('.ca-dimension-swap').getByRole('button').click();
+    await expect(page.locator('[data-node="ModelResolutionPicker"]').getByLabel('width', { exact: true })).toHaveValue('1024');
+});

@@ -229,3 +229,17 @@
 .ca-autocomplete-settings .ca-tag-status[data-error="true"] { color: var(--ca-error-text); }
 
 .ca-autocomplete-settings .ca-tag-source { overflow-wrap: anywhere; }
+
+.ca-resolution-picker { box-sizing: border-box; inline-size: 100%; min-inline-size: 0; display: flex; flex-direction: column; gap: 8px; padding: 8px; overflow-x: hidden; }
+.ca-resolution-picker [hidden] { display: none; }
+.ca-resolution-header { margin: 0; font-size: 12px; color: var(--ca-muted); overflow-wrap: anywhere; }
+.ca-resolution-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ca-resolution-chips button { min-inline-size: 0; padding-inline: 4px; white-space: normal; overflow-wrap: anywhere; }
+.ca-resolution-shape { display: inline-block; border: 1px solid currentColor; border-radius: 2px; margin-inline-end: 6px; vertical-align: middle; }
+.ca-resolution-sizes { display: flex; flex-direction: column; gap: 6px; }
+.ca-resolution-sizes button { inline-size: 100%; }
+.ca-resolution-picker :where(.ca-resolution-chips, .ca-resolution-sizes) button[aria-pressed="true"] { background: var(--ca-accent); border-color: var(--ca-accent); color: #fff; }
+.ca-resolution-ratio { inline-size: 100%; }
+.ca-resolution-status { margin: 0; min-block-size: 17px; font-size: 11px; color: var(--ca-muted); overflow-wrap: anywhere; }
+.ca-resolution-status[data-error="true"] { color: var(--ca-error-text); }
+.ca-resolution-picker :where(.ca-resolution-chips, .ca-resolution-sizes) button[aria-pressed="true"]:hover:not(:disabled) { background: #096ba6; border-color: #096ba6; color: #fff; }

@@ -38,8 +38,8 @@ export function bindDimensionPresets(node, app) {
 
 export function swapDimensions(node, app) {
     const [preset, width, height] = widgets(node);
-    if (!preset || !width || !height || swapping.has(node)) return;
-    const custom = preset.value === 'custom';
+    if (!width || !height || swapping.has(node)) return;
+    const custom = !preset || preset.value === 'custom';
     const dimensions = custom ? [width.value, height.value] : dimensionsFromPreset(preset.value);
     if (!dimensions) return;
     const [w, h] = dimensions;

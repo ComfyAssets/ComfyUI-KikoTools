@@ -104,6 +104,36 @@ The control does not change node dimensions, batch size, native input order or
 backend interfaces. Workflow persistence remains with ComfyUI's native widgets;
 the DOM control does not serialize its UI state.
 
+## Model Resolution Picker
+
+The picker's chips, size list and header are derived from the native `model`,
+`width` and `height` widgets on every change; no panel state is saved in the
+workflow. The only extra state is an in-memory custom-ratio flag, lost on
+reload. The family table comes from `GET /kikotools/model_resolution/families`,
+and a chip whose family lists no sizes for it is disabled. Swap reuses
+`dimension-swap.js` and `dimensions.js`, and node removal disposes the scope.
+
+The native `resolution` combo is another projection of the same state. Its
+options are rebuilt whenever the model or the active chip changes: `custom` plus
+the active chip's sizes (all family sizes for Custom ratio or no chip). Picking
+a label writes `width`/`height` through their callbacks and the matching chip
+activates; a chip click, swap, typed size or model change sets the label to the
+matching size, and a size outside the list, wired inputs or a failed families
+load show `custom`. Each ratio chip also carries an `aria-hidden` outline of its
+shape.
+
+The panel reports its measured content height (padding, visible children and
+gaps) as both the minimum and the maximum DOM-widget height, and after every
+render the extension sets the node height to the host's `computeSize()` while
+keeping the width. The measurement is retried for up to 60 frames when the
+element is not attached yet (fresh mount, workflow load), skipped while the
+family table is still loading, and ignored when the panel is hidden by the
+host. A `ResizeObserver` on the panel's children schedules a refit on the next
+frame when their boxes change later, for example when the stylesheet arrives
+after the first render; measuring inside the observer delivery would make WebKit
+report an undelivered-notifications loop error. The panel children must carry no
+vertical margins (the stylesheet zeroes them).
+
 ## Node Dimensions and modal dialogs
 
 The ComfyAssets-only Node Dimensions context menu uses `dialog.js` for a native

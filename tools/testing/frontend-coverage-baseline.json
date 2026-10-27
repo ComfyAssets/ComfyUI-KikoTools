@@ -95,6 +95,12 @@
     "functions": 98,
     "statements": 98
   },
+  "model_resolution_picker.js": {
+    "lines": 99,
+    "branches": 80,
+    "functions": 95,
+    "statements": 99
+  },
   "seed_history_ui.js": {
     "lines": 95,
     "branches": 85,
@@ -149,6 +155,12 @@
     "functions": 98,
     "statements": 93
   },
+  "ui/resolution-picker.js": {
+    "lines": 100,
+    "branches": 86,
+    "functions": 100,
+    "statements": 100
+  },
   "ui/text-widget-adapter.js": {
     "lines": 98,
     "branches": 89,
@@ -178,6 +190,12 @@
     "branches": 98,
     "functions": 98,
     "statements": 98
+  },
+  "views/resolution-picker.js": {
+    "lines": 100,
+    "branches": 91,
+    "functions": 100,
+    "statements": 100
   },
   "views/seed-history.js": {
     "lines": 98,

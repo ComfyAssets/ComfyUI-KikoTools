@@ -1,0 +1,99 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+    defaultEntry,
+    dropdownOptions,
+    deriveSelection,
+    effectiveSize,
+    megapixels,
+    modelOptions,
+    parseRatio,
+    parseSizeLabel,
+    sizeLabel,
+    sizesForRatio,
+    sizeOnModelChange,
+} from '../../web/ui/resolution-picker.js';
+
+const chips = ['1:1', '4:5', '5:4', '3:4', '4:3', '2:3', '3:2', '9:16', '16:9', '21:9', '9:21'];
+const mirror = { '1:1': '1:1', '4:5': '5:4', '5:4': '4:5', '3:4': '4:3', '4:3': '3:4', '2:3': '3:2', '3:2': '2:3', '9:16': '16:9', '16:9': '9:16', '21:9': '9:21', '9:21': '21:9' };
+
+function sizesFor(listed) {
+    return Object.fromEntries(chips.map((chip) => [chip, listed[chip] || []]));
+}
+
+const payload = {
+    chips,
+    mirror,
+    default: 'SDXL',
+    families: [
+        {
+            label: 'SDXL', aliases: ['SDXL 1.0'], models: [], group: 'image', vaeRatio: 8, step: 64, megapixels: [1.0], default: [1024, 1024],
+            sizes: sizesFor({ '1:1': [[1024, 1024]], '3:2': [[1216, 832]], '2:3': [[832, 1216]], '16:9': [[1344, 768]], '9:16': [[768, 1344]] }),
+        },
+        {
+            label: 'HunyuanImage 2.1', aliases: [], models: [], group: 'image', vaeRatio: 32, step: 32, megapixels: [4.0], default: [2048, 2048],
+            sizes: sizesFor({ '1:1': [[2048, 2048]], '16:9': [[2560, 1536]], '9:16': [[1536, 2560]] }),
+        },
+    ],
+};
+
+test('parseRatio accepts the documented forms and rejects malformed input', () => {
+    for (const text of ['16:9', ' 16 / 9 ', '16x9', '16×9', '16X9']) assert.deepEqual(parseRatio(text), [16, 9]);
+    for (const text of ['0:5', '16:', 'a:b', '99999999:1', '', null]) assert.equal(parseRatio(text), null);
+});
+test('deriveSelection prefers authored membership, then the 7% band, then custom', () => {
+    assert.deepEqual(deriveSelection(payload, 'HunyuanImage 2.1', 2560, 1536), { family: payload.families[1], chip: '16:9', entryIndex: 0, custom: false, ratioText: '5:3' });
+    assert.equal(deriveSelection(payload, 'SDXL', 1200, 800).chip, '3:2');           // 1.5 exactly, not listed
+    assert.equal(deriveSelection(payload, 'SDXL', 1200, 800).entryIndex, -1);
+    const custom = deriveSelection(payload, 'SDXL', 1600, 800);          // 2:1 is >7% from every chip
+    assert.deepEqual([custom.chip, custom.custom, custom.ratioText], [null, true, '2:1']);
+    assert.equal(deriveSelection(payload, 'SDXL 1.0', 1024, 1024).chip, '1:1');      // alias
+    assert.equal(deriveSelection(payload, 'nope', 1024, 1024).family, null);
+});
+test('sizesForRatio follows the core formula per tier and effectiveSize rounds to the step', () => {
+    assert.deepEqual(sizesForRatio({ step: 16, megapixels: [1, 2] }, [16, 9]), [[1360, 768], [1936, 1088]]);
+    assert.deepEqual(sizesForRatio({ step: 16, megapixels: [1, 4] }, [20, 1]), [[4576, 224]]); // 4 MP tier would exceed 8192
+    assert.deepEqual(effectiveSize(payload.families[1], 70, 1000), [64, 992]);
+    assert.deepEqual(effectiveSize(null, 1001, 1001), [1000, 1000]);
+    assert.equal(megapixels(1216, 832), '1.0');
+});
+test('model change keeps listed sizes, else the same chip default, else the family default', () => {
+    assert.deepEqual(sizeOnModelChange(payload, 'HunyuanImage 2.1', 2560, 1536, '16:9'), [2560, 1536]);
+    assert.deepEqual(sizeOnModelChange(payload, 'HunyuanImage 2.1', 1344, 768, '16:9'), [2560, 1536]);
+    assert.deepEqual(sizeOnModelChange(payload, 'HunyuanImage 2.1', 1216, 832, '3:2'), [2048, 2048]);
+    assert.deepEqual(defaultEntry(payload.families[0], '21:9'), null);
+});
+test('size labels round-trip and mirror the Python format', () => {
+    assert.equal(sizeLabel(1216, 832, '3:2'), '1216×832 - 3:2 (1.0MP)');
+    assert.equal(sizeLabel(2560, 1536, '16:9'), '2560×1536 - 16:9 (3.8MP)');
+    assert.equal(sizeLabel(512, 512, '1:1'), '512×512 - 1:1 (0.3MP)');
+    assert.deepEqual(parseSizeLabel(sizeLabel(768, 1344, '9:16')), [768, 1344]);
+    for (const text of ['custom', 'garbage', '', null, undefined, '0×832 - 3:2 (1.0MP)']) assert.equal(parseSizeLabel(text), null);
+});
+test('dropdownOptions lists the active chip sizes, or every family size for custom', () => {
+    assert.deepEqual(dropdownOptions(payload, 'SDXL', '3:2'), ['custom', '1216×832 - 3:2 (1.0MP)']);
+    assert.deepEqual(dropdownOptions(payload, 'SDXL', null), [
+        'custom', '1024×1024 - 1:1 (1.0MP)', '832×1216 - 2:3 (1.0MP)', '1216×832 - 3:2 (1.0MP)',
+        '768×1344 - 9:16 (1.0MP)', '1344×768 - 16:9 (1.0MP)',
+    ]);
+    assert.deepEqual(dropdownOptions(payload, 'SDXL', 'custom'), dropdownOptions(payload, 'SDXL', null));
+    assert.deepEqual(dropdownOptions(payload, 'SDXL', '21:9'), ['custom']);
+    assert.deepEqual(dropdownOptions(payload, 'nope', '3:2'), ['custom']);
+    assert.deepEqual(dropdownOptions(null, 'SDXL', null), ['custom']);
+});
+
+test('modelOptions lists payload labels in order and keeps an absent current value', () => {
+    const payload = { families: [{ label: 'A' }, { label: 'B' }] };
+    assert.deepEqual(modelOptions(payload, 'B'), ['A', 'B']);
+    assert.deepEqual(modelOptions(payload, 'Gone'), ['A', 'B', 'Gone']);
+    assert.deepEqual(modelOptions(payload, undefined), ['A', 'B']);
+    assert.deepEqual(modelOptions(null, 'Gone'), ['Gone']);
+});
+
+test('parseSizeLabel rejects sizes outside the widget limits like the Python parser', () => {
+    assert.equal(parseSizeLabel('16384×16384 - 1:1 (256.0MP)'), null);
+    assert.equal(parseSizeLabel('32×32 - 1:1 (0.0MP)'), null);
+    assert.deepEqual(parseSizeLabel('64×8192 - 1:128 (0.5MP)'), [64, 8192]);
+    assert.equal(parseSizeLabel('8193×64 - 128:1 (0.5MP)'), null);
+    assert.equal(parseSizeLabel(`${'9'.repeat(5000)}×${'9'.repeat(5000)} - 1:1 (1.0MP)`), null);
+});

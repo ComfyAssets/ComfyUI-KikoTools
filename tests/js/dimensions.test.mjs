@@ -58,3 +58,14 @@ test('a throwing or recursive preset callback does not leave swapping locked', (
     swapDimensions(node, app);
     assert.deepEqual(node.widgets.map(widget => widget.value), ['640×960', 640, 960]);
 });
+
+test('nodes without a preset widget swap width and height directly', () => {
+    const calls = [];
+    const node = { widgets: [
+        { name: 'width', value: 1344, callback(value) { calls.push(['width', value]); } },
+        { name: 'height', value: 768, callback(value) { calls.push(['height', value]); } },
+    ], graph: { setDirtyCanvas() { calls.push(['dirty']); } } };
+    swapDimensions(node, app);
+    assert.deepEqual(node.widgets.map(widget => widget.value), [768, 1344]);
+    assert.deepEqual(calls, [['width', 768], ['height', 1344], ['dirty']]);
+});

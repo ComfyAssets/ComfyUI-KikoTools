@@ -42,6 +42,7 @@ switching, workflow persistence and cleanup. See the retained
 | [🎲 Seed History](#-seed-history) | Advanced seed tracking with interactive history | 🌱 Seeds |
 | [⚙️ Sampler Combo](#️-sampler-combo) | Unified sampling configuration interface | 🌀 Samplers |
 | [📦 Empty Latent Batch](#-empty-latent-batch) | Create empty latent batches with preset support | 📦 Latents |
+| [🎯 Model Resolution Picker](#-model-resolution-picker) | Pick a model family and size from ratio chips, with latent and width/height outputs | 🖼️ Resolution |
 | [💾 Kiko Save Image](#-kiko-save-image) | Enhanced image saving with popup viewer | 💾 Images |
 | [📋 Display Text](#-display-text) | Smart text display with prompt detection | 👁️ Display |
 | [🤖 Gemini Prompt Engineer](#-gemini-prompt-engineer) | Deprecated; retained for existing workflows | 🧠 Prompts |
@@ -154,6 +155,25 @@ Advanced empty latent creation with preset support and batch processing capabili
 - Quick preset-based latent generation for different aspect ratios
 
 ![Empty Latent Batch Example](examples/workflows/empty_latent_batch_example.png)
+
+#### 🎯 Model Resolution Picker
+Choose a model family and a size from ratio chips, and get an empty latent plus width and height.
+
+- **Model Dropdown**: 14 shipped families (SD 1.5, SDXL, Illustrious XL, Flux.1, Flux.2, Qwen-Image and more) with their preferred sizes
+- **Chips and List**: Pick an aspect ratio chip, then a size from the list under it; the header shows `W × H · ratio · MP`
+- **Resolution Dropdown**: A native `resolution` dropdown (`custom` plus size labels like `1216×832 - 3:2 (1.0MP)`) lists the active chip's sizes and stays in sync with the chips; a listed size wins over width and height when the node runs
+- **Swap W×H**: Exchanges width and height and lands on the mirrored chip
+- **Custom Ratio and Resolution**: Enter a ratio like 16:9 or type width and height; sizes are rounded to the family's step
+- **Your Own Sizes**: An optional override file at `ComfyUI/user/kikotools/model_resolutions.json` (under the default user directory) can replace a family by label, add new ones, hide shipped ones with `remove`, or set `default`; an invalid file is ignored and the panel shows why ([details](examples/documentation/model_resolution_picker.md#user-override-file))
+- **Outputs**: `latent` (4-channel 8x, resizable for 16x and 32x VAEs), `width` and `height`
+- **Keyframe Rows**: Video families (Wan 2.2, LTX-2, HunyuanVideo 1.5, MiniMax H3) are first/last-frame sizes; the latent is an image latent, never fed to a video model
+
+**Use Cases:**
+- Pick the right size for each model without remembering bucket lists
+- Switch families while keeping a listed size
+- Feed one node to both the latent and the size inputs of a workflow
+
+![Model Resolution Picker](docs/screenshots/resolution-picker/ModelResolutionPicker-dark.png)
 
 #### 💾 Kiko Save Image
 Enhanced image saving with format selection, quality control, and floating popup viewer.
@@ -799,6 +819,7 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Seed History** | Advanced seed tracking with interactive history management | ✅ Complete | [Docs](examples/documentation/seed_history.md) |
 | **Sampler Combo** | Unified sampling configuration with smart recommendations | ✅ Complete | [Docs](examples/documentation/sampler_combo.md) |
 | **Empty Latent Batch** | Create empty latent batches with preset support | ✅ Complete | [Docs](examples/documentation/empty_latent_batch.md) |
+| **Model Resolution Picker** | Model family size picker with ratio chips, empty latent and width/height outputs | ✅ Complete | [Docs](examples/documentation/model_resolution_picker.md) |
 | **Kiko Save Image** | Enhanced image saving with popup viewer and multi-format support | ✅ Complete | [Docs](examples/documentation/kiko_save_image.md) |
 | **Display Text** | Advanced text display with smart prompt detection and split view | ✅ Complete | [Docs](examples/documentation/display_text.md) |
 | **Gemini Prompt Engineer** | Legacy image analysis and prompt generation | Deprecated | [Docs](examples/documentation/gemini_prompt.md) |
