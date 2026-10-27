@@ -26,6 +26,7 @@ from .tools.local_image_loader import LocalImageLoaderNode
 from .tools.project_file_path import ProjectFilePathNode
 from .tools.model_compare_sheet import ModelCompareSheetNode
 from .tools.model_downloader import ModelDownloaderNode
+from .tools.model_resolution_picker import ModelResolutionPickerNode
 from .tools.resolution_calculator import ResolutionCalculatorNode
 from .tools.sampler_combo import SamplerComboCompactNode, SamplerComboNode
 from .tools.seed_history import SeedHistoryNode
@@ -54,6 +55,7 @@ NODE_CLASS_MAPPINGS = {
     "SamplerCombo": SamplerComboNode,
     "SamplerComboCompact": SamplerComboCompactNode,
     "EmptyLatentBatch": EmptyLatentBatchNode,
+    "ModelResolutionPicker": ModelResolutionPickerNode,
     "KikoSaveImage": KikoSaveImageNode,
     "ImageToMultipleOf": ImageToMultipleOfNode,
     "ImageScaleDownBy": ImageScaleDownByNode,
@@ -92,6 +94,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "SamplerCombo": "Sampler Combo",
     "SamplerComboCompact": "Sampler Combo (Compact)",
     "EmptyLatentBatch": "Empty Latent Batch",
+    "ModelResolutionPicker": "Model Resolution Picker",
     "KikoSaveImage": "Kiko Save Image",
     "ImageToMultipleOf": "Image to Multiple of",
     "ImageScaleDownBy": "Image Scale Down By",
