@@ -1,0 +1,1 @@
+"""Model Resolution Picker module."""
