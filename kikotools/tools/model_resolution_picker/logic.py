@@ -2,6 +2,7 @@
 
 import math
 import re
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
 MEGAPIXEL = 1_048_576
@@ -51,7 +52,9 @@ _SIZE_LABEL = re.compile(r"^(\d+)×(\d+) - \S+ \(\d+\.\dMP\)$")
 
 def size_label(width: int, height: int, ratio_text: str) -> str:
     """Return the dropdown label ``W×H - ratio (X.XMP)`` for a size."""
-    return f"{width}×{height} - {ratio_text} ({width * height / 1_000_000:.1f}MP)"
+    exact = Decimal(width * height) / Decimal(MEGAPIXEL)  # exact: MEGAPIXEL is 2**20
+    megapixels = exact.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)  # as JS toFixed
+    return f"{width}×{height} - {ratio_text} ({megapixels}MP)"
 
 
 def parse_size_label(text: object) -> Optional[tuple[int, int]]:

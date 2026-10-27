@@ -33,7 +33,12 @@ def test_ratio_label_reduces_and_aliases():
 
 def test_size_label_formats_size_ratio_and_megapixels():
     assert size_label(1216, 832, "3:2") == "1216×832 - 3:2 (1.0MP)"
-    assert size_label(2560, 1536, "16:9") == "2560×1536 - 16:9 (3.9MP)"
+    assert size_label(2560, 1536, "16:9") == "2560×1536 - 16:9 (3.8MP)"
+
+
+def test_size_label_uses_binary_megapixels_and_rounds_ties_up():
+    assert size_label(512, 512, "1:1") == "512×512 - 1:1 (0.3MP)"
+    assert size_label(1000, 1000, "1:1") == "1000×1000 - 1:1 (1.0MP)"
 
 
 def test_parse_size_label_round_trips_and_rejects_garbage():

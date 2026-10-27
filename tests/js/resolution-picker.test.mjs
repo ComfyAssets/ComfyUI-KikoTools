@@ -64,7 +64,8 @@ test('model change keeps listed sizes, else the same chip default, else the fami
 });
 test('size labels round-trip and mirror the Python format', () => {
     assert.equal(sizeLabel(1216, 832, '3:2'), '1216×832 - 3:2 (1.0MP)');
-    assert.equal(sizeLabel(2560, 1536, '16:9'), '2560×1536 - 16:9 (3.9MP)');
+    assert.equal(sizeLabel(2560, 1536, '16:9'), '2560×1536 - 16:9 (3.8MP)');
+    assert.equal(sizeLabel(512, 512, '1:1'), '512×512 - 1:1 (0.3MP)');
     assert.deepEqual(parseSizeLabel(sizeLabel(768, 1344, '9:16')), [768, 1344]);
     for (const text of ['custom', 'garbage', '', null, undefined, '0×832 - 3:2 (1.0MP)']) assert.equal(parseSizeLabel(text), null);
 });

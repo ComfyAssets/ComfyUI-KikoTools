@@ -98,8 +98,13 @@ function mountPicker(node) {
 
     function syncResolution(state) {
         const widget = widgetOf(node, 'resolution');
+        if (!widget) return;
         const selection = state.selection;
-        if (!widget || !selection) return;
+        if (!selection) {
+            // Direct assignment fires no callback; a stale label must not override width/height.
+            widget.value = 'custom';
+            return;
+        }
         const chip = state.customOpen || selection.custom ? null : selection.chip;
         const key = `${selection.family?.label}|${chip}`;
         if (key !== optionsKey) {

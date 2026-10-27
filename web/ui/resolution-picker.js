@@ -118,7 +118,7 @@ export function sizeOnModelChange(payload, newLabel, width, height, chip) {
 const SIZE_LABEL = /^(\d+)×(\d+) - \S+ \(\d+\.\dMP\)$/;
 
 export function sizeLabel(width, height, ratioText) {
-    return `${width}×${height} - ${ratioText} (${((width * height) / 1000000).toFixed(1)}MP)`;
+    return `${width}×${height} - ${ratioText} (${megapixels(width, height)}MP)`;
 }
 
 export function parseSizeLabel(text) {
