@@ -251,3 +251,13 @@ def test_alias_default_is_normalised_to_its_label(tmp_path):
     config = ModelResolutionPickerNode.INPUT_TYPES()["required"]["model"][1]
     assert config["default"] == "My SDXL"
 
+
+
+def test_same_mtime_replacement_with_different_size_is_reread(tmp_path):
+    path = write_override(tmp_path, {"remove": ["SD 1.5"]})
+    old = path.stat()
+    assert families.resolve_family("SD 1.5") is None
+    path.write_text(json.dumps({"remove": ["Anima"], "default": "SDXL"}))
+    os.utime(path, ns=(old.st_atime_ns, old.st_mtime_ns))
+    assert families.resolve_family("SD 1.5") is not None
+    assert families.resolve_family("Anima") is None

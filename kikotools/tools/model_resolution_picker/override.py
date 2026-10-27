@@ -20,7 +20,7 @@ OVERRIDE_NAME = "model_resolutions.json"
 MAX_REPORTED_PROBLEMS = 3
 
 Table = Dict[str, Any]
-_CacheKey = Tuple[Path, int]
+_CacheKey = Tuple[Path, int, int]
 
 _cache: Optional[Tuple[_CacheKey, Tuple[Table, List[str]]]] = None
 
@@ -111,7 +111,8 @@ def current_table() -> Tuple[Table, List[str]]:
     if path is None:
         return SHIPPED_DATA, []
     try:
-        key: _CacheKey = (path, path.stat().st_mtime_ns)
+        stat = path.stat()
+        key: _CacheKey = (path, stat.st_mtime_ns, stat.st_size)
     except OSError:
         return SHIPPED_DATA, []
     if _cache is not None and _cache[0] == key:
