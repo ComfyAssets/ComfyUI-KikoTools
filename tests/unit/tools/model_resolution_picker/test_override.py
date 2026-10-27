@@ -188,3 +188,27 @@ def test_route_payload_includes_warnings(tmp_path):
     response = asyncio.run(get_families(None))
     warnings = json.loads(response.body)["warnings"]
     assert len(warnings) == 1 and warnings[0].startswith("Override ignored:")
+
+
+def test_deeply_nested_json_is_ignored_without_raising(tmp_path):
+    write_override(tmp_path, "[" * 100000 + "]" * 100000)
+    data, warnings = override.current_table()
+    assert data is families.SHIPPED_DATA
+    assert len(warnings) == 1 and warnings[0].startswith("Override ignored: ")
+    assert families.families_payload()["warnings"] == warnings
+
+
+def test_remove_wins_over_families_with_the_same_label(tmp_path):
+    entry = sdxl_entry({"1:1": [[1024, 1024], [1280, 1280]]})
+    entry = {**entry, "label": "Illustrious XL"}
+    write_override(tmp_path, {"families": [entry], "remove": ["Illustrious XL"]})
+    labels = [f["label"] for f in families.families_payload()["families"]]
+    assert "Illustrious XL" not in labels
+    assert override.current_table()[1] == []
+
+
+def test_default_naming_a_removed_family_ignores_override(tmp_path):
+    write_override(tmp_path, {"remove": ["Anima"], "default": "Anima"})
+    data, warnings = override.current_table()
+    assert data is families.SHIPPED_DATA
+    assert len(warnings) == 1 and "Anima" in warnings[0]

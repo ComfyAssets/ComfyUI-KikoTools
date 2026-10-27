@@ -93,9 +93,10 @@ def _build(path: Path, shipped: Table) -> Tuple[Table, List[str]]:
     """Load, merge and validate the override at ``path``."""
     try:
         merged = merge_override(shipped, load_table(path))
-    except ValueError as exc:
-        return _ignored(path, str(exc), shipped)
-    problems = validate_table(merged)
+        problems = validate_table(merged)
+    except (ValueError, RecursionError) as exc:
+        reason = "nested too deeply" if isinstance(exc, RecursionError) else str(exc)
+        return _ignored(path, reason, shipped)
     if problems:
         return _ignored(path, "; ".join(problems[:MAX_REPORTED_PROBLEMS]), shipped)
     return merged, []
