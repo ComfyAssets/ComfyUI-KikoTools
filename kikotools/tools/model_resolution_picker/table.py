@@ -41,10 +41,12 @@ TABLE_VERSION = 1
 GROUPS = ("image", "video")
 VAE_RATIOS = (8, 16, 32)
 CHIP_TOLERANCE = 0.07
-# Generous sanity bounds so absurd values are reported instead of overflowing.
+# Sanity bounds so absurd values are reported instead of overflowing.
 MAX_STEP = 4096
 MAX_MEGAPIXELS = 64
-MAX_SIDE = 65536
+# Match the node's width/height widget limits.
+MIN_SIDE = 64
+MAX_SIDE = 8192
 
 Size = Tuple[int, int]
 
@@ -79,7 +81,7 @@ def _is_size(value: Any) -> bool:
         isinstance(value, (list, tuple))
         and len(value) == 2
         and all(
-            isinstance(v, int) and not isinstance(v, bool) and 0 < v <= MAX_SIDE
+            isinstance(v, int) and not isinstance(v, bool) and MIN_SIDE <= v <= MAX_SIDE
             for v in value
         )
     )
@@ -258,7 +260,7 @@ def _validate_default_label(default: Any, entries: List[Dict[str, Any]]) -> List
 def validate_table(data: Any) -> List[str]:
     """Return every problem found in ``data``; an empty list means it is valid.
 
-    Bounds: step <= 4096, megapixels in (0, 64], each side <= 65536.
+    Bounds: step <= 4096, megapixels in (0, 64], each side in 64..8192.
     """
     if not isinstance(data, dict):
         return ["table must be a JSON object"]

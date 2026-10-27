@@ -15,6 +15,7 @@ from .families import (
     resolve_family,
 )
 from .logic import parse_size_label, round_to_step
+from .table import MAX_SIDE, MIN_SIDE
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class ModelResolutionPickerNode(ComfyAssetsBaseNode):
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         """Define the input types for the ComfyUI node."""
-        size_options = {"default": 1024, "min": 64, "max": 8192, "step": 8}
+        size_options = {"default": 1024, "min": MIN_SIDE, "max": MAX_SIDE, "step": 8}
         return {
             "required": {
                 "model": (

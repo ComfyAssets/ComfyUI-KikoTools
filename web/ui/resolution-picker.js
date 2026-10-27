@@ -115,7 +115,7 @@ export function sizeOnModelChange(payload, newLabel, width, height, chip) {
     return defaultEntry(family, chip) || family.default;
 }
 
-const SIZE_LABEL = /^(\d+)×(\d+) - \S+ \(\d+\.\dMP\)$/;
+const SIZE_LABEL = /^(\d{1,5})×(\d{1,5}) - \S+ \(\d+\.\dMP\)$/;
 
 export function sizeLabel(width, height, ratioText) {
     return `${width}×${height} - ${ratioText} (${megapixels(width, height)}MP)`;
@@ -125,7 +125,8 @@ export function parseSizeLabel(text) {
     const match = typeof text === 'string' ? SIZE_LABEL.exec(text) : null;
     if (!match) return null;
     const [width, height] = [Number(match[1]), Number(match[2])];
-    return width > 0 && height > 0 ? [width, height] : null;
+    const inRange = (side) => side >= MIN_SIDE && side <= MAX_SIDE;
+    return inRange(width) && inRange(height) ? [width, height] : null;
 }
 
 export function dropdownOptions(payload, label, chip) {

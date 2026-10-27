@@ -233,3 +233,17 @@ def test_families_module_raises_runtime_error_on_invalid_shipped_file(
         families_module.load_shipped_families(path)
 
     assert "SD 1.5" in str(error.value) and "vaeRatio" in str(error.value)
+
+
+@pytest.mark.parametrize("side", [63, 8200, 65536])
+def test_validate_table_rejects_sizes_outside_the_widget_limits(side: int):
+    data = shipped_data()
+    family(data, "SD 1.5")["sizes"]["1:1"].append([side, side])
+
+    assert any("sizes must be a list" in p for p in validate_table(data))
+
+
+def test_validate_table_accepts_sizes_at_the_widget_limits():
+    from kikotools.tools.model_resolution_picker.table import MAX_SIDE, MIN_SIDE
+
+    assert (MIN_SIDE, MAX_SIDE) == (64, 8192)

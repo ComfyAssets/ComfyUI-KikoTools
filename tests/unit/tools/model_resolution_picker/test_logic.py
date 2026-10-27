@@ -48,3 +48,12 @@ def test_parse_size_label_round_trips_and_rejects_garbage():
     assert parse_size_label("garbage") is None
     assert parse_size_label("0×832 - 3:2 (1.0MP)") is None
     assert parse_size_label(None) is None
+
+
+def test_parse_size_label_rejects_sizes_outside_the_widget_limits():
+    assert parse_size_label("16384×16384 - 1:1 (256.0MP)") is None
+    assert parse_size_label("32×32 - 1:1 (0.0MP)") is None
+    assert parse_size_label("64×8192 - 1:128 (0.5MP)") == (64, 8192)
+    assert parse_size_label("8193×64 - 128:1 (0.5MP)") is None
+    huge = "9" * 5000 + "×" + "9" * 5000 + " - 1:1 (1.0MP)"
+    assert parse_size_label(huge) is None

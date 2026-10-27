@@ -5,6 +5,8 @@ import re
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
+from .table import MAX_SIDE, MIN_SIDE
+
 MEGAPIXEL = 1_048_576
 
 _ALIASES = {
@@ -47,7 +49,7 @@ def ratio_label(width: int, height: int) -> str:
     return _ALIASES.get(label, label)
 
 
-_SIZE_LABEL = re.compile(r"^(\d+)×(\d+) - \S+ \(\d+\.\dMP\)$")
+_SIZE_LABEL = re.compile(r"^(\d{1,5})×(\d{1,5}) - \S+ \(\d+\.\dMP\)$")
 
 
 def size_label(width: int, height: int, ratio_text: str) -> str:
@@ -65,4 +67,5 @@ def parse_size_label(text: object) -> Optional[tuple[int, int]]:
     if match is None:
         return None
     width, height = int(match.group(1)), int(match.group(2))
-    return (width, height) if width > 0 and height > 0 else None
+    in_range = MIN_SIDE <= width <= MAX_SIDE and MIN_SIDE <= height <= MAX_SIDE
+    return (width, height) if in_range else None

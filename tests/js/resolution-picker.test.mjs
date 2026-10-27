@@ -89,3 +89,11 @@ test('modelOptions lists payload labels in order and keeps an absent current val
     assert.deepEqual(modelOptions(payload, undefined), ['A', 'B']);
     assert.deepEqual(modelOptions(null, 'Gone'), ['Gone']);
 });
+
+test('parseSizeLabel rejects sizes outside the widget limits like the Python parser', () => {
+    assert.equal(parseSizeLabel('16384×16384 - 1:1 (256.0MP)'), null);
+    assert.equal(parseSizeLabel('32×32 - 1:1 (0.0MP)'), null);
+    assert.deepEqual(parseSizeLabel('64×8192 - 1:128 (0.5MP)'), [64, 8192]);
+    assert.equal(parseSizeLabel('8193×64 - 128:1 (0.5MP)'), null);
+    assert.equal(parseSizeLabel(`${'9'.repeat(5000)}×${'9'.repeat(5000)} - 1:1 (1.0MP)`), null);
+});
