@@ -69,7 +69,7 @@ Each family object has:
 - `models`: description string; `notes` (optional string) is ignored by the node
 - `group`: `image` or `video`
 - `vaeRatio`: `8`, `16` or `32`
-- `step`: positive integer grid step (at most 4096)
+- `step`: positive integer grid step, a multiple of 8 (at most 4096), so rounded sizes land on the 8-pixel latent grid
 - `megapixels`: non-empty list of tiers used by custom ratios (each above 0, at most 64)
 - `default`: a `[width, height]` pair that appears in `sizes`
 - `sizes`: an object with one key per chip, each a list of `[width, height]` pairs in ascending pixel order (an empty list disables the chip)

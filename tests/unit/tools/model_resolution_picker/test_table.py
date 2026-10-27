@@ -71,6 +71,11 @@ def bad_step(data: Dict[str, Any]) -> None:
     family(data, "SD 1.5")["step"] = 0
 
 
+def off_latent_grid_step(data: Dict[str, Any]) -> None:
+    # 4 divides every SD 1.5 size, so only the latent-grid rule fires.
+    family(data, "SD 1.5")["step"] = 4
+
+
 def empty_megapixels(data: Dict[str, Any]) -> None:
     family(data, "SD 1.5")["megapixels"] = []
 
@@ -96,6 +101,7 @@ def test_validate_table_accepts_the_shipped_file():
         (bad_vae_ratio, "vaeRatio", None, 1),
         (bad_group, "group", None, 1),
         (bad_step, "step", None, 1),
+        (off_latent_grid_step, "multiple of 8", None, 1),
         (empty_megapixels, "megapixels", None, 1),
     ],
 )
