@@ -82,14 +82,53 @@ To change sizes without editing the shipped file, create `model_resolutions.json
 
 - Families are matched by `label`. A family with a shipped label replaces that family whole; a new label is appended after the shipped ones, in file order.
 - `remove` is a list of labels that deletes shipped families. It wins over `families` when both name the same label.
-- `default` is an optional label that becomes the default family; it must name a family that survives the merge.
+- `default` is an optional label or alias that becomes the default family; it must name a family that survives the merge.
 - The file is read again when its modification time changes, so a new node or a page reload picks up edits without restarting ComfyUI.
 - The shipped file is never modified.
 
 This example replaces SDXL with a shorter list, adds a new family, hides two shipped ones and makes the new family the default:
 
 ```json
-{ex}
+{
+  "version": 1,
+  "default": "My SDXL",
+  "remove": ["SD 1.5", "Anima"],
+  "families": [
+    {
+      "label": "SDXL",
+      "aliases": [],
+      "models": "SDXL with a trimmed size list",
+      "group": "image",
+      "vaeRatio": 8,
+      "step": 64,
+      "megapixels": [1.0],
+      "default": [1024, 1024],
+      "sizes": {
+        "1:1": [[1024, 1024]],
+        "4:5": [[832, 1024]],
+        "5:4": [[1024, 832]],
+        "3:4": [], "4:3": [], "2:3": [], "3:2": [],
+        "9:16": [], "16:9": [], "21:9": [], "9:21": []
+      }
+    },
+    {
+      "label": "My SDXL",
+      "aliases": ["my-sdxl"],
+      "models": "My own SDXL finetune",
+      "group": "image",
+      "vaeRatio": 8,
+      "step": 64,
+      "megapixels": [1.0],
+      "default": [1152, 896],
+      "sizes": {
+        "1:1": [[1024, 1024]],
+        "4:5": [[896, 1152]], "5:4": [[1152, 896]],
+        "3:4": [], "4:3": [], "2:3": [], "3:2": [],
+        "9:16": [], "16:9": [], "21:9": [], "9:21": []
+      }
+    }
+  ]
+}
 ```
 
 The merged table is checked with the same `validate_table`. If the file is unreadable, is not valid JSON, nests too deeply, or fails the check, the whole file is ignored and the shipped table is used. ComfyUI logs a warning `Override ignored: <path>: <reason>`, the same text is returned in the `warnings` list of `GET /kikotools/model_resolution/families`, and the panel's status line shows the first warning. Fix the file and reload to clear it.
@@ -109,7 +148,7 @@ The native `resolution` dropdown sits between `model` and `width` and mirrors th
 - In the UI the dropdown lists the sizes of the active ratio chip, or every size of the family when `Custom ratio` is active or no chip matches.
 - Picking a label writes width and height and activates the matching chip.
 - Clicking a chip or a size, or swapping, sets the label to match.
-- Typing a size that is not in the list, wiring width or height, or a failed families load shows `custom`.
+- Typing a size that is not in the list, wiring width or height, a families table that is still loading, or a failed load shows `custom`.
 - On execution a non-`custom` label that parses wins over width and height; `custom` or an unparseable label uses width and height. Labels that only an override file adds are accepted too.
 
 ### Swap
