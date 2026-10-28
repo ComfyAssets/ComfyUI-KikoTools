@@ -44,6 +44,7 @@ The frontend reads the family table from `GET /kikotools/model_resolution/famili
 | Z-Image | Z-Image Turbo and Z-Image Base | 8x | 16 | 1.0, 1.6 | 1024×1024 | image |
 | Qwen-Image | Qwen-Image and Qwen-Image 2512 | 8x | 16 | 1.76 | 1328×1328 | image |
 | Flux.2 / Klein / MOSS | Flux.2 dev, Flux.2 Klein, Flux.3 Klein, MOSS-Image, Ideogram 4 | 16x | 16 | 1.0, 2.0, 4.0 | 1024×1024 | image |
+| Krea 2 | Krea 2 Turbo, Krea 2 Raw and Krea 2 finetunes (Big Love KreaEdit3) | 8x | 16 | 1.0, 2.0, 4.0 | 1024×1024 | image |
 | Qwen-Image 2.1 | Qwen-Image 2.1 and 2.1 Turbo | 16x | 32 | 1.0, 4.0 | 1024×1024 | image |
 | HunyuanImage 2.1 | HunyuanImage 2.1 | 32x | 32 | 4.0 | 2048×2048 | image |
 | Wan 2.2 (keyframes) | Wan 2.2 (first/last-frame sizes) | 16x | 16 | 0.4, 0.9 | 1280×720 | video |

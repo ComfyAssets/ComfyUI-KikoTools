@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Model Resolution Picker
+
+- New `Krea 2` family (Krea 2 Turbo, Raw and finetunes): 8x VAE, step 16,
+  1.0 / 2.0 / 4.0 MP tiers, with the model card's 1024×1024 and 2048×2048 and
+  Big Love KreaEdit3's 1024×1536.
+
 ## 1.3.0
 
 ### Model Resolution Picker
