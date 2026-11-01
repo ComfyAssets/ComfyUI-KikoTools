@@ -38,8 +38,9 @@ def test_package_loads_with_a_legacy_windows_console(encoding):
 
     stream.flush()
     banner = stream.buffer.getvalue().decode(encoding)
-    assert "Loaded:" in banner
-    assert "Model Downloader" in banner  # display name kept, emoji dropped
+    assert "[ComfyUI-KikoTools] Version:" in banner
+    assert "tools loaded" in banner
+    assert "Loaded:" not in banner  # one summary line, not one line per tool
 
 
 def test_preset_validation_messages_are_ascii(monkeypatch):
