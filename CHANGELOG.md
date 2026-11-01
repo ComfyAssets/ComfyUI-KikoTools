@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Custom Colors
+
+- The `🫶 Custom Colors` entry opens its Full / Title / BG submenu again in
+  Nodes 2.0. The Nodes 2.0 context menu converts litegraph items itself and
+  only renders a submenu for entries flagged `has_submenu`, so the entry was an
+  inert label there; the classic menu was unaffected.
+
 ### Model Resolution Picker
 
 - New `Krea 2` family (Krea 2 Turbo, Raw and finetunes): 8x VAE, step 16,

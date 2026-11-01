@@ -733,6 +733,45 @@ test('Custom Colors preserves node colors across renderers and workflow reload',
     await expect(page.locator('dialog.ca-color-dialog')).toHaveCount(0);
 });
 
+test('Custom Colors opens from the node context menu in both renderers', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    for (const renderer of [false, true]) {
+        await page.evaluate(async renderer => {
+            const { app } = await import('/scripts/app.js');
+            await app.ui.settings.setSettingValue('Comfy.VueNodes.Enabled', renderer);
+        }, renderer);
+        await expect.poll(() => page.evaluate(() => LiteGraph.vueNodesMode)).toBe(renderer);
+        const title = await page.evaluate(async () => {
+            const { app } = await import('/scripts/app.js');
+            app.graph.clear();
+            const node = LiteGraph.createNode('EmptyLatentImage');
+            app.graph.add(node);
+            app.canvas.centerOnNode(node);
+            app.canvas.setDirty(true, true);
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const rect = app.canvas.canvas.getBoundingClientRect();
+            const [x, y] = app.canvas.ds.convertOffsetToCanvas([node.pos[0] + node.size[0] / 2, node.pos[1] - 10]);
+            return { x: rect.left + x, y: rect.top + y };
+        });
+        await page.mouse.click(title.x, title.y, { button: 'right' });
+        // The Nodes 2.0 menu converts litegraph items itself and only renders a
+        // submenu for entries flagged has_submenu; the classic menu opens
+        // submenu.options either way. Both must reach the picker.
+        const entry = page.getByText('🫶 Custom Colors', { exact: true }).first();
+        const full = page.getByText('🫶 Custom Full', { exact: true }).first();
+        await entry.hover();
+        try { await full.waitFor({ state: 'visible', timeout: 2000 }); } // Nodes 2.0 opens on hover
+        catch { await entry.click(); } // the classic litegraph menu opens on click
+        await full.click();
+        await expect(page.getByRole('dialog', { name: 'Custom full color', exact: true })).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(page.locator('ca-color-picker')).toHaveCount(0);
+        await page.keyboard.press('Escape');
+    }
+    expect(errors).toEqual([]);
+});
+
 test('Follow Execution honors live settings and host menus in both renderers', async ({ page }, testInfo) => {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
