@@ -114,15 +114,12 @@ def get_version():
     return "unknown"
 
 
-# Print startup message with loaded tools
-print()
-print(f"\033[94m[ComfyUI-KikoTools] Version:\033[0m {get_version()}")
-for node_key, display_name in NODE_DISPLAY_NAME_MAPPINGS.items():
-    # ASCII only: a Windows console using a legacy code page cannot print emoji,
-    # and a UnicodeEncodeError here would abort loading the whole node.
-    ascii_name = display_name.encode("ascii", "ignore").decode().strip()
-    print(f"  \033[94mLoaded:\033[0m {ascii_name}")
-print(f"\033[94mTotal: {len(NODE_CLASS_MAPPINGS)} tools loaded\033[0m")
-print()
+# One-line startup banner. Keep it ASCII: a Windows console using a legacy
+# code page raises UnicodeEncodeError on emoji, which would abort loading the
+# whole node pack.
+print(
+    f"\033[94m[ComfyUI-KikoTools] Version:\033[0m {get_version()} "
+    f"- {len(NODE_CLASS_MAPPINGS)} tools loaded"
+)
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]

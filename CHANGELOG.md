@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.3.1
+
+### Startup
+
+- The console banner is one line, version plus tool count, instead of one
+  `Loaded:` line per node.
 
 ### Model Resolution Picker
 
