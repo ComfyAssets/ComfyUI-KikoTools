@@ -1731,8 +1731,11 @@ test('custom colors handle absent settings, empty canvas menus, legacy groups an
     expect(await page.evaluate(() => {
         const extension = kikoHost.extensions.find(item => item.name === 'kikotools.customColors');
         kikoHost.settings.delete('kikotools.custom_colors.enabled');
-        return [extension.getCanvasMenuItems({}), extension.getCanvasMenuItems({ graph_mouse: [0, 0], graph: { getGroupOnPos: () => null } }), extension.getNodeMenuItems(kikoHost.app.graph._nodes[0])[1].submenu.options.length];
-    })).toEqual([[], [], 3]);
+        const nodeMenu = extension.getNodeMenuItems(kikoHost.app.graph._nodes[0])[1];
+        const groupMenu = extension.getCanvasMenuItems({ graph_mouse: [0, 0], graph: { getGroupOnPos: () => ({ color: '#000000' }) } })[1];
+        // The Nodes 2.0 menu converter only renders submenu.options when has_submenu is set.
+        return [extension.getCanvasMenuItems({}), extension.getCanvasMenuItems({ graph_mouse: [0, 0], graph: { getGroupOnPos: () => null } }), nodeMenu.submenu.options.length, nodeMenu.has_submenu, groupMenu.has_submenu];
+    })).toEqual([[], [], 3, true, true]);
     await page.evaluate(() => {
         const extension = kikoHost.extensions.find(item => item.name === 'kikotools.customColors');
         window.testGroup = { color: '#000000' };

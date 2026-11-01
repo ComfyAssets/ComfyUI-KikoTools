@@ -86,10 +86,13 @@ const openPicker = (initialColor, apply, node, label) => {
     picker.dialog.showModal();
 };
 
-// Wrap menu options in the "Custom Colors" submenu (or nothing if empty)
+// Wrap menu options in the "Custom Colors" submenu (or nothing if empty).
+// has_submenu is required as well as submenu: the Nodes 2.0 context menu
+// converts litegraph items itself and only renders submenu.options for
+// entries flagged has_submenu; without it the entry is an inert label.
 const customColorsMenu = (options) => options.length === 0 ? [] : [
     null, // separator
-    { content: "🫶 Custom Colors", submenu: { options } },
+    { content: "🫶 Custom Colors", has_submenu: true, submenu: { options } },
 ];
 
 app.registerExtension({
