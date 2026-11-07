@@ -282,6 +282,12 @@ class TestRedirectHandler:
         )
         assert new.get_header("Authorization") == "Bearer s"
 
+    def test_https_to_http_drops_authorization(self):
+        new = self.redirect(
+            "https://a.com/x", "http://a.com/y", {"Authorization": "Bearer s"}
+        )
+        assert not new.has_header("Authorization")
+
     def test_disallowed_scheme_blocked(self):
         with pytest.raises(urllib.error.HTTPError):
             self.redirect("https://a.com/x", "file:///etc/passwd", {})
@@ -510,6 +516,14 @@ class TestCustom:
 
 
 class TestHuggingFace:
+    def test_http_link_is_fetched_over_https(self, root, out, opener):
+        _, op = opener
+        op.open.return_value = FakeResponse(b"d", headers={"Content-Length": "1"})
+        make(HuggingFaceDownloader, root, token="hf_x").download(
+            "http://huggingface.co/u/r/resolve/main/m.safetensors", out
+        )
+        assert op.open.call_args.args[0].full_url.startswith("https://")
+
     def test_download_blob_url_converted(self, root, out, opener):
         _, op = opener
         op.open.return_value = FakeResponse(b"d", headers={"Content-Length": "1"})
@@ -792,6 +806,16 @@ class TestCivitAI:
         assert (
             op.open.call_args.args[0].full_url
             == "https://civitai.com/api/download/models/77?type=Model"
+        )
+
+    def test_http_api_link_is_fetched_over_https(self, root, out, opener):
+        _, op = opener
+        op.open.return_value = FakeResponse(b"d", status=200)
+        make(CivitAIDownloader, root, token="t").download(
+            "http://civitai.red/api/download/models/77", out, filename="m.safetensors"
+        )
+        assert op.open.call_args.args[0].full_url == (
+            "https://civitai.com/api/download/models/77"
         )
 
     def test_red_model_page_resolves_version(self, root, out, opener):

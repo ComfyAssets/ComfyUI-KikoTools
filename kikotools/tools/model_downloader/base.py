@@ -88,7 +88,7 @@ def safe_server_filename(name: Optional[str], default: str) -> str:
 
 
 class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
-    """Only follow http(s) redirects and drop credentials on cross-host hops."""
+    """Only follow http(s) redirects; drop credentials on cross-host or https-to-http hops."""
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if urlparse(newurl).scheme.lower() not in ALLOWED_SCHEMES:
@@ -96,8 +96,9 @@ class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
                 newurl, code, "Redirect to disallowed URL scheme", headers, fp
             )
         new_request = super().redirect_request(req, fp, code, msg, headers, newurl)
+        old, new = urlparse(req.full_url), urlparse(newurl)
         if new_request is not None and (
-            urlparse(newurl).netloc.lower() != urlparse(req.full_url).netloc.lower()
+            new.netloc.lower() != old.netloc.lower() or new.scheme.lower() != "https"
         ):
             new_request.remove_header("Authorization")
         return new_request

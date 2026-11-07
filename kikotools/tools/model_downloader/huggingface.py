@@ -5,7 +5,7 @@ import os
 import urllib.request
 import urllib.error
 from typing import Optional
-from urllib.parse import urlparse, quote
+from urllib.parse import urlparse, urlunparse, quote
 
 from .base import (
     USER_AGENT,
@@ -131,6 +131,8 @@ class HuggingFaceDownloader(BaseDownloader):
             logger.info("Converted URL to: %s", download_url)
         else:
             download_url = url
+        # https only: the request may carry the server's token
+        download_url = urlunparse(urlparse(download_url)._replace(scheme="https"))
 
         if not filename:
             if url_info["filename"]:

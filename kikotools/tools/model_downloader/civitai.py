@@ -156,7 +156,10 @@ class CivitAIDownloader(BaseDownloader):
 
         # Downloads go through civitai.com whichever site the link came from
         if "/api/download/models/" in url:
-            url = urllib.parse.urlunparse(parsed_url._replace(netloc="civitai.com"))
+            # https only: the request carries the token
+            url = urllib.parse.urlunparse(
+                parsed_url._replace(scheme="https", netloc="civitai.com")
+            )
         else:
             ids = self._parse_civitai_url(url)
 
