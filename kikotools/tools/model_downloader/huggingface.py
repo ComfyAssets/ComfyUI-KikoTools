@@ -18,7 +18,7 @@ from .base import (
 logger = logging.getLogger(__name__)
 
 HTTP_ERROR_HINTS = {
-    401: "Authentication required. Please provide a valid HuggingFace token.",
+    401: "Authentication required. Set HF_TOKEN on the ComfyUI server or run `hf auth login` (see the node's README).",
     403: "Access forbidden. The model might be gated or require special permissions.",
     404: "File not found. The URL might be incorrect or the file was removed.",
 }

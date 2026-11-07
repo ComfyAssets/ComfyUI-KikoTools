@@ -778,6 +778,44 @@ class TestCivitAI:
         )
         assert op.open.call_args.args[0].full_url.endswith("/api/download/models/9")
 
+    @pytest.mark.parametrize("host", ["civitai.red", "www.civitai.green"])
+    def test_red_and_green_links_download_through_civitai_com(
+        self, root, out, opener, host
+    ):
+        _, op = opener
+        op.open.return_value = FakeResponse(b"d", status=200)
+        make(CivitAIDownloader, root).download(
+            f"https://{host}/api/download/models/77?type=Model",
+            out,
+            filename="m.safetensors",
+        )
+        assert (
+            op.open.call_args.args[0].full_url
+            == "https://civitai.com/api/download/models/77?type=Model"
+        )
+
+    def test_red_model_page_resolves_version(self, root, out, opener):
+        _, op = opener
+        op.open.return_value = FakeResponse(b"d", status=200)
+        make(CivitAIDownloader, root).download(
+            "https://civitai.red/models/5?modelVersionId=77",
+            out,
+            filename="m.safetensors",
+        )
+        assert op.open.call_args.args[0].full_url == (
+            "https://civitai.com/api/download/models/77"
+        )
+
+    def test_existing_named_file_skips_the_network(self, root, out, opener):
+        _, op = opener
+        with open(os.path.join(out, "m.safetensors"), "wb") as f:
+            f.write(b"have")
+        path = make(CivitAIDownloader, root).download(
+            "https://civitai.com/models/5", out, filename="m.safetensors"
+        )
+        assert path == os.path.join(os.path.realpath(out), "m.safetensors")
+        op.open.assert_not_called()
+
     def test_web_url_model_without_versions(self, root, out, opener):
         _, op = opener
         op.open.return_value = FakeResponse(b'{"modelVersions": []}')

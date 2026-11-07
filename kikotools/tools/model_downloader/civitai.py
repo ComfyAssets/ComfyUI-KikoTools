@@ -9,6 +9,7 @@ import urllib.error
 from typing import Optional, Dict, Any
 from urllib.parse import urlparse, parse_qs, unquote, urljoin
 
+from .detector import CIVITAI_HOSTS
 from .base import (
     USER_AGENT,
     BaseDownloader,
@@ -23,7 +24,7 @@ API_BASE = "https://civitai.com/api/v1"
 REDIRECT_STATUSES = (301, 302, 303, 307, 308)
 
 HTTP_ERROR_HINTS = {
-    401: "Authentication required. Please provide a valid API token.",
+    401: "Authentication required. Set CIVITAI_API_KEY on the ComfyUI server (see the node's README).",
     403: "Access forbidden. The model might be restricted or require special permissions.",
     404: "Model not found. The URL might be incorrect or the model was removed.",
 }
@@ -139,15 +140,24 @@ class CivitAIDownloader(BaseDownloader):
             validate_filename(filename)
         output_dir = self.resolve_output_dir(output_path)
 
-        # Validate that URL is from civitai.com domain
         parsed_url = urlparse(url)
-        if parsed_url.netloc not in ("civitai.com", "www.civitai.com"):
+        if parsed_url.netloc not in CIVITAI_HOSTS:
             raise ValueError(
-                f"Invalid URL: Only civitai.com URLs are supported, got {parsed_url.netloc}"
+                "Invalid URL: only civitai.com, civitai.green and civitai.red URLs "
+                f"are supported, got {parsed_url.netloc}"
             )
 
-        # Convert web URL to API URL if needed
-        if "/api/download/models/" not in url:
+        # A file already there needs no API call when its name is known
+        if filename and not self.should_download(
+            os.path.join(output_dir, filename), force
+        ):
+            logger.info("File already exists: %s", os.path.join(output_dir, filename))
+            return os.path.join(output_dir, filename)
+
+        # Downloads go through civitai.com whichever site the link came from
+        if "/api/download/models/" in url:
+            url = urllib.parse.urlunparse(parsed_url._replace(netloc="civitai.com"))
+        else:
             ids = self._parse_civitai_url(url)
 
             # If we have a version ID, use it directly

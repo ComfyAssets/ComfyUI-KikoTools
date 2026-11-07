@@ -440,7 +440,7 @@ Download models, LoRAs, and other assets directly from CivitAI, HuggingFace, and
 
 - **Multi-Platform Support**: CivitAI, HuggingFace, and direct download URLs
 - **Smart URL Detection**: Automatic detection of download source and file handling
-- **API Token Support**: Optional authentication for private/gated models
+- **API Tokens on the Server**: Civitai and Hugging Face tokens come from the ComfyUI server's environment, so workflows never carry them
 - **Progress Reporting**: Real-time download progress with speed indicators
 - **Resume Support**: Skip existing files or force re-download
 - **Interrupt Handling**: Respects ComfyUI's "Cancel current run" button
@@ -448,9 +448,9 @@ Download models, LoRAs, and other assets directly from CivitAI, HuggingFace, and
 - **Custom Filenames**: Override auto-detected filenames when needed
 
 **Platform Features:**
-- **CivitAI**: Model page URLs, version-specific downloads, API authentication
+- **CivitAI**: Model page URLs, version-specific downloads, API authentication; civitai.com, civitai.green and civitai.red links
 - **HuggingFace**: Blob and resolve URLs, branch/revision support, gated model access
-- **Custom URLs**: Direct download links with bearer token authentication
+- **Custom URLs**: Direct download links; only a token typed on the node is sent
 
 **Use Cases:**
 - Download models without leaving ComfyUI
@@ -458,6 +458,28 @@ Download models, LoRAs, and other assets directly from CivitAI, HuggingFace, and
 - Access private or gated models with API tokens
 - Build reproducible workflows with automatic model fetching
 - Quickly test new models from the community
+
+**Tokens:** many Civitai models and gated Hugging Face models need a token. Leave the node's `api_token` empty and set the tokens where ComfyUI starts; a token typed on the node is saved inside the workflow. Each token goes only to its own site.
+
+| Site | Variable | Get a token |
+|------|----------|-------------|
+| Civitai | `CIVITAI_API_KEY` | civitai.com → Account settings → API Keys |
+| Hugging Face | `HF_TOKEN` (or run `hf auth login` once) | huggingface.co → Settings → Access Tokens (read) |
+
+Linux / macOS, in `~/.bashrc` or `~/.zshrc` (or the script that starts ComfyUI):
+```bash
+export CIVITAI_API_KEY="your-civitai-key"
+export HF_TOKEN="hf_your-token"
+```
+
+Windows, once in a Command Prompt (then open a new window and start ComfyUI):
+```bat
+setx CIVITAI_API_KEY "your-civitai-key"
+setx HF_TOKEN "hf_your-token"
+```
+For the portable build you can instead add `set CIVITAI_API_KEY=your-civitai-key` and `set HF_TOKEN=hf_your-token` above the `python` line in `run_nvidia_gpu.bat`.
+
+Restart ComfyUI after setting them.
 
 #### ⏱️ Workflow Timer
 Real-time execution timer that displays workflow duration with millisecond precision.

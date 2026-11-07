@@ -47,7 +47,10 @@ class ModelDownloaderNode(ComfyAssetsBaseNode):
                     {
                         "default": "",
                         "multiline": False,
-                        "placeholder": "API token (CivitAI or HuggingFace)",
+                        "placeholder": "Leave empty: uses CIVITAI_API_KEY / HF_TOKEN",
+                        "tooltip": "Leave empty to use the server's token: CIVITAI_API_KEY for "
+                        "Civitai, HF_TOKEN or `hf auth login` for Hugging Face. A token typed here "
+                        "is saved inside the workflow, so anyone you share it with gets it.",
                     },
                 ),
                 "force_download": (

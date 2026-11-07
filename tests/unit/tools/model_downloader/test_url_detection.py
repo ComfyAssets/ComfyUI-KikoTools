@@ -28,6 +28,23 @@ class TestURLDetection:
         result = detector.detect(url)
         assert result == DownloaderType.CIVITAI
 
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://civitai.red/models/123/name",
+            "https://www.civitai.red/api/download/models/456",
+            "https://civitai.green/models/123?modelVersionId=9",
+            "https://www.civitai.green/api/download/models/456",
+        ],
+    )
+    def test_detect_civitai_red_and_green(self, url):
+        """civitai.red and civitai.green links are Civitai links"""
+        assert URLDetector().detect(url) == DownloaderType.CIVITAI
+
+    def test_lookalike_civitai_domain_is_custom(self):
+        url = "https://civitai.red.evil.com/models/123"
+        assert URLDetector().detect(url) == DownloaderType.CUSTOM
+
     def test_detect_huggingface_co_url(self):
         """Detect HuggingFace .co domain URL"""
         url = "https://huggingface.co/username/repo-name/resolve/main/model.safetensors"

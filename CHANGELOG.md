@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Model Downloader
+
+- Civitai tokens and Hugging Face tokens are read on the ComfyUI server:
+  `CIVITAI_API_KEY` (also `CIVITAI_API_TOKEN`, `CIVITAI_TOKEN`) and `HF_TOKEN`
+  (also `HUGGING_FACE_HUB_TOKEN`, or the token `hf auth login` saved). Leave
+  `api_token` empty so shared workflows carry no token; a typed token still
+  wins. Each token goes only to its own site, and custom URLs only get a typed
+  token.
+- civitai.green and civitai.red links download like civitai.com links; the
+  download goes through civitai.com.
+- A Civitai download with a `filename` that already exists returns before any
+  API call.
+
 ## 1.3.1
 
 ### Startup
