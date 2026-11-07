@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 1.4.0
+
+### Packaging
+
+- The Comfy Registry package has its nodes again. An unanchored `tools/` rule in
+  `.comfyignore` also matched `kikotools/tools/`, so the 1.2.0 to 1.3.1 packages
+  shipped without the tool modules; installs from git were not affected. Every
+  rule is now anchored to the root, and `tests/unit/test_package_contents.py`
+  holds them to what ComfyUI needs.
+- `docs/` and `examples/` are left out of the package as well; they are only
+  read on GitHub. The download goes from about 8.5 MB to about 0.26 MB.
 
 ### Local Image Loader
 
