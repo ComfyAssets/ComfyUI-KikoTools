@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Local Image Loader
+
+- New `folder` output: the path of the folder the gallery shows, or the
+  selected image's folder until you browse. Browsing to a folder is enough;
+  no image needs to be selected. Use it to pick a training dataset visually and
+  pass it to a node that reads a whole folder. The folder must be inside a
+  saved path or ComfyUI's input/output, as for images.
+
 ## 1.3.1
 
 ### Startup

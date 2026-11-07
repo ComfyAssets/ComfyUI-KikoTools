@@ -156,6 +156,25 @@ class TestViewMedia:
         r = run(node_mod.get_thumbnail(req({"filepath": str(env.root / "clip.mp4")})))
         assert r.status == 403
 
+    def test_folder_selection_ok(self, env):
+        p = str(env.root / "sub")
+        r = run(
+            node_mod.set_node_selection(
+                req(body={"node_id": 2, "path": p, "type": "folder"})
+            )
+        )
+        assert r.status == 200
+        assert json.loads(env.sel.read_text())["2"]["folder"] == {"path": p}
+
+    def test_folder_selection_disallowed_403(self, env):
+        for p in (str(env.outside), str(env.root / "a.png"), "/etc"):
+            r = run(
+                node_mod.set_node_selection(
+                    req(body={"node_id": 2, "path": p, "type": "folder"})
+                )
+            )
+            assert r.status == 403, p
+
     def test_video_selection_allowed_but_not_loaded(self, env):
         (env.root / "clip.mp4").write_bytes(b"x")
         p = str(env.root / "clip.mp4")
@@ -380,31 +399,32 @@ class TestLoadMediaGuard:
         env.sel.write_text(
             json.dumps({"7": {"image": {"path": str(env.outside / "o.png")}}})
         )
-        image, info = node_mod.LocalImageLoaderNode().load_media("7")
-        assert image.shape == (1, 1, 1, 4) and info == ""
+        image, info, folder = node_mod.LocalImageLoaderNode().load_media("7")
+        assert image.shape == (1, 1, 1, 4) and info == "" and folder == ""
 
     def test_non_image_selection_refused(self, env):
         env.sel.write_text(
             json.dumps({"7": {"image": {"path": str(env.root / "notes.txt")}}})
         )
-        _, info = node_mod.LocalImageLoaderNode().load_media("7")
-        assert info == ""
+        _, info, folder = node_mod.LocalImageLoaderNode().load_media("7")
+        assert info == "" and folder == ""
 
     def test_allowed_selection_loads(self, env):
         env.sel.write_text(
             json.dumps({"7": {"image": {"path": str(env.root / "a.png")}}})
         )
-        image, info = node_mod.LocalImageLoaderNode().load_media("7")
+        image, info, folder = node_mod.LocalImageLoaderNode().load_media("7")
         assert image.shape == (1, 300, 400, 3)
         assert json.loads(info)["width"] == 400
+        assert folder == os.path.realpath(env.root)
 
     def test_load_error_is_swallowed(self, env):
         (env.root / "bad.png").write_bytes(b"junk")
         env.sel.write_text(
             json.dumps({"7": {"image": {"path": str(env.root / "bad.png")}}})
         )
-        image, info = node_mod.LocalImageLoaderNode().load_media("7")
-        assert info == ""
+        image, info, folder = node_mod.LocalImageLoaderNode().load_media("7")
+        assert info == "" and folder == ""
 
 
 class TestPersistence:

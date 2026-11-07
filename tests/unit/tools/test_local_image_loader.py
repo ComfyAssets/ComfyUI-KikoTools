@@ -201,8 +201,8 @@ class TestLocalImageLoaderNode:
 
     def test_node_properties(self):
         """Test node properties."""
-        assert LocalImageLoaderNode.RETURN_TYPES == ("IMAGE", "STRING")
-        assert LocalImageLoaderNode.RETURN_NAMES == ("image", "info")
+        assert LocalImageLoaderNode.RETURN_TYPES == ("IMAGE", "STRING", "STRING")
+        assert LocalImageLoaderNode.RETURN_NAMES == ("image", "info", "folder")
         assert LocalImageLoaderNode.FUNCTION == "load_media"
         assert LocalImageLoaderNode.CATEGORY == "🫶 ComfyAssets/💾 Images"
 
@@ -212,13 +212,14 @@ class TestLocalImageLoaderNode:
         mock_load_selections.return_value = {}
 
         node = LocalImageLoaderNode()
-        image, info = node.load_media("test_id")
+        image, info, folder = node.load_media("test_id")
 
         # Check empty returns
         assert isinstance(image, torch.Tensor)
         assert image.shape == (1, 1, 1, 4)
         assert torch.all(image == 0)
         assert info == ""
+        assert folder == ""
 
     @patch("kikotools.tools.local_image_loader.node.load_selections")
     @patch("kikotools.tools.local_image_loader.node.load_image_from_path")
@@ -244,11 +245,12 @@ class TestLocalImageLoaderNode:
             ),
         ):
             node = LocalImageLoaderNode()
-            image, info = node.load_media("test_id")
+            image, info, folder = node.load_media("test_id")
 
         # Check returns
         assert torch.equal(image, test_tensor)
         assert json.loads(info) == test_metadata
+        assert folder == os.path.realpath("/path/to")
 
     @patch("kikotools.tools.local_image_loader.node.load_selections")
     def test_load_media_ignores_video_audio_selection(self, mock_load_selections):
@@ -260,10 +262,73 @@ class TestLocalImageLoaderNode:
             }
         }
 
-        image, info = LocalImageLoaderNode().load_media("test_id")
+        image, info, folder = LocalImageLoaderNode().load_media("test_id")
 
         assert image.shape == (1, 1, 1, 4)
         assert info == ""
+        assert folder == ""
+
+    def test_load_media_outputs_browsed_folder(self, tmp_path):
+        """The folder the gallery is showing is output even with no image picked."""
+        (tmp_path / "dataset").mkdir()
+        folder_path = str(tmp_path / "dataset")
+        with (
+            patch(
+                "kikotools.tools.local_image_loader.node.load_selections",
+                return_value={"test_id": {"folder": {"path": folder_path}}},
+            ),
+            patch(
+                "kikotools.tools.local_image_loader.node.get_allowed_roots",
+                return_value=[str(tmp_path)],
+            ),
+        ):
+            image, info, folder = LocalImageLoaderNode().load_media("test_id")
+
+        assert image.shape == (1, 1, 1, 4)
+        assert folder == os.path.realpath(folder_path)
+
+    def test_load_media_browsed_folder_wins_over_image_folder(self, tmp_path):
+        """Browsing away after picking an image outputs the folder now shown."""
+        for d in ("a", "b"):
+            (tmp_path / d).mkdir()
+        Image.new("RGB", (4, 4)).save(tmp_path / "a" / "x.png")
+        selection = {
+            "image": {"path": str(tmp_path / "a" / "x.png")},
+            "folder": {"path": str(tmp_path / "b")},
+        }
+        with (
+            patch(
+                "kikotools.tools.local_image_loader.node.load_selections",
+                return_value={"test_id": selection},
+            ),
+            patch(
+                "kikotools.tools.local_image_loader.node.get_allowed_roots",
+                return_value=[str(tmp_path)],
+            ),
+        ):
+            _, _, folder = LocalImageLoaderNode().load_media("test_id")
+
+        assert folder == os.path.realpath(tmp_path / "b")
+
+    def test_load_media_refuses_folder_outside_roots(self, tmp_path):
+        """A tampered selections.json cannot point the folder output elsewhere."""
+        (tmp_path / "root").mkdir()
+        (tmp_path / "elsewhere").mkdir()
+        with (
+            patch(
+                "kikotools.tools.local_image_loader.node.load_selections",
+                return_value={
+                    "test_id": {"folder": {"path": str(tmp_path / "elsewhere")}}
+                },
+            ),
+            patch(
+                "kikotools.tools.local_image_loader.node.get_allowed_roots",
+                return_value=[str(tmp_path / "root")],
+            ),
+        ):
+            _, _, folder = LocalImageLoaderNode().load_media("test_id")
+
+        assert folder == ""
 
     def test_is_changed(self):
         """Test IS_CHANGED method."""
