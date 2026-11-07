@@ -1,29 +1,37 @@
-# Files excluded from the Comfy Registry archive (gitignore syntax).
-# Everything here is development-only; the published node needs
-# __init__.py, kikotools/, web/, examples/, README, LICENSE, pyproject.toml.
+# Left out of the Comfy Registry package (comfy node publish). Git clones still
+# have everything. tests/unit/test_package_contents.py holds these rules to what
+# ComfyUI needs at run time; keep each one anchored to the root with a leading /.
+# An unanchored "tools/" also matched kikotools/tools/ and shipped 1.2.0 to 1.3.1
+# without their nodes.
 
-# Test suite and tooling
-tests/
-scripts/
-.github/
-Makefile
-pytest.ini
-mypy.ini
-.flake8
-.pre-commit-config.yaml
-.secrets.baseline
-requirements-dev.txt
+# Development folders
+/tests/
+/scripts/
+/tools/
+/.github/
+/.ci-comfyui/
+/coverage/
 
-# Reference / scratch code not imported by the node
-example.py
+# Docs, screenshots and example workflows used only on GitHub. ComfyUI only reads
+# example workflows from *.json directly inside examples/, and there are none.
+/docs/
+/examples/
+
+# Development files
+/Makefile
+/pytest.ini
+/mypy.ini
+/.flake8
+/.pre-commit-config.yaml
+/.secrets.baseline
+/requirements-dev.txt
+/example.py
+/TESTING.md
+/.gitignore
+/.gitattributes
 
 # Agent and contributor docs
-CLAUDE.md
-CONTRIBUTING.md
-CODE_OF_CONDUCT.md
-
-tools/
-.ci-comfyui/
-coverage/
-TESTING.md
-AGENTS.md
+/CLAUDE.md
+/AGENTS.md
+/CONTRIBUTING.md
+/CODE_OF_CONDUCT.md
