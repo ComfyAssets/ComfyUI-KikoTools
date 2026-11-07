@@ -27,9 +27,10 @@ None - The node uses a visual interface for file selection
 | Output | Type | Description |
 |--------|------|-------------|
 | `image` | IMAGE | The selected image as a tensor |
-| `video_path` | STRING | Path to the selected video file |
-| `audio_path` | STRING | Path to the selected audio file |
 | `info` | STRING | JSON metadata about the selected image |
+| `folder` | STRING | The folder the gallery is showing, or the selected image's folder |
+
+Browse to a folder and queue: `folder` passes its path on without selecting an image, for nodes that read a whole folder, such as a dataset captioner.
 
 ## Usage
 

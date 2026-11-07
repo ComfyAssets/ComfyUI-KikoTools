@@ -225,14 +225,16 @@ test('local image selection persists and the real node loads the selected PNG te
     const image = page.getByAltText('cat & dog.png', { exact: true });
     await expect(image).toBeVisible();
     await expect.poll(() => image.evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
-    const selected = page.waitForResponse(response => response.url().endsWith('/set_node_selection'));
+    const selected = page.waitForResponse(response => response.url().endsWith('/set_node_selection') && response.request().postDataJSON().type === 'image');
     await image.click();
     expect((await selected).ok()).toBe(true);
     const selectedPath = `${(await state(request)).input}/cat & dog.png`;
     expect((await state(request)).selections[String(id)].image.path).toBe(selectedPath);
     const executed = await request.post('/__test__/execute/KikoLocalImageLoader', { data: { unique_id: String(id) } });
     await expect(executed).toBeOK();
-    expect((await executed.json()).shape).toEqual([1, 12, 16, 3]);
+    const output = await executed.json();
+    expect(output.shape).toEqual([1, 12, 16, 3]);
+    expect(output.folder).toBe((await state(request)).input);
     await page.reload();
     await expect(page.locator('body')).toHaveAttribute('data-ready', 'true');
     expect(await createNode(page, 'KikoLocalImageLoader')).toBe(id);
@@ -271,7 +273,8 @@ test('gallery rejects disallowed folders and retries after a network error', asy
     await expect(page.locator('.kiko-status-message')).toBeVisible();
     const deniedSelection = await request.post('/kiko_local_image_loader/set_node_selection', { data: { node_id: id, path: `${info.outside}/secret.png`, type: 'image' } });
     expect(deniedSelection.status()).toBe(403);
-    expect((await state(request)).selections).toEqual({});
+    // Only the folder the gallery still shows is stored, never the denied one.
+    expect((await state(request)).selections).toEqual({ [String(id)]: { folder: { path: info.input } } });
     await page.locator('.kiko-path-input').fill(info.input);
     await page.route('**/kiko_local_image_loader/images?*', route => route.abort('failed'), { times: 1 });
     await page.locator('.kiko-browse').click();

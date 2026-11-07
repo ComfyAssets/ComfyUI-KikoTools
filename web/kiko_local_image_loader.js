@@ -436,6 +436,7 @@ app.registerExtension({
 
                         pathInput.value = currentDirectory;
                         upFolderBtn.disabled = !parentDirectory;
+                        selectFolder(currentDirectory);
 
                         renderGallery();
                         renderPagination();
@@ -575,6 +576,28 @@ app.registerExtension({
                 }
 
                 // Select media
+                // The folder output is the folder the gallery shows.
+                let selectedFolder = null;
+                async function selectFolder(directory) {
+                    if (directory === selectedFolder) return;
+                    selectedFolder = directory;
+                    try {
+                        const response = await fetchApi('/kiko_local_image_loader/set_node_selection', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ node_id: node.id, path: directory, type: 'folder' })
+                        });
+                        if (!response.ok) {
+                            selectedFolder = null;
+                            showStatus(`Folder not set: ${await describeHttpError(response)}`);
+                        }
+                    } catch (error) {
+                        if (scope.signal.aborted) return;
+                        selectedFolder = null;
+                        console.error('Error setting folder:', error);
+                    }
+                }
+
                 async function selectMedia(item, type, cardElement) {
                     // Update selection
                     const previousPath = selectedPaths[type];

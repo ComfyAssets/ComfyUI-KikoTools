@@ -113,10 +113,17 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
     RETURN_TYPES = (
         "IMAGE",
         "STRING",
+        "STRING",
     )
     RETURN_NAMES = (
         "image",
         "info",
+        "folder",
+    )
+    OUTPUT_TOOLTIPS = (
+        "The selected image.",
+        "The selected image's metadata as JSON.",
+        "The folder the gallery shows, e.g. a training dataset to pass on by path.",
     )
     FUNCTION = "load_media"
     CATEGORY = "🫶 ComfyAssets/💾 Images"
@@ -128,7 +135,7 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
             return os.path.getmtime(SELECTIONS_FILE)
         return float("inf")
 
-    def load_media(self, unique_id: str) -> Tuple[torch.Tensor, str]:
+    def load_media(self, unique_id: str) -> Tuple[torch.Tensor, str, str]:
         """
         Load selected media based on node's unique ID.
 
@@ -136,13 +143,15 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
             unique_id: Unique identifier for this node instance
 
         Returns:
-            Tuple of (image tensor, info string)
+            Tuple of (image tensor, info string, folder path)
         """
         image_tensor = create_empty_tensor()
         info_string = ""
+        folder = ""
 
         selections = load_selections()
         node_selections = selections.get(str(unique_id), {})
+        roots = get_allowed_roots()
 
         # Load image if selected
         image_selection = node_selections.get("image")
@@ -150,17 +159,27 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
             # Load the resolved path we validated, so a symlink swapped after
             # the check can't redirect the read.
             image_path = resolve_path(image_selection["path"])
-            if not is_allowed_image_path(image_path, get_allowed_roots()):
+            if not is_allowed_image_path(image_path, roots):
                 # selections.json may have been tampered with
                 logger.warning("Refusing to load disallowed path: %s", image_path)
             elif os.path.exists(image_path):
                 try:
                     image_tensor, metadata = load_image_from_path(image_path)
                     info_string = json.dumps(metadata, indent=4, ensure_ascii=False)
+                    folder = os.path.dirname(image_path)
                 except Exception as e:
                     logger.error("Error loading image: %s", e)
 
-        return (image_tensor, info_string)
+        # The folder the gallery shows wins over the picked image's folder, so
+        # browsing to a dataset is enough to pass it on.
+        folder_selection = node_selections.get("folder")
+        browsed = resolve_path(
+            folder_selection.get("path") if isinstance(folder_selection, dict) else None
+        )
+        if browsed and os.path.isdir(browsed) and is_within_roots(browsed, roots):
+            folder = browsed
+
+        return (image_tensor, info_string, folder)
 
 
 # ---------------------------------------------------------------------------
@@ -215,8 +234,13 @@ async def set_node_selection(request):
     ):
         return _error(400, "Missing required data.")
 
-    # The frontend also selects video/audio; load_media only ever reads images.
-    if not is_allowed_media_path(path, get_allowed_roots(), MEDIA_KINDS):
+    if media_type == "folder":
+        # The folder the gallery is showing, output as a path.
+        allowed = os.path.isdir(path) and is_within_roots(path, get_allowed_roots())
+    else:
+        # The frontend also selects video/audio; load_media only ever reads images.
+        allowed = is_allowed_media_path(path, get_allowed_roots(), MEDIA_KINDS)
+    if not allowed:
         return _error(403, "Path not allowed.")
 
     selections = load_selections()

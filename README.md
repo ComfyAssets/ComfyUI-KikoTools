@@ -427,6 +427,7 @@ Visual gallery browser for loading local images, videos, and audio files directl
 - **Double-Click Preview**: Open full-size media in new browser tab
 - **Smart Sorting**: Sort by name, date, or file size in ascending or descending order
 - **Pagination Support**: Efficiently browse large directories with page controls
+- **Folder Output**: Outputs the path of the folder the gallery shows, so a folder can be picked by browsing
 
 **Use Cases:**
 - Load reference images from local folders for img2img workflows
@@ -434,6 +435,7 @@ Visual gallery browser for loading local images, videos, and audio files directl
 - Quickly access frequently used asset directories
 - Extract prompts and settings from previously generated images
 - Preview media files before loading into workflow
+- Browse to a training dataset and pass its folder to a captioning or training node
 
 #### 🌐 Model Downloader
 Download models, LoRAs, and other assets directly from CivitAI, HuggingFace, and custom URLs within ComfyUI.
