@@ -5,7 +5,7 @@ import os
 import urllib.request
 import urllib.error
 from typing import Optional
-from urllib.parse import urlparse, quote
+from urllib.parse import urlparse, urlunparse, quote
 
 from .base import (
     USER_AGENT,
@@ -18,7 +18,7 @@ from .base import (
 logger = logging.getLogger(__name__)
 
 HTTP_ERROR_HINTS = {
-    401: "Authentication required. Please provide a valid HuggingFace token.",
+    401: "Authentication required. Set HF_TOKEN on the ComfyUI server or run `hf auth login` (see the node's README).",
     403: "Access forbidden. The model might be gated or require special permissions.",
     404: "File not found. The URL might be incorrect or the file was removed.",
 }
@@ -131,6 +131,8 @@ class HuggingFaceDownloader(BaseDownloader):
             logger.info("Converted URL to: %s", download_url)
         else:
             download_url = url
+        # https only: the request may carry the server's token
+        download_url = urlunparse(urlparse(download_url)._replace(scheme="https"))
 
         if not filename:
             if url_info["filename"]:
