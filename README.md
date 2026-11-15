@@ -1,3 +1,5 @@
+![KikoTools by ComfyAssets](docs/brand/banner.webp)
+
 # ComfyUI-KikoTools
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
