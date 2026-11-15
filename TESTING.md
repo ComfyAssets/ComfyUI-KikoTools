@@ -164,3 +164,24 @@ gh api repos/ComfyAssets/ComfyUI-KikoTools/branches/main/protection/required_sta
 ```
 
 Keep the manifest synchronized with job names when changing CI.
+
+### Only changes that can affect code are tested (#118)
+
+Both workflows start with a `change class` job that runs
+`tools/ci/change_class.py` over the files the pull request or push touches:
+
+| Class | Files (allowlist in the script) | What runs |
+| --- | --- | --- |
+| `inert` | The Markdown documents at the root (`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `TESTING.md`, `CLAUDE.md`, `AGENTS.md`), `docs/`, `examples/documentation/`, `.github/FUNDING.yml`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/` | `change class` only. The twelve Python legs start and skip their steps, because a skipped matrix job would never report those required contexts; every other job is skipped. |
+| `code` | Anything else | Everything. |
+
+A file that is not listed is code, and so is every case of doubt: no changed
+files, a range git cannot read. `examples/workflows/` is code, because those
+files ship to users as release assets. No test here reads a document's content,
+so there is no class in between. Before adding a file to the list, check that no
+test and no shipped code opens it.
+
+The jobs run whenever the class is not `inert`, so a classifier that fails or
+prints nothing means a full run. The required contexts do not change: a job
+skipped by its `if:` reports Success. The pre-push hooks use the same script and
+skip both suites when the pushed commits are inert.
