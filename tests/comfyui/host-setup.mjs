@@ -7,6 +7,11 @@ export const fixture = 'http://127.0.0.1:8771';
 const web = resolve(fileURLToPath(new URL('../../web/', import.meta.url)));
 
 export function installHost(test, expect) {
+// A request the page sends as a test ends would still be in the route handler's route.fetch(), which then
+// fails with "Test ended" and fails a test whose checks all passed (#123). Remove the handler first.
+test.afterEach(async ({ context }) => {
+    await context.unrouteAll({ behavior: 'ignoreErrors' });
+});
 test.beforeEach(async ({ page, context, request, baseURL }, testInfo) => {
     const info = await (await request.get(`${baseURL}system_stats`)).json();
     expect(info.system.comfyui_version).toBe(runtime.serverVersion);
