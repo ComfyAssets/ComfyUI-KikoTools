@@ -43,7 +43,7 @@ kikotools = ["**/*.json"]
 [tool.comfy]
 PublisherId = "kiko9"
 DisplayName = "ComfyUI-KikoTools"
-Icon = "https://avatars.githubusercontent.com/u/213204677?s=200"
+Icon = "https://raw.githubusercontent.com/ComfyAssets/ComfyUI-KikoTools/main/docs/brand/icon-256.png"
 includes = []
 
 [tool.black]
