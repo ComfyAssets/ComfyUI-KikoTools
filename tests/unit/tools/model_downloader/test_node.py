@@ -1,5 +1,7 @@
 """Tests for Model Downloader ComfyUI node"""
 
+import hashlib
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from kikotools.tools.model_downloader.node import ModelDownloaderNode
@@ -20,6 +22,12 @@ class TestModelDownloaderNode:
         assert "filename" in inputs["optional"]
         assert "api_token" in inputs["optional"]
         assert "force_download" in inputs["optional"]
+        assert "sha256" in inputs["optional"]
+
+    def test_sha256_is_the_last_input(self):
+        """New widgets go last so saved workflows keep their positional values"""
+        inputs = ModelDownloaderNode.INPUT_TYPES()
+        assert list(inputs["optional"])[-1] == "sha256"
 
     def test_node_has_correct_return_types(self):
         """Node should return correct types"""
@@ -233,3 +241,77 @@ class TestModelDownloaderNode:
         )
 
         assert value1 != value2
+
+
+SHA_ABC = hashlib.sha256(b"abc").hexdigest()
+
+
+def _node_with_downloader(downloader):
+    detector = Mock()
+    from kikotools.tools.model_downloader.detector import DownloaderType
+
+    detector.detect.return_value = DownloaderType.CUSTOM
+    detector.get_downloader.return_value = downloader
+    return detector
+
+
+class TestSha256Verification:
+    """Optional sha256 input: verify downloads and existing files"""
+
+    def _run(self, downloader, **kwargs):
+        with patch(
+            "kikotools.tools.model_downloader.node.URLDetector",
+            return_value=_node_with_downloader(downloader),
+        ):
+            return ModelDownloaderNode().download_model(
+                url="https://example.com/model.safetensors",
+                save_path="/tmp/models",
+                **kwargs,
+            )["ui"]["text"][0]
+
+    def test_invalid_hash_is_refused_before_downloading(self):
+        downloader = Mock()
+        text = self._run(downloader, sha256="not-a-hash")
+        assert "SHA256" in text and "64 hex" in text
+        downloader.download.assert_not_called()
+
+    def test_hash_is_normalized_and_handed_to_downloader(self, tmp_path):
+        target = tmp_path / "m.safetensors"
+        downloader = Mock()
+
+        def download(**_):
+            target.write_bytes(b"abc")
+            downloader.verified_path = str(target)
+            return str(target)
+
+        downloader.download.side_effect = download
+        downloader.verified_path = None
+        text = self._run(downloader, sha256="  " + SHA_ABC.upper() + " ")
+        assert downloader.expected_sha256 == SHA_ABC
+        assert "Successfully downloaded" in text and "SHA256 verified" in text
+
+    def test_existing_file_with_matching_hash_passes(self, tmp_path):
+        target = tmp_path / "m.safetensors"
+        target.write_bytes(b"abc")
+        downloader = Mock()
+        downloader.verified_path = None
+        downloader.download.return_value = str(target)
+        text = self._run(downloader, sha256=SHA_ABC)
+        assert "SHA256 verified" in text
+
+    def test_existing_file_with_wrong_hash_is_reported_and_kept(self, tmp_path):
+        target = tmp_path / "m.safetensors"
+        target.write_bytes(b"something else")
+        downloader = Mock()
+        downloader.verified_path = None
+        downloader.download.return_value = str(target)
+        text = self._run(downloader, sha256=SHA_ABC)
+        assert "SHA256 mismatch" in text and "Force Redownload" in text
+        assert target.read_bytes() == b"something else"
+
+    def test_without_hash_existing_file_is_not_hashed(self, tmp_path):
+        downloader = Mock()
+        downloader.download.return_value = str(tmp_path / "missing.safetensors")
+        text = self._run(downloader)
+        assert "Successfully downloaded" in text
+        assert "SHA256" not in text

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Model Downloader
+
+- New optional `sha256` input. When it is set, a download is hashed while it
+  streams and is discarded (the `.part` file is removed, nothing lands in the
+  models folder) if it does not match. A file that is already there is hashed
+  instead of being trusted; on a mismatch it is kept and the node says so,
+  suggesting Force Redownload. The input is last, so saved workflows keep their
+  widget values.
+
 ## 1.4.0
 
 ### Packaging

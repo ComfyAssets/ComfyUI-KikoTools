@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Sequence, Union
 from urllib.parse import urlparse, unquote
+import hashlib
 import logging
 import os
 import re
@@ -156,6 +157,19 @@ def _default_base_path() -> Optional[str]:
     return base if isinstance(base, str) and base else None
 
 
+class ChecksumMismatchError(Exception):
+    """A downloaded file's SHA256 is not the expected one."""
+
+
+def sha256_of_file(path: str) -> str:
+    """Hex SHA256 of a file, read in CHUNK_SIZE blocks."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(CHUNK_SIZE), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 class BaseDownloader(ABC):
     """Abstract base class for all downloaders"""
 
@@ -177,6 +191,10 @@ class BaseDownloader(ABC):
             models_root = [models_root]
         self._models_root = list(models_root) if models_root else None
         self._progress_callback: Optional[Callable[[int, int, str], None]] = None
+        # Lowercase hex SHA256 the next saved file must match (None: no check), and
+        # the path of the last file that save_response verified against it.
+        self.expected_sha256: Optional[str] = None
+        self.verified_path: Optional[str] = None
 
     def set_progress_callback(self, callback: Callable[[int, int, str], None]) -> None:
         """Set callback function for progress updates
@@ -323,6 +341,8 @@ class BaseDownloader(ABC):
                 f"only model files ({', '.join(sorted(ALLOWED_FILE_EXTENSIONS))})"
             )
         part_file = output_file + PART_SUFFIX
+        self.verified_path = None
+        digest = hashlib.sha256()
         try:
             downloaded = 0
             start_time = time.time()
@@ -335,6 +355,7 @@ class BaseDownloader(ABC):
                         break
                     downloaded += len(buffer)
                     f.write(buffer)
+                    digest.update(buffer)
                     self.check_interrupt()
                     speed = self.calculate_speed(len(buffer), chunk_time)
                     self._report_chunk(downloaded, total_size, speed)
@@ -350,7 +371,9 @@ class BaseDownloader(ABC):
                     raise Exception(message)
                 logger.warning(message)
 
+            self._check_digest(digest, output_file)
             os.replace(part_file, output_file)
+            self.verified_path = output_file if self.expected_sha256 else None
             logger.info(
                 "Download completed in %.0fs: %s", time.time() - start_time, output_file
             )
@@ -363,6 +386,15 @@ class BaseDownloader(ABC):
             close = getattr(response, "close", None)
             if callable(close):
                 close()
+
+    def _check_digest(self, digest: Any, output_file: str) -> None:
+        """Raise ChecksumMismatchError when a hashed download is not the expected file."""
+        if self.expected_sha256 and digest.hexdigest() != self.expected_sha256:
+            raise ChecksumMismatchError(
+                f"SHA256 mismatch for {os.path.basename(output_file)}: expected "
+                f"{self.expected_sha256}, got {digest.hexdigest()}. The download "
+                "was discarded."
+            )
 
     def _report_chunk(
         self, downloaded: int, total_size: Optional[int], speed: float
