@@ -3,6 +3,7 @@
 All network access is mocked; nothing here touches the real network.
 """
 
+import hashlib
 import io
 import json
 import os
@@ -322,6 +323,28 @@ class TestSaveResponse:
         assert not os.path.exists(target + ".part")
         assert resp.closed
         cb.assert_called()
+
+    def test_sha256_match_saves_and_records_verified_path(self, tmp_path):
+        target = str(tmp_path / "f.bin")
+        d = CustomDownloader()
+        d.expected_sha256 = hashlib.sha256(b"abcdef").hexdigest()
+        assert d.save_response(FakeResponse(b"abcdef"), target, 6) == target
+        assert open(target, "rb").read() == b"abcdef"
+        assert d.verified_path == target
+
+    def test_sha256_mismatch_leaves_nothing(self, tmp_path):
+        target = str(tmp_path / "f.bin")
+        d = CustomDownloader()
+        d.expected_sha256 = "0" * 64
+        with pytest.raises(base.ChecksumMismatchError, match="SHA256 mismatch"):
+            d.save_response(FakeResponse(b"abcdef"), target, 6)
+        assert os.listdir(tmp_path) == []
+        assert d.verified_path is None
+
+    def test_no_expected_sha256_records_nothing(self, tmp_path):
+        d = CustomDownloader()
+        d.save_response(FakeResponse(b"abc"), str(tmp_path / "f.bin"), 3)
+        assert d.verified_path is None
 
     def test_unknown_size_progress(self, tmp_path):
         cb = MagicMock()
