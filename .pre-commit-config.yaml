@@ -62,16 +62,18 @@ repos:
 
   - repo: local
     hooks:
+      # Both suites are skipped when the pushed commits only change inert files
+      # (tools/ci/change_class.py, #118).
       - id: python-regressions
         name: Python regression suite
-        entry: python -m pytest tests
+        entry: python tools/ci/change_class.py --unless-inert python -m pytest tests
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-push]
       - id: frontend-regressions
         name: JavaScript regression suite
-        entry: npm test --prefix tools/testing
+        entry: python tools/ci/change_class.py --unless-inert npm test --prefix tools/testing
         language: system
         pass_filenames: false
         always_run: true

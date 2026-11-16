@@ -1,3 +1,5 @@
+![KikoTools by ComfyAssets](docs/brand/banner.webp)
+
 # ComfyUI-KikoTools
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -448,6 +450,7 @@ Download models, LoRAs, and other assets directly from CivitAI, HuggingFace, and
 - **Interrupt Handling**: Respects ComfyUI's "Cancel current run" button
 - **Automatic Cleanup**: Removes partial downloads on cancellation
 - **Custom Filenames**: Override auto-detected filenames when needed
+- **SHA256 Check**: Optional expected hash; a download that does not match is discarded, and an existing file is checked instead of trusted
 
 **Platform Features:**
 - **CivitAI**: Model page URLs, version-specific downloads, API authentication; civitai.com, civitai.green and civitai.red links
