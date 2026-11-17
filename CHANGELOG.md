@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.5.0
+
+### Packaging
+
+- The Comfy Registry listing uses the new KikoTools icon, and the README opens
+  with the new banner. Both images live in `docs/brand/`, which stays out of
+  the package.
 
 ### Model Downloader
 
