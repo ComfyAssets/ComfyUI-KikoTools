@@ -13,14 +13,17 @@
   leave that folder alone. Needs ComfyUI from September 2026 or newer.
 - A `model` picker lists `native:` text encoders from `text_encoders` and
   `gguf:` models from `models/LLM` or `text_encoders`; it defaults to the first
-  uncensored, abliterated or heretic entry. GGUF needs `llama-cpp-python`
+  uncensored, abliterated or heretic `native:` entry, then the first such entry
+  of any kind. JoyCaption GGUFs are not listed. GGUF needs `llama-cpp-python`
   (optional, not installed by KikoTools) and unloads ComfyUI's models first;
-  `keep_loaded` keeps it in memory between runs. A vision GGUF needs an
+  `keep_loaded` keeps it in memory between runs. Thinking is switched through
+  the model's own chat template (`enable_thinking`). A vision GGUF needs an
   `mmproj` file in the same folder.
 - A `mode` input (`text` or `vision`) decides whether the `image` input is
-  used. The `clip` input is now optional and overrides `model` when connected.
+  used. The `clip` input is now optional and overrides `model` when connected; a
+  saved model missing on this machine no longer fails validation.
 - Prompt files accept a `no_text_sentence:` front-matter key, appended when the
-  result has no double-quoted text; the shipped krea2 prompt uses it.
+  result has no quoted text (straight or typographic quotes); the shipped krea2 prompt uses it.
 
 ## 1.5.0
 

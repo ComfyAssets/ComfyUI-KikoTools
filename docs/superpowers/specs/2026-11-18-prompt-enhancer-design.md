@@ -180,11 +180,14 @@ an explicit choice between text and vision. He decided:
     `comfy.sd.load_clip`, using a `clip_type` chosen per detected model, so ComfyUI manages their memory as usual.
   - `gguf: <path>`: `*.gguf` LLM files under `models/LLM` and `text_encoders`, run through `llama_cpp`. Files whose
     name contains `mmproj` are projectors, not entries. A projector in the same folder makes the entry
-    vision-capable. umt5 and other non-LLM GGUFs are skipped.
+    vision-capable. umt5 and other non-LLM GGUFs are skipped, and so are JoyCaption files.
   - `llama_cpp` stays optional. If it can't be imported, the GGUF entries are not listed and one info line is logged.
     No new requirement is added to `requirements.txt`.
 - **`clip` becomes optional and overrides the picker.** When an encoder is wired in, the node uses it and ignores
-  `model`, which avoids loading a second copy. This keeps v7-style wiring working.
+  `model`, which avoids loading a second copy. This keeps v7-style wiring working. `VALIDATE_INPUTS` accepts any
+  `model`, so a saved model missing on this machine doesn't block a run with a clip connected.
+- **Default model.** The first uncensored/abliterated/heretic `native:` entry, then the first such entry of any kind,
+  then the first entry.
 - **`mode` combo: `text` | `vision`.**
   - `text` never sends an image, even when one is connected.
   - `vision` requires an image (error: "vision mode needs an image") and a vision-capable model (error naming the
@@ -194,16 +197,17 @@ an explicit choice between text and vision. He decided:
     `soft_empty_cache()`).
   - `flash_attn=True` on CUDA. Without it, the 27B vision projector's warmup reservation overflows 24 GB, as found
     with the QwenVL patch.
-  - A vision entry uses `llama_cpp`'s Qwen VL chat handler (Qwen3VL if present, else Qwen25VL, else MTMD) with its
+  - A vision entry uses `llama_cpp`'s Qwen VL chat handler (MTMD if present, else Qwen25VL; neither is a clear error) with its
     projector.
   - The same system prompt, temperature, seed, top_k/top_p/min_p and max_length (as `max_tokens`) apply.
-  - Thinking is off unless `thinking` is on. For Qwen3-family models that means a `/no_think` soft switch.
+  - Thinking is off unless `thinking` is on; thinking is switched through the model's own chat template
+    (enable_thinking).
   - A `keep_loaded` boolean (default off) keeps the GGUF model between runs. Off frees it after each run.
 - **Same output path.** Every backend goes through the existing clean, cap and trigger steps.
 
 ### Also in this round (from the first live test)
 - **krea2 "no text" sentence.** It moves out of the LLM's hands. A new optional front-matter key, `no_text_sentence:`,
-  holds the sentence, and the node appends it only when the cleaned output contains no double-quoted text.
+  holds the sentence, and the node appends it only when the cleaned output contains no quoted text (straight or typographic quotes).
   krea2.md drops its rule-7 closing-sentence instruction and sets the key.
 - **Trigger stripping.** It only tidies commas and spaces where a trigger was removed, so quoted text such as
   `"1,000"` is never rewritten.
