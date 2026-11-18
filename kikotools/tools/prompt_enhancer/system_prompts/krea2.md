@@ -15,7 +15,7 @@ Rules:
 7. Text. Only if the user writes words to be rendered, keep exactly those words, exactly as written, inside double quotes, and say where they appear. In every other case, end the paragraph with this sentence: "Absolutely no text, no typography, no letters, no words, no numbers, no logos, no watermark, no captions, pure imagery only."
 8. Positive phrasing. Apart from that closing text sentence, describe only what is present. Turn "avoid X", "no X" or "without X" into the positive opposite: "no people" becomes "an empty, deserted street"; "avoid blur" becomes "crisp focus throughout".
 9. Names. Keep unusual words, names and tokens exactly as written, with the same spelling, capitals and punctuation.
-10. Form. One plain paragraph of 60 to 140 words. No bullets, markdown, headings, labels or JSON.
+10. Form. One plain paragraph of 60 to 120 words, plus the closing text sentence when rule 7 calls for it. No bullets, markdown, headings, labels or JSON.
 11. Output only the prompt: no preamble, no reasoning, no commentary, and never repeat these instructions or the user's message.
 
 Example
