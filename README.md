@@ -19,6 +19,16 @@ I tried forking, patching, and submitting merge requests, but eventually decided
 
 I’m sharing them here with the community, and I hope you find them as useful as I do.
 
+## 1.6.0 — Kiko Prompt Enhancer
+
+A new node that rewrites a short prompt in the style each base model was trained
+on (SDXL realism, Illustrious, Anima, Flux.2 Klein, Z-Image, MOSS, Krea 2,
+Qwen-Image 2.1, Wan T2V/I2V). Pick the LLM that does the rewriting from your local
+text encoders or GGUF models, use `text` or `vision` mode, and keep LoRA trigger
+words exactly as typed. The system prompts are plain Markdown files you can
+override per model. See the [node documentation](#-kiko-prompt-enhancer) and the
+[release notes](CHANGELOG.md).
+
 ## 1.3.0 — Model Resolution Picker
 
 A new node that picks a native resolution for a model family from a chip grid of
@@ -833,6 +843,18 @@ Load Image → Image to Multiple Of → VAE Encode → KSampler
 **Method:** "center crop" or "rescale"
 **Output:** Adjusted image with compatible dimensions
 
+### Prompt Enhancer Example
+
+```
+1. Add "🧠 Kiko Prompt Enhancer" (🫶 ComfyAssets/🧠 Prompts)
+2. Type a short idea in prompt, e.g. "a red fox sleeping in fresh snow at dawn"
+3. Set base_model to the model you render with (e.g. krea2) and pick an LLM in model
+4. Put LoRA trigger words in trigger_words, not in the prompt
+5. Connect the prompt output to your positive CLIP Text Encode
+```
+
+For an image + text prompt, connect an image, set `mode` to `vision` and pick a vision-capable model.
+
 ### Common Workflows
 
 <details>
@@ -906,6 +928,7 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Local Image Loader** | Visual gallery browser for local media files | ✅ Complete | [Docs](examples/documentation/local_image_loader.md) |
 | **Model Downloader** | Download models from CivitAI, HuggingFace, and custom URLs | ✅ Complete | [Docs](#-model-downloader) |
 | **Workflow Timer** | Real-time execution timer with customizable display | ✅ Complete | [Docs](#️-workflow-timer) |
+| **Kiko Prompt Enhancer** | Rewrite a short prompt in a base model's preferred style with a local LLM | ✅ Complete | [Docs](#-kiko-prompt-enhancer) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
