@@ -145,7 +145,7 @@ def test_missing_llama_cpp_raises(monkeypatch):
 def test_text_run_messages_and_params(fakes):
     assert run() == "A cat on a mat."
     llm = FakeLlama.instances[0]
-    assert llm.kwargs["model_path"] == "/m/q.gguf"
+    assert llm.kwargs["model_path"] == str(TEXT.path)
     assert llm.kwargs["n_ctx"] == 8192
     assert llm.kwargs["n_gpu_layers"] == -1
     assert llm.kwargs["flash_attn"] == torch.cuda.is_available()
@@ -209,7 +209,7 @@ def test_image_run_uses_handler_and_data_uri(fakes):
     llm = FakeLlama.instances[0]
     handler = llm.kwargs["chat_handler"]
     assert type(handler) is FakeHandler
-    assert handler.clip_model_path == "/m/mmproj.gguf"
+    assert handler.clip_model_path == str(VISION.mmproj)
     assert handler.verbose is False
     assert FakeFormatter.instances == []
     (call,) = handler.calls
