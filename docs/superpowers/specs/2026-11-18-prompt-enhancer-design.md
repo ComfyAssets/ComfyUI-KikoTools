@@ -168,3 +168,49 @@ Rules shared by every prompt:
 - Tests: file discovery and override precedence, header parsing, the vision
   error path, and output clean-up, all with a mocked CLIP. Plus one manual run
   per base model against a real encoder.
+
+## Addendum 2026-11-18: model picker, text/vision mode, GGUF backend
+
+Vito's first test of v7 raised three needs: he couldn't choose the LLM, he prefers uncensored models, and he wants
+an explicit choice between text and vision. He decided:
+
+- **Model picker.** A `model` combo lists both kinds of local LLM:
+  - `native: <path>`: safetensors files under `text_encoders` that `comfy.sd.detect_te_model` identifies as a
+    generate-capable Qwen LLM (Qwen2.5-VL, Qwen3, Qwen3-VL, Qwen3.5). The node loads them with
+    `comfy.sd.load_clip`, using a `clip_type` chosen per detected model, so ComfyUI manages their memory as usual.
+  - `gguf: <path>`: `*.gguf` LLM files under `models/LLM` and `text_encoders`, run through `llama_cpp`. Files whose
+    name contains `mmproj` are projectors, not entries. A projector in the same folder makes the entry
+    vision-capable. umt5 and other non-LLM GGUFs are skipped.
+  - `llama_cpp` stays optional. If it can't be imported, the GGUF entries are not listed and one info line is logged.
+    No new requirement is added to `requirements.txt`.
+- **`clip` becomes optional and overrides the picker.** When an encoder is wired in, the node uses it and ignores
+  `model`, which avoids loading a second copy. This keeps v7-style wiring working.
+- **`mode` combo: `text` | `vision`.**
+  - `text` never sends an image, even when one is connected.
+  - `vision` requires an image (error: "vision mode needs an image") and a vision-capable model (error naming the
+    model). It sends the image and appends the prompt file's `## With an image` section.
+- **GGUF runs.**
+  - Before loading, the node frees ComfyUI's models (`comfy.model_management.unload_all_models()` plus
+    `soft_empty_cache()`).
+  - `flash_attn=True` on CUDA. Without it, the 27B vision projector's warmup reservation overflows 24 GB, as found
+    with the QwenVL patch.
+  - A vision entry uses `llama_cpp`'s Qwen VL chat handler (Qwen3VL if present, else Qwen25VL, else MTMD) with its
+    projector.
+  - The same system prompt, temperature, seed, top_k/top_p/min_p and max_length (as `max_tokens`) apply.
+  - Thinking is off unless `thinking` is on. For Qwen3-family models that means a `/no_think` soft switch.
+  - A `keep_loaded` boolean (default off) keeps the GGUF model between runs. Off frees it after each run.
+- **Same output path.** Every backend goes through the existing clean, cap and trigger steps.
+
+### Also in this round (from the first live test)
+- **krea2 "no text" sentence.** It moves out of the LLM's hands. A new optional front-matter key, `no_text_sentence:`,
+  holds the sentence, and the node appends it only when the cleaned output contains no double-quoted text.
+  krea2.md drops its rule-7 closing-sentence instruction and sets the key.
+- **Trigger stripping.** It only tidies commas and spaces where a trigger was removed, so quoted text such as
+  `"1,000"` is never rewritten.
+
+### Left to the builder
+- The detected-model-to-`clip_type` map. Prefer the type the matching official workflows use, for example Qwen3.5
+  9B to `moss_image`, Qwen3-VL 4B to `flux3`, Qwen3 4B to `lumina2`, Qwen2.5-VL 7B to `qwen_image`. Verify each
+  generates live.
+- Caching the scan of the model list. Header reads are cheap; cache by mtime.
+- The GGUF context size: 8192 by default, raised if the image tokens need more.
