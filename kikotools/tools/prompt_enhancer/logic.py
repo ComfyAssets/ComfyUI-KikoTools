@@ -1,7 +1,7 @@
 """Output helpers for the Kiko Prompt Enhancer."""
 
 import re
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 _PREAMBLE = re.compile(r"^(here is|here's|enhanced prompt|prompt)\b[^\n]*:\s*\n", re.IGNORECASE)
 _WRAPPERS = (('"', '"'), ("'", "'"), ("```", "```"))
@@ -44,8 +44,24 @@ def cap_words(text: str, max_words: Optional[int]) -> str:
     return capped[:comma].rstrip() if comma > 0 else capped
 
 
+def _parse_triggers(trigger_words: str) -> List[str]:
+    return [part.strip() for part in trigger_words.split(",") if part.strip()]
+
+
+def strip_triggers(prompt: str, trigger_words: str) -> str:
+    """Remove trigger words from the prompt so the LLM never reinterprets them."""
+    triggers = _parse_triggers(trigger_words)
+    if not triggers:
+        return prompt
+    for trigger in triggers:
+        prompt = re.sub(r"(?<!\w)" + re.escape(trigger) + r"(?!\w)", "", prompt, flags=re.IGNORECASE)
+    prompt = re.sub(r"[ \t]*,[ \t,]*", ", ", prompt)
+    prompt = re.sub(r"[ \t]{2,}", " ", prompt)
+    return prompt.strip(" \t\n,")
+
+
 def prepend_triggers(text: str, trigger_words: str) -> str:
-    triggers = [part.strip() for part in trigger_words.split(",") if part.strip()]
+    triggers = _parse_triggers(trigger_words)
     if not triggers:
         return text
     return ", ".join(triggers + [text])

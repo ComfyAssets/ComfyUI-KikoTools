@@ -3,6 +3,7 @@ from kikotools.tools.prompt_enhancer.logic import (
     clean_output,
     prepend_triggers,
     split_thinking,
+    strip_triggers,
     tokens_include_image,
 )
 
@@ -73,3 +74,30 @@ def test_clean_output_keeps_text_with_several_quoted_parts():
 
 def test_clean_output_drops_fence_language_tag():
     assert clean_output("```text\nA fox.\n```") == "A fox."
+
+
+def test_strip_triggers_removes_trigger():
+    assert strip_triggers("mabes9sans walks a dog", "mabes9sans") == "walks a dog"
+
+
+def test_strip_triggers_ignores_case():
+    assert strip_triggers("Mabes9sans walks", "mabes9sans") == "walks"
+
+
+def test_strip_triggers_keeps_longer_words():
+    assert strip_triggers("mabes9sansX walks", "mabes9sans") == "mabes9sansX walks"
+
+
+def test_strip_triggers_cleans_punctuation():
+    assert (
+        strip_triggers("mabes9sans, a woman, vito , , in the rain,", "mabes9sans, vito")
+        == "a woman, in the rain"
+    )
+
+
+def test_strip_triggers_handles_non_word_characters():
+    assert strip_triggers("a fox, v1.0-style, snow", "v1.0-style") == "a fox, snow"
+
+
+def test_strip_triggers_empty_is_noop():
+    assert strip_triggers("a fox", " , ") == "a fox"

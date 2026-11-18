@@ -10,6 +10,7 @@ from .logic import (
     clean_output,
     prepend_triggers,
     split_thinking,
+    strip_triggers,
     tokens_include_image,
 )
 
@@ -75,7 +76,7 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
                     "STRING",
                     {
                         "default": "",
-                        "tooltip": "Comma-separated; added to the front of the result, never sent to the encoder",
+                        "tooltip": "Comma-separated; added to the front of the result and removed from the prompt before the encoder sees it",
                     },
                 ),
                 "image": (
@@ -123,6 +124,11 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
     ) -> Tuple[str, str]:
         if not prompt.strip() and image is None:
             raise ValueError("The prompt is empty; type an idea or attach an image")
+        prompt = strip_triggers(prompt, trigger_words)
+        if not prompt and image is None:
+            raise ValueError(
+                "the prompt only contains trigger words; describe the scene in the prompt"
+            )
         library_prompt = load_prompt(base_model)
         system = library_prompt.text
         if image is not None and library_prompt.image_text:

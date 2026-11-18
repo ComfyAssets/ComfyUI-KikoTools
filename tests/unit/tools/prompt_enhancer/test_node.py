@@ -106,6 +106,24 @@ def test_trigger_words_not_sent_to_encoder_and_prepended():
     assert final.startswith("mabes9sans, ")
 
 
+def test_trigger_words_stripped_from_prompt_before_encoder():
+    clip = FakeClip()
+    final, _ = run(clip, prompt="Mabes9sans woman in the rain", trigger_words="mabes9sans")
+    assert clip.tokenize_calls[0][0] == "woman in the rain"
+    assert final == "mabes9sans, A cat on a mat."
+
+
+def test_trigger_only_prompt_raises():
+    with pytest.raises(ValueError, match="only contains trigger words"):
+        run(FakeClip(), prompt="mabes9sans, vito", trigger_words="mabes9sans, vito")
+
+
+def test_trigger_only_prompt_with_image_runs():
+    clip = FakeClip()
+    run(clip, prompt="mabes9sans", trigger_words="mabes9sans", image=IMAGE)
+    assert clip.tokenize_calls[0][0] == ""
+
+
 def test_image_section_appended_only_with_image(tmp_path):
     write_override(tmp_path, "vid.md", "Body text\n## With an image\nMotion only.")
     clip = FakeClip()
