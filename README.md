@@ -500,7 +500,7 @@ Rewrites a short prompt in the style the chosen base model likes, using a local 
 - **Advanced**: `temperature`, `max_length`, `thinking`, `keep_loaded` (keeps a GGUF model in memory between runs; off by default, so it is freed after each run)
 - **Outputs**: `prompt` and `system_prompt` (the system prompt that was used). There is no negative output, because most CFG 1 setups ignore negatives
 
-**GGUF models** need `llama-cpp-python`, which KikoTools does not install; without it GGUF entries are not listed and a GGUF run fails with an install message. Before a GGUF model loads, ComfyUI's loaded models are unloaded to free VRAM. It runs with all layers on the GPU, flash attention on CUDA and an 8192 token context.
+**GGUF models** need `llama-cpp-python`, which KikoTools does not install; without it `gguf:` entries are not listed (a saved workflow that names one will not find its model). Only `.gguf` files whose names contain `qwen`, `llama` or `joycaption` are listed; `mmproj` files are never listed. Before a GGUF model loads, ComfyUI's loaded models are unloaded to free VRAM. It runs with all layers on the GPU, flash attention on CUDA and an 8192 token context.
 
 **Customising:** put Markdown files in `ComfyUI/user/kikotools/system_prompts/`. A file with the same name as a shipped prompt replaces it; a new name adds a model to `base_model`. Updates never touch this folder. To start from a shipped prompt, right-click the node and choose "Copy system prompt to user folder", then edit the copy.
 
@@ -520,7 +520,7 @@ You rewrite the user's idea into ...
 The image is the first frame ...
 ```
 
-**Requirements:** ComfyUI from September 2026 or newer (system-prompt support in the text encoder) and a chat-capable encoder such as Qwen3. Older versions stop with an "Update ComfyUI" error.
+**Requirements:** for `native:` models and a connected `clip`, ComfyUI from September 2026 or newer (system-prompt support in the text encoder) and a chat-capable encoder such as Qwen3; older versions stop with an "Update ComfyUI" error. GGUF runs do not need this.
 
 #### ⏱️ Workflow Timer
 Real-time execution timer that displays workflow duration with millisecond precision.
