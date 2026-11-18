@@ -12,28 +12,8 @@ from .logic import (
     prepend_triggers,
     split_thinking,
     strip_triggers,
-    tokens_include_image,
 )
-
-UPDATE_COMFY = (
-    "This encoder ignored the system prompt. Update ComfyUI (Sept 2026 or newer) "
-    "or use a chat encoder such as Qwen3, Qwen3-VL or Qwen3.5"
-)
-NO_GENERATE = "This ComfyUI is too old for text generation. Update ComfyUI (Sept 2026 or newer)"
-SYSTEM_CHECK_CHARS = 40
-
-
-def _prompt_ids(tokens: Any) -> list:
-    """All prompt token ids, read the way core TextGenerateV2 reads them."""
-    if isinstance(tokens, dict):
-        tokens = next(iter(tokens.values()), [])
-    return [
-        t[0]
-        for chunk in tokens
-        for t in chunk
-        if isinstance(t, tuple) and isinstance(t[0], int)
-    ]
-
+from .native_backend import generate_native
 
 class PromptEnhancerNode(ComfyAssetsBaseNode):
     """Rewrite a short prompt with the loaded text encoder and a per-model system prompt."""
@@ -136,37 +116,9 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
             system += "\n\n" + library_prompt.image_text
         if not system.strip():
             raise ValueError(f"system prompt file '{base_model}' is empty")
-        if not hasattr(clip, "generate"):
-            raise ValueError(NO_GENERATE)
-
-        tokens = clip.tokenize(
-            prompt, image=image, thinking=thinking, system_prompt=system, min_length=1
+        decoded = generate_native(
+            clip, system, prompt, image, seed, temperature, max_length, thinking
         )
-        if image is not None and not tokens_include_image(tokens):
-            encoder = type(getattr(clip, "cond_stage_model", clip)).__name__
-            raise ValueError(
-                f"{encoder} did not take the image; load a vision encoder such as Qwen3-VL or Qwen3.5"
-            )
-        if system[:SYSTEM_CHECK_CHARS] not in clip.decode(_prompt_ids(tokens)):
-            raise ValueError(UPDATE_COMFY)
-
-        generated = clip.generate(
-            tokens,
-            do_sample=True,
-            max_length=max_length,
-            temperature=temperature,
-            top_k=64,
-            top_p=0.95,
-            min_p=0.05,
-            repetition_penalty=1.05,
-            presence_penalty=0.0,
-            seed=seed,
-        )
-        decoded = clip.decode(generated)
-        if thinking and "</think>" not in decoded:
-            raise ValueError(
-                "thinking used up max_length; raise max_length or turn thinking off"
-            )
         text = clean_output(split_thinking(decoded))
         max_words = library_prompt.max_words
         sentence = library_prompt.no_text_sentence
