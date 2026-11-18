@@ -137,12 +137,6 @@ def test_image_section_appended_only_with_image(tmp_path):
     assert clip.tokenize_calls[1][1]["image"] is None
 
 
-
-
-
-
-
-
 def test_empty_prompt_without_image_raises():
     with pytest.raises(ValueError, match="prompt is empty"):
         run(FakeClip(), prompt="   ")
@@ -184,6 +178,59 @@ def test_node_skips_no_text_when_quoted(tmp_path):
     assert final == 'A sign reading "OPEN" hangs.'
 
 
+@pytest.mark.parametrize(
+    "output",
+    [
+        " ".join(f"w{i}" for i in range(20)) + ' "OPEN" tail',
+        " ".join(f"w{i}" for i in range(20)) + ' "unpaired tail',
+    ],
+)
+def test_node_stays_within_cap_with_late_or_unpaired_quote(tmp_path, output):
+    write_override(
+        tmp_path,
+        "plain.md",
+        "---\nmax_words: 10\nno_text_sentence: No text here.\n---\nBody",
+    )
+    final, _ = run(FakeClip(output=output), base_model="plain")
+    assert len(final.split()) <= 10
+
+
+def test_is_changed_follows_file_content(tmp_path):
+    path = write_override(tmp_path, "mine.md", "first")
+    before = PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1)
+    path.write_text("second", encoding="utf-8")
+    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1) != before
+
+
+def test_is_changed_follows_header_edits(tmp_path):
+    path = write_override(tmp_path, "mine.md", "---\nmax_words: 50\n---\nBody")
+    before = PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1)
+    path.write_text("---\nmax_words: 80\n---\nBody", encoding="utf-8")
+    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1) != before
+
+
+def test_enhance_calls_backend_and_runs_pipeline(monkeypatch):
+    calls = []
+
+    def fake_generate(*args):
+        calls.append(args)
+        return "<think>x</think>A cat."
+
+    monkeypatch.setattr(node_module, "generate_native", fake_generate)
+    clip = object()
+    final, system = run(
+        clip,
+        prompt="Mabes9sans a cat",
+        trigger_words="mabes9sans",
+        image=IMAGE,
+        temperature=0.5,
+        max_length=256,
+        thinking=True,
+    )
+    assert calls == [(clip, system, "a cat", IMAGE, 7, 0.5, 256, True)]
+    krea = load_prompt("krea2")
+    assert system == krea.text + "\n\n" + krea.image_text if krea.image_text else krea.text
+    assert final == f"mabes9sans, A cat. {NO_TEXT}"
 
 
 def test_closed_thinking_returns_answer():
@@ -195,4 +242,3 @@ def test_empty_system_prompt_raises(tmp_path):
     write_override(tmp_path, "blank.md", "---\nmax_words: 50\n---\n  \n")
     with pytest.raises(ValueError, match="system prompt file 'blank' is empty"):
         run(FakeClip(), base_model="blank")
-

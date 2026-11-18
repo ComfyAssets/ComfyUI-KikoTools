@@ -15,6 +15,7 @@ from .logic import (
 )
 from .native_backend import generate_native
 
+
 class PromptEnhancerNode(ComfyAssetsBaseNode):
     """Rewrite a short prompt with the loaded text encoder and a per-model system prompt."""
 
