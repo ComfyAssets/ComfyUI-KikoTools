@@ -170,7 +170,7 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
         text = clean_output(split_thinking(decoded))
         max_words = library_prompt.max_words
         sentence = library_prompt.no_text_sentence
-        if sentence and '"' not in text and max_words is not None:
+        if sentence and max_words is not None:
             max_words -= len(sentence.split())
         final = prepend_triggers(
             append_no_text(cap_words(text, max_words), sentence), trigger_words

@@ -196,6 +196,23 @@ def test_node_skips_no_text_when_quoted(tmp_path):
     assert final == 'A sign reading "OPEN" hangs.'
 
 
+@pytest.mark.parametrize(
+    "output",
+    [
+        " ".join(f"w{i}" for i in range(20)) + ' "OPEN" tail',
+        " ".join(f"w{i}" for i in range(20)) + ' "unpaired tail',
+    ],
+)
+def test_node_stays_within_cap_with_late_or_unpaired_quote(tmp_path, output):
+    write_override(
+        tmp_path,
+        "plain.md",
+        "---\nmax_words: 10\nno_text_sentence: No text here.\n---\nBody",
+    )
+    final, _ = run(FakeClip(output=output), base_model="plain")
+    assert len(final.split()) <= 10
+
+
 def test_is_changed_follows_file_content(tmp_path):
     path = write_override(tmp_path, "mine.md", "first")
     before = PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1)
