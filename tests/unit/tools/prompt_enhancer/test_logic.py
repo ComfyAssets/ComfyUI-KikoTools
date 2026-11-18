@@ -133,5 +133,12 @@ def test_append_no_text_skipped_with_quotes():
     )
 
 
+def test_append_no_text_skipped_with_typographic_quotes():
+    assert (
+        append_no_text("A sign reading \u201cOPEN\u201d.", "No text.")
+        == "A sign reading \u201cOPEN\u201d."
+    )
+
+
 def test_append_no_text_none_is_noop():
     assert append_no_text("A fox.", None) == "A fox."

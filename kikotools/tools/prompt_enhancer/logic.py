@@ -6,7 +6,7 @@ from typing import Any, List, Optional
 _PREAMBLE = re.compile(r"^(here is|here's|enhanced prompt|prompt)\b[^\n]*:\s*\n", re.IGNORECASE)
 _WRAPPERS = (('"', '"'), ("'", "'"), ("```", "```"))
 _SENTENCE_END = re.compile(r"[.!?][\"')\]]*(?=\s|$)")
-_QUOTED_SPAN = re.compile(r'"[^"]*"')
+_QUOTED_SPAN = re.compile(r'"[^"]*"|\u201c[^\u201d]*\u201d')
 _FENCE_LANGUAGE = re.compile(r"^[\w+-]+\n")
 
 
