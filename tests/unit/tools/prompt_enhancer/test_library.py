@@ -85,3 +85,16 @@ def test_default_prefers_krea2():
 def test_non_md_files_ignored(tmp_path):
     write_override(tmp_path, "notes.txt", "x")
     assert "notes" not in library.prompt_names()
+
+
+def test_unreadable_override_is_skipped_with_warning(tmp_path, caplog):
+    path = tmp_path / "kikotools" / "system_prompts" / "broken.md"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"\xff\xfe not utf-8 \x80")
+    write_override(tmp_path, "mine.md", "x")
+    with caplog.at_level(logging.WARNING):
+        names = library.prompt_names()
+    assert "broken.md" in caplog.text
+    assert "broken" not in names
+    assert "mine" in names
+    assert library.load_prompt("krea2").text

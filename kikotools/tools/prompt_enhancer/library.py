@@ -92,12 +92,15 @@ def parse_prompt_file(
 def _read_dir(directory: Optional[Path], is_override: bool) -> Dict[str, SystemPrompt]:
     if directory is None or not directory.is_dir():
         return {}
-    return {
-        path.stem: parse_prompt_file(
-            path.stem, path.read_text(encoding="utf-8"), path, is_override
-        )
-        for path in sorted(directory.glob("*.md"))
-    }
+    prompts = {}
+    for path in sorted(directory.glob("*.md")):
+        try:
+            raw = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as error:
+            logger.warning("Skipping system prompt %s: %s", path, error)
+            continue
+        prompts[path.stem] = parse_prompt_file(path.stem, raw, path, is_override)
+    return prompts
 
 
 def available_prompts() -> Dict[str, SystemPrompt]:
