@@ -2,7 +2,7 @@
 
 Each ``*.md`` file is one base model. Shipped files live next to this module;
 ``<user dir>/kikotools/system_prompts/`` may replace them by name or add more.
-A file may start with ``---`` front matter (only ``max_words: <int>`` is read),
+A file may start with ``---`` front matter (``max_words: <int>`` and ``no_text_sentence: <text>`` are read),
 and a line ``## With an image`` splits the body into the text prompt and the
 text used when an image is attached.
 """
@@ -30,6 +30,7 @@ class SystemPrompt:
     max_words: Optional[int]
     path: Path
     is_override: bool
+    no_text_sentence: Optional[str] = None
 
 
 def override_dir() -> Optional[Path]:
@@ -69,6 +70,15 @@ def _read_max_words(header: List[str], path: Path) -> Optional[int]:
     return max_words
 
 
+def _read_no_text_sentence(header: List[str]) -> Optional[str]:
+    sentence = None
+    for line in header:
+        key, _, value = line.partition(":")
+        if key.strip() == "no_text_sentence":
+            sentence = value.strip() or None
+    return sentence
+
+
 def parse_prompt_file(
     stem: str, raw: str, path: Path, is_override: bool
 ) -> SystemPrompt:
@@ -86,6 +96,7 @@ def parse_prompt_file(
         max_words=_read_max_words(header, path),
         path=path,
         is_override=is_override,
+        no_text_sentence=_read_no_text_sentence(header),
     )
 
 

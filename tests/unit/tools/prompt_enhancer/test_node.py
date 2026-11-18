@@ -65,6 +65,7 @@ class FakeClip:
 
 
 IMAGE = torch.zeros(1, 8, 8, 3)
+NO_TEXT = load_prompt("krea2").no_text_sentence
 
 
 def run(clip, prompt="a cat", base_model="krea2", **kwargs):
@@ -96,7 +97,7 @@ def test_enhance_passes_system_prompt_and_seed():
     assert clip.tokenize_calls[0][1]["system_prompt"] == expected
     assert clip.generate_calls[0]["seed"] == 7
     assert clip.generate_calls[0]["do_sample"] is True
-    assert final == "A cat on a mat."
+    assert final == f"A cat on a mat. {NO_TEXT}"
 
 
 def test_trigger_words_not_sent_to_encoder_and_prepended():
@@ -110,7 +111,7 @@ def test_trigger_words_stripped_from_prompt_before_encoder():
     clip = FakeClip()
     final, _ = run(clip, prompt="Mabes9sans woman in the rain", trigger_words="mabes9sans")
     assert clip.tokenize_calls[0][0] == "woman in the rain"
-    assert final == "mabes9sans, A cat on a mat."
+    assert final == f"mabes9sans, A cat on a mat. {NO_TEXT}"
 
 
 def test_trigger_only_prompt_raises():
@@ -161,7 +162,7 @@ def test_empty_prompt_without_image_raises():
 
 def test_empty_prompt_with_image_runs():
     final, _ = run(FakeClip(), prompt="", image=IMAGE)
-    assert final == "A cat on a mat."
+    assert final == f"A cat on a mat. {NO_TEXT}"
 
 
 def test_output_is_cleaned_and_capped(tmp_path):
@@ -171,6 +172,28 @@ def test_output_is_cleaned_and_capped(tmp_path):
     )
     final, _ = run(clip, base_model="short")
     assert final == "One two."
+
+
+def test_node_appends_no_text_within_cap(tmp_path):
+    write_override(
+        tmp_path,
+        "plain.md",
+        "---\nmax_words: 10\nno_text_sentence: No text here.\n---\nBody",
+    )
+    clip = FakeClip(output="w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12")
+    final, _ = run(clip, base_model="plain")
+    assert final == "w1 w2 w3 w4 w5 w6 w7 No text here."
+
+
+def test_node_skips_no_text_when_quoted(tmp_path):
+    write_override(
+        tmp_path,
+        "plain.md",
+        "---\nmax_words: 10\nno_text_sentence: No text here.\n---\nBody",
+    )
+    clip = FakeClip(output='A sign reading "OPEN" hangs.')
+    final, _ = run(clip, base_model="plain")
+    assert final == 'A sign reading "OPEN" hangs.'
 
 
 def test_is_changed_follows_file_content(tmp_path):
@@ -195,7 +218,7 @@ def test_cut_off_thinking_raises():
 
 def test_closed_thinking_returns_answer():
     final, _ = run(FakeClip(output="<think>x</think>A cat."), thinking=True)
-    assert final == "A cat."
+    assert final == f"A cat. {NO_TEXT}"
 
 
 def test_empty_system_prompt_raises(tmp_path):

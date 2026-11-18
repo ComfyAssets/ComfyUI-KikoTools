@@ -6,6 +6,7 @@ from typing import Any, List, Optional
 _PREAMBLE = re.compile(r"^(here is|here's|enhanced prompt|prompt)\b[^\n]*:\s*\n", re.IGNORECASE)
 _WRAPPERS = (('"', '"'), ("'", "'"), ("```", "```"))
 _SENTENCE_END = re.compile(r"[.!?][\"')\]]*(?=\s|$)")
+_QUOTED_SPAN = re.compile(r'"[^"]*"')
 _FENCE_LANGUAGE = re.compile(r"^[\w+-]+\n")
 
 
@@ -48,16 +49,24 @@ def _parse_triggers(trigger_words: str) -> List[str]:
     return [part.strip() for part in trigger_words.split(",") if part.strip()]
 
 
+def _drop_trigger(match: "re.Match[str]") -> str:
+    if match.start() == 0 or match.end() == len(match.string):
+        return ""
+    return ", " if "," in match.group() else " "
+
+
 def strip_triggers(prompt: str, trigger_words: str) -> str:
-    """Remove trigger words from the prompt so the LLM never reinterprets them."""
-    triggers = _parse_triggers(trigger_words)
-    if not triggers:
-        return prompt
-    for trigger in triggers:
-        prompt = re.sub(r"(?<!\w)" + re.escape(trigger) + r"(?!\w)", "", prompt, flags=re.IGNORECASE)
-    prompt = re.sub(r"[ \t]*,[ \t,]*", ", ", prompt)
-    prompt = re.sub(r"[ \t]{2,}", " ", prompt)
-    return prompt.strip(" \t\n,")
+    """Remove trigger words so the LLM never reinterprets them; text elsewhere is left as typed."""
+    for trigger in _parse_triggers(trigger_words):
+        pattern = r"\s*,?\s*(?<!\w)" + re.escape(trigger) + r"(?!\w)\s*,?\s*"
+        prompt = re.sub(pattern, _drop_trigger, prompt, flags=re.IGNORECASE)
+    return prompt
+
+
+def append_no_text(text: str, sentence: Optional[str]) -> str:
+    if not sentence or _QUOTED_SPAN.search(text):
+        return text
+    return f"{text} {sentence}"
 
 
 def prepend_triggers(text: str, trigger_words: str) -> str:

@@ -6,6 +6,7 @@ from typing import Any, Dict, Tuple
 from ...base.base_node import ComfyAssetsBaseNode
 from .library import default_prompt_name, load_prompt, prompt_names
 from .logic import (
+    append_no_text,
     cap_words,
     clean_output,
     prepend_triggers,
@@ -167,8 +168,12 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
                 "thinking used up max_length; raise max_length or turn thinking off"
             )
         text = clean_output(split_thinking(decoded))
+        max_words = library_prompt.max_words
+        sentence = library_prompt.no_text_sentence
+        if sentence and '"' not in text and max_words is not None:
+            max_words -= len(sentence.split())
         final = prepend_triggers(
-            cap_words(text, library_prompt.max_words), trigger_words
+            append_no_text(cap_words(text, max_words), sentence), trigger_words
         )
         return final, system
 

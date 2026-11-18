@@ -98,3 +98,20 @@ def test_unreadable_override_is_skipped_with_warning(tmp_path, caplog):
     assert "broken" not in names
     assert "mine" in names
     assert library.load_prompt("krea2").text
+
+
+def test_no_text_sentence_parsed():
+    prompt = library.parse_prompt_file(
+        "x",
+        "---\nno_text_sentence: Absolutely no text.\n---\nBody",
+        Path("x.md"),
+        False,
+    )
+    assert prompt.no_text_sentence == "Absolutely no text."
+
+
+def test_empty_no_text_sentence_is_none():
+    prompt = library.parse_prompt_file(
+        "x", "---\nno_text_sentence:\n---\nBody", Path("x.md"), False
+    )
+    assert prompt.no_text_sentence is None

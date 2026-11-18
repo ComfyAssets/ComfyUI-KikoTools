@@ -1,4 +1,5 @@
 from kikotools.tools.prompt_enhancer.logic import (
+    append_no_text,
     cap_words,
     clean_output,
     prepend_triggers,
@@ -90,7 +91,7 @@ def test_strip_triggers_keeps_longer_words():
 
 def test_strip_triggers_cleans_punctuation():
     assert (
-        strip_triggers("mabes9sans, a woman, vito , , in the rain,", "mabes9sans, vito")
+        strip_triggers("mabes9sans, a woman, vito , in the rain", "mabes9sans, vito")
         == "a woman, in the rain"
     )
 
@@ -101,3 +102,36 @@ def test_strip_triggers_handles_non_word_characters():
 
 def test_strip_triggers_empty_is_noop():
     assert strip_triggers("a fox", " , ") == "a fox"
+
+
+def test_strip_triggers_keeps_quoted_text():
+    assert (
+        strip_triggers('mabes9sans, a sign "1,000  items,left"', "mabes9sans")
+        == 'a sign "1,000  items,left"'
+    )
+
+
+def test_strip_triggers_untouched_without_match():
+    assert strip_triggers("a,b  c", "zzz") == "a,b  c"
+
+
+def test_strip_triggers_mid_sentence():
+    assert (
+        strip_triggers("a woman, mabes9sans, smiling", "mabes9sans")
+        == "a woman, smiling"
+    )
+
+
+def test_append_no_text_when_no_quotes():
+    assert append_no_text("A fox.", "No text.") == "A fox. No text."
+
+
+def test_append_no_text_skipped_with_quotes():
+    assert (
+        append_no_text('A sign reading "OPEN".', "No text.")
+        == 'A sign reading "OPEN".'
+    )
+
+
+def test_append_no_text_none_is_noop():
+    assert append_no_text("A fox.", None) == "A fox."
