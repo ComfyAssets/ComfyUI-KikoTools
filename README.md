@@ -492,14 +492,14 @@ Rewrites a short prompt in the style the chosen base model likes, using the text
 
 - **Inputs**: `clip`, `prompt`, `base_model`, `seed`
 - **base_model**: one system prompt per model: `anima`, `flux2-klein`, `illustrious`, `krea2`, `moss`, `qwen-image`, `sdxl-realism`, `wan-i2v`, `wan-t2v`, `z-image`
-- **trigger_words** (optional): kept exactly and placed first in the result; never sent to the LLM
+- **trigger_words** (optional): comma-separated; placed first in the result and also removed from the prompt text before the LLM sees it. Describe the subject in plain words in the prompt ("a woman", not the trigger)
 - **image** (optional): describes or animates an image. Needs a vision-capable encoder such as Qwen3-VL or Qwen3.5; otherwise the node stops with a clear error
 - **Advanced**: `temperature`, `max_length`, `thinking`
 - **Outputs**: `prompt` and `system_prompt` (the system prompt that was used). There is no negative output, because most CFG 1 setups ignore negatives
 
 **Customising:** put Markdown files in `ComfyUI/user/kikotools/system_prompts/`. A file with the same name as a shipped prompt replaces it; a new name adds a model to `base_model`. Updates never touch this folder. To start from a shipped prompt, right-click the node and choose "Copy system prompt to user folder", then edit the copy.
 
-A prompt file may start with front matter holding `max_words` (the result is cut to that many words), and may include a `## With an image` section that is added to the system prompt when an image is connected:
+A prompt file may start with front matter holding `max_words` (the result is trimmed back to the last sentence end (or tag boundary) within the limit; trigger words don't count), and may include a `## With an image` section that is added to the system prompt when an image is connected:
 
 ```markdown
 ---
