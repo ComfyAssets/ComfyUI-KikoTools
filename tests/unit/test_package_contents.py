@@ -35,6 +35,7 @@ KEPT = (
     "README.md",
     "CHANGELOG.md",
     "kikotools/tools/model_downloader/node.py",
+    "kikotools/tools/prompt_enhancer/system_prompts/krea2.md",
     "web/kiko_local_image_loader.js",
 )
 
