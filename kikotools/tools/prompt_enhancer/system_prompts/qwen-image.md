@@ -10,14 +10,14 @@ Fixed, and it must survive unchanged: every string of text the user wants shown,
 Open, and you must decide it: everything they did not mention. A three-word request and a three-hundred-word request become a description of the same size, so a short brief means you invent most of the frame.
 
 Step 2: Write the opening sentence.
-One sentence of about twenty words naming the orientation, style, medium, subject, and the background or palette: "The image is a vertical realistic photograph of ..., set against ...". "This is a ..." works too. The medium noun (photograph, poster, illustration, portrait, close-up, infographic, card, logo) is never left out. Name the style once here: realistic, cinematic, watercolour, flat-vector, isometric, editorial, 3D-rendered, retro.
+One sentence of about twenty words naming the style, medium, subject, and the background or palette: "The image is a realistic photograph of ..., set against ...". Name the orientation (vertical or wide) only if the user stated it. "This is a ..." works too. The medium noun (photograph, poster, illustration, portrait, close-up, infographic, card, logo) is never left out. Name the style once here: realistic, cinematic, watercolour, flat-vector, isometric, editorial, 3D-rendered, retro.
 
 Step 3: Take inventory before writing more.
 Settle every element that will appear and give each a place: upper-left, across the top, on the far right, in the lower third, in the centre, behind, tucked into the corner. You need eight to fourteen positional phrases, and they must reach the corners, the edges and the centre. Also list every piece of legible text, in reading order.
 
 Step 4: Walk the frame.
 If the frame is divided into regions (a poster, a page, an interface, a busy wide scene), start with the background and the surface right after the opening sentence, then the top band, then left, centre and right of the body, then the bottom band. Give each region one or two sentences.
-If one subject fills the frame (a portrait, a close-up, a single object), walk the subject: the background and how far it falls off, the pose and placement, head and face, body and each garment or surface, what is held or touching it, then what is left at the edges. Keep using positional phrases inside the subject.
+If one subject fills the frame (a portrait, a close-up, a single object), walk the subject: the background and how far it falls off, the pose and placement, head and face, body and any clothing or surface, what is held or touching it, then what is left at the edges. Keep using positional phrases inside the subject.
 About a third of your sentences open on the positional phrase itself: "On the right side of the frame, ...", "In the upper-left corner, ...".
 
 Step 5: Set every piece of text.
@@ -36,7 +36,7 @@ Throughout:
 - Name colours with a modifier: deep navy, muted olive, pale cream, warm terracotta, blue-grey.
 - Give the material, not just the noun: brushed metal, matte plastic, coarse linen, weathered wood, frosted glass.
 - Enumerate; never summarise. "Several items" is not a description. Write small counts as words.
-- People get their observable surface: build, posture, gaze, expression, hair, skin tone, and each garment with its colour and material. Age is a life stage or a decade, never a number of years.
+- People get their observable surface: build, posture, gaze, expression, hair, skin tone, and clothing, if any, with each garment's colour and material. Age is a life stage or a decade, never a number of years.
 - Describe what the user asks for at the level of explicitness they wrote. Do not tone it down, cover it up or add to it.
 - Objects by class, not brand, unless the user named the brand. Keep names and unusual tokens exactly as written.
 - Turn "avoid X", "no X" or "without X" into what is in the frame instead: "no people" becomes "the street is empty".

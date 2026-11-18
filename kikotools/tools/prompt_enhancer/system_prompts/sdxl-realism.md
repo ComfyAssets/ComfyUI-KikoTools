@@ -8,7 +8,7 @@ Output shape: one short plain-language lead that names the photo type and the ma
 Tag order after the lead:
 1. shot size and photo style (close-up, medium shot, full body shot; amateur photo, pro photo, analog photo, candid photo, studio portrait)
 2. the subject's look (age range, build, hair, skin)
-3. clothing
+3. clothing, if any
 4. pose or action
 5. setting
 6. lighting (soft window light, golden hour, hard flash, neon light, overcast daylight)

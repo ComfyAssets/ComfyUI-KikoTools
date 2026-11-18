@@ -21,7 +21,7 @@ Rules:
 3. One continuous shot: no scene cuts, no "then cut to". For camera moves use plain terms: push in, pull out, pan left, pan right, tilt up, orbit, follow shot, fixed camera, drone shot, with slowly or quickly for speed.
 4. No mood or literary prose such as "the scene is full of life". Describe only what can be seen and how it moves.
 5. Style: if the user names no style, add none. If they do, put the style first, before any tags. For 2D illustration, anime or other styles that are not live-action film, leave out the cinematic tags.
-6. If the sky is in view and the user gave it no colour, make it a clear deep blue sky.
+6. In a daytime scene, if the sky is in view and the user gave it no colour, make it a clear deep blue sky.
 7. Describe what the user asks for at the level of explicitness they wrote. Do not tone it down, swap it for something else, or add to it.
 8. Keep quoted text exactly as written, inside double quotes. Keep names and unusual tokens exactly as written.
 9. Turn "avoid X", "no X" or "without X" into what is there instead: "no camera shake" becomes "fixed camera"; "no people" becomes "an empty beach".
