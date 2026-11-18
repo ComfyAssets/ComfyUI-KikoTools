@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 _PREAMBLE = re.compile(r"^(here is|here's|enhanced prompt|prompt)\b[^\n]*:\s*\n", re.IGNORECASE)
 _WRAPPERS = (('"', '"'), ("'", "'"), ("```", "```"))
-_SENTENCE_END = ".!?"
+_SENTENCE_END = re.compile(r"[.!?][\"')\]]*(?=\s|$)")
 
 
 def split_thinking(generated: str) -> str:
@@ -31,8 +31,8 @@ def cap_words(text: str, max_words: Optional[int]) -> str:
     if len(words) <= max_words:
         return text
     capped = text[: words[max_words - 1].end()] if max_words > 0 else ""
-    last_end = max(capped.rfind(c) for c in _SENTENCE_END)
-    return capped[: last_end + 1] if last_end >= 0 else capped
+    ends = list(_SENTENCE_END.finditer(capped))
+    return capped[: ends[-1].end()] if ends else capped
 
 
 def prepend_triggers(text: str, trigger_words: str) -> str:

@@ -55,3 +55,8 @@ def test_prepend_triggers_empty_is_noop():
 def test_tokens_include_image_true_and_false():
     assert tokens_include_image({"qwen35": [[({"type": "image"}, 1.0)]]}) is True
     assert tokens_include_image([[(1, 1.0)]]) is False
+
+
+def test_cap_words_ignores_mid_token_punctuation():
+    text = "Use 3.5 mm lens and a very wide angle shot here"
+    assert cap_words(text, 5) == "Use 3.5 mm lens and"
