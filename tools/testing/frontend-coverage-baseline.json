@@ -101,6 +101,12 @@
     "functions": 95,
     "statements": 99
   },
+  "prompt_enhancer.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
+  },
   "seed_history_ui.js": {
     "lines": 95,
     "branches": 85,
@@ -154,6 +160,12 @@
     "branches": 80,
     "functions": 98,
     "statements": 93
+  },
+  "ui/prompt-enhancer.js": {
+    "lines": 98,
+    "branches": 98,
+    "functions": 98,
+    "statements": 98
   },
   "ui/resolution-picker.js": {
     "lines": 100,

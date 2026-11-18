@@ -2126,3 +2126,35 @@ test('route failure keeps native widgets usable', async ({ page }) => {
     await page.locator('.ca-dimension-swap').getByRole('button').click();
     await expect(page.locator('[data-node="ModelResolutionPicker"]').getByLabel('width', { exact: true })).toHaveValue('1024');
 });
+
+test('prompt enhancer menu copies the system prompt and reports the result', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'KikoPromptEnhancer', { base_model: 'Flux' });
+    const posted = [];
+    const replies = [[200, { path: '/user/kiko/flux.md' }], [409, { path: '/user/kiko/flux.md' }], [200, { path: '/user/kiko/flux.md' }]];
+    await page.route('**/kikotools/prompt_enhancer/copy', route => {
+        posted.push([route.request().method(), route.request().postDataJSON()]);
+        const [status, body] = replies.shift();
+        return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    });
+    const info = [];
+    page.on('console', message => { if (message.type() === 'info') info.push(message.text()); });
+    const items = await page.evaluate(() => {
+        const extension = kikoHost.extensions.find(item => item.name === 'kikotools.promptEnhancer');
+        window.toasts = [];
+        kikoHost.app.extensionManager = { toast: { add: toast => window.toasts.push(toast) } };
+        kikoHost.app.graph._nodes.at(-1).comfyClass = 'KikoPromptEnhancer';
+        window.copyPrompt = () => extension.getNodeMenuItems(kikoHost.app.graph._nodes.at(-1))[1].callback();
+        return [extension.getNodeMenuItems({ comfyClass: 'TextInput' }), extension.getNodeMenuItems(kikoHost.app.graph._nodes.at(-1)).map(item => item?.content ?? null)];
+    });
+    expect(items).toEqual([[], [null, 'Copy system prompt to user folder']]);
+    await page.evaluate(() => window.copyPrompt());
+    await page.evaluate(() => window.copyPrompt());
+    expect(await page.evaluate(() => window.toasts.map(({ severity, detail }) => [severity, detail]))).toEqual([
+        ['success', 'Copied to /user/kiko/flux.md'],
+        ['warn', 'File already exists: /user/kiko/flux.md'],
+    ]);
+    await page.evaluate(() => { delete kikoHost.app.extensionManager; return window.copyPrompt(); });
+    await expect.poll(() => info).toEqual(['Kiko Prompt Enhancer: Copied to /user/kiko/flux.md']);
+    expect(posted).toEqual(Array(3).fill(['POST', { base_model: 'Flux' }]));
+});
