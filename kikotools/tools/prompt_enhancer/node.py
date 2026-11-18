@@ -160,3 +160,17 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
             cap_words(text, library_prompt.max_words), trigger_words
         )
         return final, system
+
+
+# Setup API routes
+try:
+    import server
+
+    from .routes import copy_route
+
+    server.PromptServer.instance.routes.post("/kikotools/prompt_enhancer/copy")(
+        copy_route
+    )
+except ImportError:
+    # Server not available during testing
+    pass
