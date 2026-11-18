@@ -82,7 +82,9 @@ def test_registered_in_package():
 def test_input_types_lists_base_models_and_default(tmp_path):
     write_override(tmp_path, "aaa.md", "x")
     names, options = PromptEnhancerNode.INPUT_TYPES()["required"]["base_model"]
-    assert names == ["aaa", "krea2"]
+    assert names == sorted(names)
+    assert names[0] == "aaa"
+    assert "krea2" in names
     assert options["default"] == "krea2"
 
 

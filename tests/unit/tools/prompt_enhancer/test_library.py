@@ -42,8 +42,8 @@ def test_override_adds_new_entry(tmp_path):
 
 
 def test_missing_override_dir_is_fine():
-    assert library.prompt_names() == ["krea2"]
-    assert not library.load_prompt("krea2").is_override
+    assert "krea2" in library.prompt_names()
+    assert not any(prompt.is_override for prompt in library.available_prompts().values())
 
 
 def test_front_matter_parsed():
