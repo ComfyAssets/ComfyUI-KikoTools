@@ -137,7 +137,7 @@ A small web extension adds the node's context-menu entry.
   1. Compose the system prompt: `text` plus `"\n\n" + image_text` when an image is attached and `image_text` is set.
   2. Check that `clip` has `generate` (otherwise the "update ComfyUI" error).
   3. `tokens = clip.tokenize(prompt, image=image, thinking=thinking, system_prompt=system, min_length=1)`.
-  4. Run the system prompt check, then the vision check when an image is attached.
+  4. Run the vision check first when an image is attached, then the system prompt check. Vision goes first so a text-only encoder with an image gets the vision error rather than a misleading one.
   5. `clip.generate(tokens, do_sample=True, …, seed=seed)`, then `clip.decode`.
   6. `split_thinking`, then `clean_output`, then `cap_words`, then `prepend_triggers`.
   7. Return `(final, system)`.
