@@ -63,6 +63,7 @@ switching, workflow persistence and cleanup. See the retained
 | [🧹 Kiko Purge VRAM](#-kiko-purge-vram) | Intelligent VRAM management with detailed reporting | 🛠️ Utils |
 | [📂 Local Image Loader](#-local-image-loader) | Visual gallery browser for local media files | 💾 Images |
 | [🌐 Model Downloader](#-model-downloader) | Download models from CivitAI, HuggingFace, and custom URLs | 🛠️ Utils |
+| [🧠 Kiko Prompt Enhancer](#-kiko-prompt-enhancer) | Rewrite a short prompt in a base model's style with the loaded text encoder | 🧠 Prompts |
 | [⏱️ Workflow Timer](#️-workflow-timer) | Real-time execution timer with customizable display | 🛠️ Utils |
 | [🗂️ Project File Path](#️-project-file-path) | Build safe, organized save prefixes like `MyProject/images/image` | 🛠️ Utils |
 
@@ -485,6 +486,32 @@ setx HF_TOKEN "hf_your-token"
 For the portable build you can instead add `set CIVITAI_API_KEY=your-civitai-key` and `set HF_TOKEN=hf_your-token` above the `python` line in `run_nvidia_gpu.bat`.
 
 Restart ComfyUI after setting them.
+
+#### 🧠 Kiko Prompt Enhancer
+Rewrites a short prompt in the style the chosen base model likes, using the text encoder you already loaded (the `CLIP` input). No extra dependencies and no network access.
+
+- **Inputs**: `clip`, `prompt`, `base_model`, `seed`
+- **base_model**: one system prompt per model: `anima`, `flux2-klein`, `illustrious`, `krea2`, `moss`, `qwen-image`, `sdxl-realism`, `wan-i2v`, `wan-t2v`, `z-image`
+- **trigger_words** (optional): kept exactly and placed first in the result; never sent to the LLM
+- **image** (optional): describes or animates an image. Needs a vision-capable encoder such as Qwen3-VL or Qwen3.5; otherwise the node stops with a clear error
+- **Advanced**: `temperature`, `max_length`, `thinking`
+- **Outputs**: `prompt` and `system_prompt` (the system prompt that was used). There is no negative output, because most CFG 1 setups ignore negatives
+
+**Customising:** put Markdown files in `ComfyUI/user/kikotools/system_prompts/`. A file with the same name as a shipped prompt replaces it; a new name adds a model to `base_model`. Updates never touch this folder. To start from a shipped prompt, right-click the node and choose "Copy system prompt to user folder", then edit the copy.
+
+A prompt file may start with front matter holding `max_words` (the result is cut to that many words), and may include a `## With an image` section that is added to the system prompt when an image is connected:
+
+```markdown
+---
+max_words: 100
+---
+You rewrite the user's idea into ...
+
+## With an image
+The image is the first frame ...
+```
+
+**Requirements:** ComfyUI from September 2026 or newer (system-prompt support in the text encoder) and a chat-capable encoder such as Qwen3. Older versions stop with an "Update ComfyUI" error.
 
 #### ⏱️ Workflow Timer
 Real-time execution timer that displays workflow duration with millisecond precision.

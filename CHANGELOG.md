@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Prompt Enhancer
+
+- New Kiko Prompt Enhancer node. It rewrites a short prompt in the style of the
+  chosen base model, using the text encoder from the `CLIP` input, with an
+  optional image and trigger words that are kept first and never sent to the
+  LLM. It ships ten system prompts (anima, flux2-klein, illustrious, krea2,
+  moss, qwen-image, sdxl-realism, wan-i2v, wan-t2v, z-image). Files in
+  `ComfyUI/user/kikotools/system_prompts/` replace or add prompts, and updates
+  leave that folder alone. Needs ComfyUI from September 2026 or newer.
+
 ## 1.5.0
 
 ### Packaging
