@@ -6,10 +6,11 @@ from typing import Any, Optional
 _PREAMBLE = re.compile(r"^(here is|here's|enhanced prompt|prompt)\b[^\n]*:\s*\n", re.IGNORECASE)
 _WRAPPERS = (('"', '"'), ("'", "'"), ("```", "```"))
 _SENTENCE_END = re.compile(r"[.!?][\"')\]]*(?=\s|$)")
+_FENCE_LANGUAGE = re.compile(r"^[\w+-]+\n")
 
 
 def split_thinking(generated: str) -> str:
-    """Return the answer with any ``<think>`` block removed (mirrors core TextGenerateV2)."""
+    """Return the text after ``</think>``; an unclosed ``<think>`` block gives ""."""
     reasoning, sep, text = generated.partition("</think>")
     if not sep and not reasoning.lstrip().startswith("<think>"):
         text = generated
@@ -20,7 +21,12 @@ def clean_output(text: str) -> str:
     text = _PREAMBLE.sub("", text.strip(), count=1).strip()
     for start, end in _WRAPPERS:
         if len(text) >= 2 * len(start) and text.startswith(start) and text.endswith(end):
-            return text[len(start):-len(end)].strip()
+            inner = text[len(start):-len(end)]
+            if start in inner:
+                return text
+            if start == "```":
+                inner = _FENCE_LANGUAGE.sub("", inner, count=1)
+            return inner.strip()
     return text
 
 
@@ -32,7 +38,10 @@ def cap_words(text: str, max_words: Optional[int]) -> str:
         return text
     capped = text[: words[max_words - 1].end()] if max_words > 0 else ""
     ends = list(_SENTENCE_END.finditer(capped))
-    return capped[: ends[-1].end()] if ends else capped
+    if ends:
+        return capped[: ends[-1].end()]
+    comma = capped.rfind(",")
+    return capped[:comma].rstrip() if comma > 0 else capped
 
 
 def prepend_triggers(text: str, trigger_words: str) -> str:

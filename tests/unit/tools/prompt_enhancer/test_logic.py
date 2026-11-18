@@ -60,3 +60,16 @@ def test_tokens_include_image_true_and_false():
 def test_cap_words_ignores_mid_token_punctuation():
     text = "Use 3.5 mm lens and a very wide angle shot here"
     assert cap_words(text, 5) == "Use 3.5 mm lens and"
+
+
+def test_cap_words_falls_back_to_last_comma():
+    assert cap_words("a b, c d, e f", 5) == "a b, c d"
+
+
+def test_clean_output_keeps_text_with_several_quoted_parts():
+    text = '"A" and "B"'
+    assert clean_output(text) == text
+
+
+def test_clean_output_drops_fence_language_tag():
+    assert clean_output("```text\nA fox.\n```") == "A fox."

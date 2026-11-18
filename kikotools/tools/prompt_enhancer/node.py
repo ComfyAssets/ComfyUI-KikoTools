@@ -17,6 +17,7 @@ UPDATE_COMFY = (
     "This encoder ignored the system prompt. Update ComfyUI (Sept 2026 or newer) "
     "or use a chat encoder such as Qwen3, Qwen3-VL or Qwen3.5"
 )
+NO_GENERATE = "This ComfyUI is too old for text generation. Update ComfyUI (Sept 2026 or newer)"
 SYSTEM_CHECK_CHARS = 40
 
 
@@ -106,10 +107,7 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
 
     @classmethod
     def IS_CHANGED(cls, base_model: str, **kwargs) -> str:
-        system = load_prompt(base_model)
-        return hashlib.sha256(
-            (system.text + system.image_text).encode("utf-8")
-        ).hexdigest()
+        return hashlib.sha256(load_prompt(base_model).path.read_bytes()).hexdigest()
 
     def enhance(
         self,
@@ -129,8 +127,10 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
         system = library_prompt.text
         if image is not None and library_prompt.image_text:
             system += "\n\n" + library_prompt.image_text
+        if not system.strip():
+            raise ValueError(f"system prompt file '{base_model}' is empty")
         if not hasattr(clip, "generate"):
-            raise ValueError(UPDATE_COMFY)
+            raise ValueError(NO_GENERATE)
 
         tokens = clip.tokenize(
             prompt, image=image, thinking=thinking, system_prompt=system, min_length=1
@@ -155,7 +155,12 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
             presence_penalty=0.0,
             seed=seed,
         )
-        text = clean_output(split_thinking(clip.decode(generated)))
+        decoded = clip.decode(generated)
+        if thinking and "</think>" not in decoded:
+            raise ValueError(
+                "thinking used up max_length; raise max_length or turn thinking off"
+            )
+        text = clean_output(split_thinking(decoded))
         final = prepend_triggers(
             cap_words(text, library_prompt.max_words), trigger_words
         )

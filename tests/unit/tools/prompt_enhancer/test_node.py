@@ -123,7 +123,7 @@ def test_image_with_non_vision_encoder_raises():
 
 
 def test_ignored_system_prompt_raises():
-    with pytest.raises(ValueError, match="Update ComfyUI"):
+    with pytest.raises(ValueError, match="ignored the system prompt"):
         run(FakeClip(honours_system=False))
 
 
@@ -132,7 +132,7 @@ def test_missing_generate_raises():
         def tokenize(self, text, **kwargs):
             return {}
 
-    with pytest.raises(ValueError, match="Update ComfyUI"):
+    with pytest.raises(ValueError, match="too old for text generation"):
         run(OldClip())
 
 
@@ -160,6 +160,30 @@ def test_is_changed_follows_file_content(tmp_path):
     before = PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1)
     path.write_text("second", encoding="utf-8")
     assert PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1) != before
+
+
+def test_is_changed_follows_header_edits(tmp_path):
+    path = write_override(tmp_path, "mine.md", "---\nmax_words: 50\n---\nBody")
+    before = PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1)
+    path.write_text("---\nmax_words: 80\n---\nBody", encoding="utf-8")
+    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1) != before
+
+
+def test_cut_off_thinking_raises():
+    clip = FakeClip(output="<think>still reasoning when max_length ran out")
+    with pytest.raises(ValueError, match="thinking used up max_length"):
+        run(clip, thinking=True)
+
+
+def test_closed_thinking_returns_answer():
+    final, _ = run(FakeClip(output="<think>x</think>A cat."), thinking=True)
+    assert final == "A cat."
+
+
+def test_empty_system_prompt_raises(tmp_path):
+    write_override(tmp_path, "blank.md", "---\nmax_words: 50\n---\n  \n")
+    with pytest.raises(ValueError, match="system prompt file 'blank' is empty"):
+        run(FakeClip(), base_model="blank")
 
 
 def test_vision_check_runs_before_system_prompt_check():
