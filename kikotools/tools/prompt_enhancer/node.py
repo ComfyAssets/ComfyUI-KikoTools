@@ -34,7 +34,8 @@ def generate_with_model(
     entry = find_model(model) if model != NONE_FOUND else None
     if entry is None:
         raise ValueError(
-            "No model selected and no clip connected; pick a model or connect an encoder"
+            f"No model named '{model}' and no clip connected; "
+            "pick a model or connect an encoder"
         )
     if image is not None and not entry.vision:
         raise ValueError(
@@ -136,6 +137,12 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
     RETURN_NAMES = ("prompt", "system_prompt")
     FUNCTION = "enhance"
     CATEGORY = "🫶 ComfyAssets/🧠 Prompts"
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, model) -> bool:
+        # A saved model missing on this machine is fine when a clip is connected;
+        # enhance() raises if neither is usable.
+        return True
 
     @classmethod
     def IS_CHANGED(cls, base_model: str, model: str, mode: str, **kwargs) -> str:

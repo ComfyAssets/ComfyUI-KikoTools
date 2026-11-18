@@ -264,7 +264,8 @@ def test_enhance_calls_backend_and_runs_pipeline(monkeypatch):
     )
     assert calls == [(clip, system, "a cat", IMAGE, 7, 0.5, 256, True)]
     krea = load_prompt("krea2")
-    assert system == krea.text + "\n\n" + krea.image_text if krea.image_text else krea.text
+    expected = krea.text + "\n\n" + krea.image_text if krea.image_text else krea.text
+    assert system == expected
     assert final == f"mabes9sans, A cat. {NO_TEXT}"
 
 
@@ -391,8 +392,12 @@ def test_no_model_no_clip_raises(backends, model):
     with pytest.raises(ValueError) as error:
         run(None, model=model)
     assert str(error.value) == (
-        "No model selected and no clip connected; pick a model or connect an encoder"
+        f"No model named '{model}' and no clip connected; pick a model or connect an encoder"
     )
+
+
+def test_validate_inputs_accepts_missing_model():
+    assert PromptEnhancerNode.VALIDATE_INPUTS(model="gguf: elsewhere.gguf") is True
 
 
 def test_is_changed_follows_model_and_mode(tmp_path):
