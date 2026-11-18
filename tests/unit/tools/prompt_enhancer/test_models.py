@@ -175,3 +175,30 @@ def test_native_detection_cached(fake_comfy, monkeypatch):
     models.list_models()
     monkeypatch.setattr(sys.modules["comfy.sd"], "detect_te_model", lambda sd: pytest.fail("not cached"))
     assert models.model_names() == ["native: qwen3_4b.safetensors"]
+
+
+def test_dangling_symlink_skipped(fake_comfy, caplog):
+    (fake_comfy.text_encoders / "parked.safetensors").symlink_to(fake_comfy.text_encoders / "gone.safetensors")
+    write_safetensors(fake_comfy.text_encoders / "good.safetensors", "qwen3_marker")
+    with caplog.at_level(logging.WARNING):
+        names = models.model_names()
+    assert names == ["native: good.safetensors"]
+    assert "parked.safetensors" in caplog.text
+
+
+@pytest.mark.parametrize("header", [b"[]", b"1", b'"x"'])
+def test_non_object_header_skipped(fake_comfy, caplog, header):
+    (fake_comfy.text_encoders / "odd.safetensors").write_bytes(struct.pack("<Q", len(header)) + header)
+    write_safetensors(fake_comfy.text_encoders / "good.safetensors", "qwen3_marker")
+    with caplog.at_level(logging.WARNING):
+        names = models.model_names()
+    assert names == ["native: good.safetensors"]
+    assert "odd.safetensors" in caplog.text
+
+
+def test_oversized_header_length_skipped(fake_comfy, caplog):
+    (fake_comfy.text_encoders / "huge.safetensors").write_bytes(struct.pack("<Q", 16 * 1024 * 1024 + 1) + b"{}")
+    with caplog.at_level(logging.WARNING):
+        assert models.list_models() == []
+    assert "huge.safetensors" in caplog.text
+    assert "too large" in caplog.text

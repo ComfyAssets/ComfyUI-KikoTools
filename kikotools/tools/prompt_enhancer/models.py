@@ -19,7 +19,7 @@ from typing import Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 NONE_FOUND = "(none found)"
-MAX_HEADER_BYTES = 100 * 1024 * 1024
+MAX_HEADER_BYTES = 16 * 1024 * 1024
 GGUF_NAME_HINTS = ("qwen", "llama", "joycaption")
 
 NATIVE_CLIP_TYPES = {
@@ -68,6 +68,8 @@ def _read_header(path: Path) -> dict:
         if length > MAX_HEADER_BYTES:
             raise ValueError(f"header length {length} is too large")
         header = json.loads(f.read(length))
+    if not isinstance(header, dict):
+        raise ValueError("header is not a JSON object")
     return {
         key: SimpleNamespace(shape=tuple(value["shape"]))
         for key, value in header.items()
@@ -76,7 +78,11 @@ def _read_header(path: Path) -> dict:
 
 
 def _detect_native(path: Path) -> Optional[str]:
-    stat = path.stat()
+    try:
+        stat = path.stat()
+    except OSError as e:
+        logger.warning("Skipping unreadable text encoder %s: %s", path, e)
+        return None
     key = (str(path), stat.st_mtime, stat.st_size)
     if key not in _native_cache:
         import comfy.sd
