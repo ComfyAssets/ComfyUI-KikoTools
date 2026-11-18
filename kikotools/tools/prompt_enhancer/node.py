@@ -13,7 +13,41 @@ from .logic import (
     split_thinking,
     strip_triggers,
 )
-from .native_backend import generate_native
+from .gguf_backend import generate_gguf
+from .models import NONE_FOUND, find_model, model_names
+from .native_backend import generate_native, load_native
+
+UNCENSORED_HINTS = ("uncensored", "abliterated", "heretic")
+
+
+def default_model(names):
+    return next(
+        (
+            name
+            for name in names
+            if any(hint in name.lower() for hint in UNCENSORED_HINTS)
+        ),
+        names[0],
+    )
+
+
+def generate_with_model(
+    model, system, prompt, image, seed, temperature, max_length, thinking, keep_loaded
+):
+    entry = find_model(model) if model != NONE_FOUND else None
+    if entry is None:
+        raise ValueError(
+            "No model selected and no clip connected; pick a model or connect an encoder"
+        )
+    if image is not None and not entry.vision:
+        raise ValueError(
+            f"{model} cannot read images; pick a vision model "
+            "(one with an mmproj file, or a Qwen-VL / Qwen3.5 encoder)"
+        )
+    args = (system, prompt, image, seed, temperature, max_length, thinking)
+    if entry.kind == "gguf":
+        return generate_gguf(entry, *args, keep_loaded)
+    return generate_native(load_native(entry), *args)
 
 
 class PromptEnhancerNode(ComfyAssetsBaseNode):
@@ -22,12 +56,9 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         names = prompt_names()
+        models = model_names()
         return {
             "required": {
-                "clip": (
-                    "CLIP",
-                    {"tooltip": "Chat text encoder, e.g. Qwen3, Qwen3-VL or Qwen3.5"},
-                ),
                 "prompt": (
                     "STRING",
                     {
@@ -43,6 +74,20 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
                         "tooltip": "System prompt file to rewrite for",
                     },
                 ),
+                "model": (
+                    models,
+                    {
+                        "default": default_model(models),
+                        "tooltip": "Text encoder from models/text_encoders or GGUF from models/LLM",
+                    },
+                ),
+                "mode": (
+                    ["text", "vision"],
+                    {
+                        "default": "text",
+                        "tooltip": "vision describes the connected image; needs a vision model",
+                    },
+                ),
                 "seed": (
                     "INT",
                     {
@@ -54,6 +99,12 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
                 ),
             },
             "optional": {
+                "clip": (
+                    "CLIP",
+                    {
+                        "tooltip": "Overrides model; chat text encoder, e.g. Qwen3, Qwen3-VL or Qwen3.5"
+                    },
+                ),
                 "trigger_words": (
                     "STRING",
                     {
@@ -63,7 +114,7 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
                 ),
                 "image": (
                     "IMAGE",
-                    {"tooltip": "Needs a vision encoder such as Qwen3-VL or Qwen3.5"},
+                    {"tooltip": "Used in vision mode"},
                 ),
                 "temperature": (
                     "FLOAT",
@@ -80,6 +131,7 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
                     {"default": 1024, "min": 64, "max": 8192, "advanced": True},
                 ),
                 "thinking": ("BOOLEAN", {"default": False, "advanced": True}),
+                "keep_loaded": ("BOOLEAN", {"default": False, "advanced": True}),
             },
         }
 
@@ -89,21 +141,27 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
     CATEGORY = "🫶 ComfyAssets/🧠 Prompts"
 
     @classmethod
-    def IS_CHANGED(cls, base_model: str, **kwargs) -> str:
-        return hashlib.sha256(load_prompt(base_model).path.read_bytes()).hexdigest()
+    def IS_CHANGED(cls, base_model: str, model: str, mode: str, **kwargs) -> str:
+        digest = hashlib.sha256(load_prompt(base_model).path.read_bytes())
+        digest.update(f"\0{model}\0{mode}".encode())
+        return digest.hexdigest()
 
     def enhance(
         self,
-        clip,
         prompt: str,
         base_model: str,
+        model: str,
+        mode: str,
         seed: int,
+        clip=None,
         trigger_words: str = "",
         image=None,
         temperature: float = 0.7,
         max_length: int = 1024,
         thinking: bool = False,
+        keep_loaded: bool = False,
     ) -> Tuple[str, str]:
+        image = image if mode == "vision" else None
         if not prompt.strip() and image is None:
             raise ValueError("The prompt is empty; type an idea or attach an image")
         prompt = strip_triggers(prompt, trigger_words)
@@ -111,15 +169,21 @@ class PromptEnhancerNode(ComfyAssetsBaseNode):
             raise ValueError(
                 "the prompt only contains trigger words; describe the scene in the prompt"
             )
+        if mode == "vision" and image is None:
+            raise ValueError(
+                "vision mode needs an image; connect one to the image input"
+            )
         library_prompt = load_prompt(base_model)
         system = library_prompt.text
         if image is not None and library_prompt.image_text:
             system += "\n\n" + library_prompt.image_text
         if not system.strip():
             raise ValueError(f"system prompt file '{base_model}' is empty")
-        decoded = generate_native(
-            clip, system, prompt, image, seed, temperature, max_length, thinking
-        )
+        args = (system, prompt, image, seed, temperature, max_length, thinking)
+        if clip is not None:
+            decoded = generate_native(clip, *args)
+        else:
+            decoded = generate_with_model(model, *args, keep_loaded)
         text = clean_output(split_thinking(decoded))
         max_words = library_prompt.max_words
         sentence = library_prompt.no_text_sentence

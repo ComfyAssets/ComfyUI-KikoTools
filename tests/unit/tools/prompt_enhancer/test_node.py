@@ -7,6 +7,7 @@ import torch
 
 import kikotools
 from kikotools.tools.prompt_enhancer.library import load_prompt
+from kikotools.tools.prompt_enhancer.models import NONE_FOUND, ModelEntry
 from kikotools.tools.prompt_enhancer import node as node_module
 from kikotools.tools.prompt_enhancer.node import PromptEnhancerNode
 
@@ -18,6 +19,7 @@ def fake_user_dir(tmp_path, monkeypatch):
         "folder_paths",
         types.SimpleNamespace(get_user_directory=lambda: str(tmp_path)),
     )
+    monkeypatch.setattr(node_module, "model_names", lambda: [NONE_FOUND])
     return tmp_path
 
 
@@ -69,8 +71,41 @@ IMAGE = torch.zeros(1, 8, 8, 3)
 NO_TEXT = load_prompt("krea2").no_text_sentence
 
 
-def run(clip, prompt="a cat", base_model="krea2", **kwargs):
-    return PromptEnhancerNode().enhance(clip, prompt, base_model, 7, **kwargs)
+def run(clip, prompt="a cat", base_model="krea2", model=NONE_FOUND, **kwargs):
+    mode = kwargs.pop("mode", "text" if kwargs.get("image") is None else "vision")
+    return PromptEnhancerNode().enhance(
+        prompt, base_model, model, mode, 7, clip=clip, **kwargs
+    )
+
+
+def entry(name, kind="gguf", vision=False):
+    return ModelEntry(name, kind, Path("/models") / name, vision, None, "flux2")
+
+
+@pytest.fixture
+def backends(monkeypatch):
+    """Replace both backends and the model lookup; records every call."""
+    calls = {"native": [], "gguf": [], "load": []}
+    entries = {}
+
+    def fake_native(*args):
+        calls["native"].append(args)
+        return "A cat."
+
+    def fake_gguf(*args):
+        calls["gguf"].append(args)
+        return calls.get("gguf_output", "A cat.")
+
+    def fake_load(found):
+        calls["load"].append(found)
+        return "loaded-clip"
+
+    monkeypatch.setattr(node_module, "generate_native", fake_native)
+    monkeypatch.setattr(node_module, "generate_gguf", fake_gguf)
+    monkeypatch.setattr(node_module, "load_native", fake_load)
+    monkeypatch.setattr(node_module, "find_model", entries.get)
+    calls["entries"] = entries
+    return calls
 
 
 def test_registered_in_package():
@@ -197,16 +232,16 @@ def test_node_stays_within_cap_with_late_or_unpaired_quote(tmp_path, output):
 
 def test_is_changed_follows_file_content(tmp_path):
     path = write_override(tmp_path, "mine.md", "first")
-    before = PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1)
+    before = PromptEnhancerNode.IS_CHANGED(base_model="mine", model="m", mode="text", seed=1)
     path.write_text("second", encoding="utf-8")
-    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1) != before
+    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", model="m", mode="text", seed=1) != before
 
 
 def test_is_changed_follows_header_edits(tmp_path):
     path = write_override(tmp_path, "mine.md", "---\nmax_words: 50\n---\nBody")
-    before = PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1)
+    before = PromptEnhancerNode.IS_CHANGED(base_model="mine", model="m", mode="text", seed=1)
     path.write_text("---\nmax_words: 80\n---\nBody", encoding="utf-8")
-    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", seed=1) != before
+    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", model="m", mode="text", seed=1) != before
 
 
 def test_enhance_calls_backend_and_runs_pipeline(monkeypatch):
@@ -242,3 +277,126 @@ def test_empty_system_prompt_raises(tmp_path):
     write_override(tmp_path, "blank.md", "---\nmax_words: 50\n---\n  \n")
     with pytest.raises(ValueError, match="system prompt file 'blank' is empty"):
         run(FakeClip(), base_model="blank")
+
+
+def test_input_order_and_mode_combo(monkeypatch):
+    monkeypatch.setattr(node_module, "model_names", lambda: ["gguf: a.gguf"])
+    types_ = PromptEnhancerNode.INPUT_TYPES()
+    assert list(types_["required"]) == ["prompt", "base_model", "model", "mode", "seed"]
+    assert list(types_["optional"]) == [
+        "clip", "trigger_words", "image", "temperature", "max_length", "thinking", "keep_loaded",
+    ]
+    modes, options = types_["required"]["mode"]
+    assert modes == ["text", "vision"]
+    assert options["default"] == "text"
+    assert types_["optional"]["keep_loaded"][1] == {"default": False, "advanced": True}
+
+
+@pytest.mark.parametrize(
+    "names, expected",
+    [
+        (["gguf: a.gguf", "gguf: Qwen3-Heretic.gguf", "native: x-uncensored.safetensors"], "gguf: Qwen3-Heretic.gguf"),
+        (["gguf: a.gguf", "native: Qwen3-8B-ABLITERATED.safetensors"], "native: Qwen3-8B-ABLITERATED.safetensors"),
+        (["gguf: a.gguf", "native: b.safetensors"], "gguf: a.gguf"),
+        ([NONE_FOUND], NONE_FOUND),
+    ],
+)
+def test_default_model_prefers_uncensored(monkeypatch, names, expected):
+    monkeypatch.setattr(node_module, "model_names", lambda: names)
+    listed, options = PromptEnhancerNode.INPUT_TYPES()["required"]["model"]
+    assert listed == names
+    assert options["default"] == expected
+
+
+def test_text_mode_drops_image(tmp_path, backends):
+    write_override(tmp_path, "vid.md", "Body text\n## With an image\nMotion only.")
+    clip = object()
+    _, system = run(clip, base_model="vid", image=IMAGE, mode="text")
+    assert system == "Body text"
+    assert backends["native"][0][3] is None
+
+
+def test_text_mode_empty_prompt_with_image_raises(backends):
+    with pytest.raises(ValueError, match="prompt is empty"):
+        run(object(), prompt="", image=IMAGE, mode="text")
+
+
+def test_vision_mode_requires_image(backends):
+    with pytest.raises(ValueError) as error:
+        run(object(), mode="vision")
+    assert str(error.value) == "vision mode needs an image; connect one to the image input"
+    assert backends["native"] == []
+
+
+def test_vision_mode_rejects_text_only_model(backends):
+    backends["entries"]["gguf: q.gguf"] = entry("gguf: q.gguf", vision=False)
+    with pytest.raises(ValueError) as error:
+        run(None, model="gguf: q.gguf", image=IMAGE, mode="vision")
+    assert str(error.value) == (
+        "gguf: q.gguf cannot read images; pick a vision model "
+        "(one with an mmproj file, or a Qwen-VL / Qwen3.5 encoder)"
+    )
+    assert backends["gguf"] == []
+
+
+def test_connected_clip_overrides_none_found(backends):
+    clip = object()
+    final, system = run(clip, model=NONE_FOUND)
+    assert backends["native"] == [(clip, system, "a cat", None, 7, 0.7, 1024, False)]
+    assert backends["load"] == []
+    assert final == f"A cat. {NO_TEXT}"
+
+
+def test_connected_clip_overrides_selected_model(backends):
+    backends["entries"]["gguf: q.gguf"] = entry("gguf: q.gguf")
+    clip = object()
+    run(clip, model="gguf: q.gguf")
+    assert backends["gguf"] == []
+    assert backends["native"][0][0] is clip
+
+
+def test_gguf_entry_dispatches_to_gguf(backends):
+    found = entry("gguf: q.gguf", vision=True)
+    backends["entries"]["gguf: q.gguf"] = found
+    final, system = run(
+        None, model="gguf: q.gguf", image=IMAGE, mode="vision",
+        temperature=0.5, max_length=256, thinking=True, keep_loaded=True,
+    )
+    assert backends["gguf"] == [(found, system, "a cat", IMAGE, 7, 0.5, 256, True, True)]
+    assert backends["native"] == []
+    assert final == f"A cat. {NO_TEXT}"
+
+
+def test_gguf_empty_think_block_is_removed(tmp_path, backends):
+    write_override(tmp_path, "plain.md", "Body")
+    backends["entries"]["gguf: q.gguf"] = entry("gguf: q.gguf")
+    backends["gguf_output"] = "<think>\n\n</think>\n\nA fox."
+    final, _ = run(None, base_model="plain", model="gguf: q.gguf")
+    assert final == "A fox."
+
+
+def test_native_entry_loads_and_dispatches(backends):
+    found = entry("native: q.safetensors", kind="native")
+    backends["entries"]["native: q.safetensors"] = found
+    final, system = run(None, model="native: q.safetensors")
+    assert backends["load"] == [found]
+    assert backends["native"] == [("loaded-clip", system, "a cat", None, 7, 0.7, 1024, False)]
+    assert backends["gguf"] == []
+    assert final == f"A cat. {NO_TEXT}"
+
+
+@pytest.mark.parametrize("model", [NONE_FOUND, "gguf: gone.gguf"])
+def test_no_model_no_clip_raises(backends, model):
+    with pytest.raises(ValueError) as error:
+        run(None, model=model)
+    assert str(error.value) == (
+        "No model selected and no clip connected; pick a model or connect an encoder"
+    )
+
+
+def test_is_changed_follows_model_and_mode(tmp_path):
+    write_override(tmp_path, "mine.md", "first")
+    base = PromptEnhancerNode.IS_CHANGED(base_model="mine", model="a", mode="text", seed=1)
+    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", model="a", mode="text", seed=2) == base
+    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", model="b", mode="text", seed=1) != base
+    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", model="a", mode="vision", seed=1) != base
