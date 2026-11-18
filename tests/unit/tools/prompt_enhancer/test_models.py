@@ -34,7 +34,9 @@ def fake_comfy(tmp_path, monkeypatch):
     llm.mkdir()
     folder_paths = types.SimpleNamespace(
         models_dir=str(tmp_path),
-        get_folder_paths=lambda name: [str(text_encoders)] if name == "text_encoders" else [],
+        get_folder_paths=lambda name: (
+            [str(text_encoders)] if name == "text_encoders" else []
+        ),
     )
     comfy = types.ModuleType("comfy")
     comfy_sd = types.ModuleType("comfy.sd")
@@ -67,7 +69,9 @@ def touch(path: Path) -> Path:
 
 
 def test_native_listed_with_clip_type(fake_comfy):
-    path = write_safetensors(fake_comfy.text_encoders / "Moss" / "x.safetensors", "qwen35_marker")
+    path = write_safetensors(
+        fake_comfy.text_encoders / "Moss" / "x.safetensors", "qwen35_marker"
+    )
     [entry] = models.list_models()
     assert entry.name == "native: Moss/x.safetensors"
     assert entry.kind == "native"
@@ -118,7 +122,10 @@ def test_mmproj_shared_by_all_quants(fake_comfy):
     touch(folder / "qwen-Q8_0.gguf")
     mmproj = touch(folder / "qwen-mmproj.gguf")
     entries = models.list_models()
-    assert [entry.name for entry in entries] == ["gguf: qwen/qwen-Q4_K_M.gguf", "gguf: qwen/qwen-Q8_0.gguf"]
+    assert [entry.name for entry in entries] == [
+        "gguf: qwen/qwen-Q4_K_M.gguf",
+        "gguf: qwen/qwen-Q8_0.gguf",
+    ]
     assert all(entry.vision and entry.mmproj == mmproj for entry in entries)
 
 
@@ -172,7 +179,9 @@ def test_none_found_placeholder():
 
 
 def test_find_model_round_trip(fake_comfy):
-    write_safetensors(fake_comfy.text_encoders / "Moss" / "x.safetensors", "qwen35_marker")
+    write_safetensors(
+        fake_comfy.text_encoders / "Moss" / "x.safetensors", "qwen35_marker"
+    )
     touch(fake_comfy.llm / "qwen-Q4_K_M.gguf")
     for name in models.model_names():
         assert models.find_model(name).name == name
@@ -183,12 +192,16 @@ def test_find_model_round_trip(fake_comfy):
 def test_native_detection_cached(fake_comfy, monkeypatch):
     write_safetensors(fake_comfy.text_encoders / "qwen3_4b.safetensors", "qwen3_marker")
     models.list_models()
-    monkeypatch.setattr(sys.modules["comfy.sd"], "detect_te_model", lambda sd: pytest.fail("not cached"))
+    monkeypatch.setattr(
+        sys.modules["comfy.sd"], "detect_te_model", lambda sd: pytest.fail("not cached")
+    )
     assert models.model_names() == ["native: qwen3_4b.safetensors"]
 
 
 def test_dangling_symlink_skipped(fake_comfy, caplog):
-    (fake_comfy.text_encoders / "parked.safetensors").symlink_to(fake_comfy.text_encoders / "gone.safetensors")
+    (fake_comfy.text_encoders / "parked.safetensors").symlink_to(
+        fake_comfy.text_encoders / "gone.safetensors"
+    )
     write_safetensors(fake_comfy.text_encoders / "good.safetensors", "qwen3_marker")
     with caplog.at_level(logging.WARNING):
         names = models.model_names()
@@ -198,7 +211,9 @@ def test_dangling_symlink_skipped(fake_comfy, caplog):
 
 @pytest.mark.parametrize("header", [b"[]", b"1", b'"x"'])
 def test_non_object_header_skipped(fake_comfy, caplog, header):
-    (fake_comfy.text_encoders / "odd.safetensors").write_bytes(struct.pack("<Q", len(header)) + header)
+    (fake_comfy.text_encoders / "odd.safetensors").write_bytes(
+        struct.pack("<Q", len(header)) + header
+    )
     write_safetensors(fake_comfy.text_encoders / "good.safetensors", "qwen3_marker")
     with caplog.at_level(logging.WARNING):
         names = models.model_names()
@@ -207,7 +222,9 @@ def test_non_object_header_skipped(fake_comfy, caplog, header):
 
 
 def test_oversized_header_length_skipped(fake_comfy, caplog):
-    (fake_comfy.text_encoders / "huge.safetensors").write_bytes(struct.pack("<Q", 16 * 1024 * 1024 + 1) + b"{}")
+    (fake_comfy.text_encoders / "huge.safetensors").write_bytes(
+        struct.pack("<Q", 16 * 1024 * 1024 + 1) + b"{}"
+    )
     with caplog.at_level(logging.WARNING):
         assert models.list_models() == []
     assert "huge.safetensors" in caplog.text

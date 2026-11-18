@@ -132,7 +132,11 @@ def generate_gguf(
         )
         choice = result["choices"][0]
         content = choice["message"]["content"]
-        if thinking and choice["finish_reason"] == "length" and "</think>" not in content:
+        if (
+            thinking
+            and choice["finish_reason"] == "length"
+            and "</think>" not in content
+        ):
             raise ValueError(THINKING_TOO_LONG)
         return content
     finally:

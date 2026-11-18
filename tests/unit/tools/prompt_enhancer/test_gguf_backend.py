@@ -20,9 +20,7 @@ VISION = ModelEntry(
 
 def completion(content="A cat on a mat.", finish_reason="stop"):
     return {
-        "choices": [
-            {"message": {"content": content}, "finish_reason": finish_reason}
-        ]
+        "choices": [{"message": {"content": content}, "finish_reason": finish_reason}]
     }
 
 
@@ -65,7 +63,9 @@ class FakeLlama:
         self.kwargs = kwargs
         self.chat_handler = kwargs["chat_handler"]
         self.metadata = (
-            {} if FakeLlama.template is None else {"tokenizer.chat_template": FakeLlama.template}
+            {}
+            if FakeLlama.template is None
+            else {"tokenizer.chat_template": FakeLlama.template}
         )
         self.closed = False
         FakeLlama.instances.append(self)
@@ -136,7 +136,8 @@ def text_calls():
 def test_missing_llama_cpp_raises(monkeypatch):
     monkeypatch.setitem(sys.modules, "llama_cpp", None)
     with pytest.raises(
-        ValueError, match="^llama-cpp-python is not installed; install it to use GGUF models$"
+        ValueError,
+        match="^llama-cpp-python is not installed; install it to use GGUF models$",
     ):
         run()
 

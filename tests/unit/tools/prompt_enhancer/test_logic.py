@@ -47,7 +47,9 @@ def test_cap_words_none_is_noop():
 
 
 def test_prepend_triggers_normalises_separators():
-    assert prepend_triggers("A fox.", " mabes9sans, ,vito ") == "mabes9sans, vito, A fox."
+    assert (
+        prepend_triggers("A fox.", " mabes9sans, ,vito ") == "mabes9sans, vito, A fox."
+    )
 
 
 def test_prepend_triggers_empty_is_noop():
@@ -128,8 +130,7 @@ def test_append_no_text_when_no_quotes():
 
 def test_append_no_text_skipped_with_quotes():
     assert (
-        append_no_text('A sign reading "OPEN".', "No text.")
-        == 'A sign reading "OPEN".'
+        append_no_text('A sign reading "OPEN".', "No text.") == 'A sign reading "OPEN".'
     )
 
 

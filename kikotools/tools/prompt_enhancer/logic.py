@@ -3,7 +3,9 @@
 import re
 from typing import Any, List, Optional
 
-_PREAMBLE = re.compile(r"^(here is|here's|enhanced prompt|prompt)\b[^\n]*:\s*\n", re.IGNORECASE)
+_PREAMBLE = re.compile(
+    r"^(here is|here's|enhanced prompt|prompt)\b[^\n]*:\s*\n", re.IGNORECASE
+)
 _WRAPPERS = (('"', '"'), ("'", "'"), ("```", "```"))
 _SENTENCE_END = re.compile(r"[.!?][\"')\]]*(?=\s|$)")
 _QUOTED_SPAN = re.compile(r'"[^"]*"|\u201c[^\u201d]*\u201d')
@@ -21,8 +23,12 @@ def split_thinking(generated: str) -> str:
 def clean_output(text: str) -> str:
     text = _PREAMBLE.sub("", text.strip(), count=1).strip()
     for start, end in _WRAPPERS:
-        if len(text) >= 2 * len(start) and text.startswith(start) and text.endswith(end):
-            inner = text[len(start):-len(end)]
+        if (
+            len(text) >= 2 * len(start)
+            and text.startswith(start)
+            and text.endswith(end)
+        ):
+            inner = text[len(start) : -len(end)]
             if start in inner:
                 return text
             if start == "```":
@@ -81,7 +87,12 @@ def tokens_include_image(tokens: Any) -> bool:
         return any(tokens_include_image(value) for value in tokens.values())
     if isinstance(tokens, (list, tuple)):
         return any(
-            (isinstance(item, tuple) and bool(item) and isinstance(item[0], dict) and item[0].get("type") == "image")
+            (
+                isinstance(item, tuple)
+                and bool(item)
+                and isinstance(item[0], dict)
+                and item[0].get("type") == "image"
+            )
             or (not isinstance(item, tuple) and tokens_include_image(item))
             for item in tokens
         )

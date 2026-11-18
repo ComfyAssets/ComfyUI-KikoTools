@@ -145,7 +145,9 @@ def test_trigger_words_not_sent_to_encoder_and_prepended():
 
 def test_trigger_words_stripped_from_prompt_before_encoder():
     clip = FakeClip()
-    final, _ = run(clip, prompt="Mabes9sans woman in the rain", trigger_words="mabes9sans")
+    final, _ = run(
+        clip, prompt="Mabes9sans woman in the rain", trigger_words="mabes9sans"
+    )
     assert clip.tokenize_calls[0][0] == "woman in the rain"
     assert final == f"mabes9sans, A cat on a mat. {NO_TEXT}"
 
@@ -232,16 +234,26 @@ def test_node_stays_within_cap_with_late_or_unpaired_quote(tmp_path, output):
 
 def test_is_changed_follows_file_content(tmp_path):
     path = write_override(tmp_path, "mine.md", "first")
-    before = PromptEnhancerNode.IS_CHANGED(base_model="mine", model="m", mode="text", seed=1)
+    before = PromptEnhancerNode.IS_CHANGED(
+        base_model="mine", model="m", mode="text", seed=1
+    )
     path.write_text("second", encoding="utf-8")
-    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", model="m", mode="text", seed=1) != before
+    assert (
+        PromptEnhancerNode.IS_CHANGED(base_model="mine", model="m", mode="text", seed=1)
+        != before
+    )
 
 
 def test_is_changed_follows_header_edits(tmp_path):
     path = write_override(tmp_path, "mine.md", "---\nmax_words: 50\n---\nBody")
-    before = PromptEnhancerNode.IS_CHANGED(base_model="mine", model="m", mode="text", seed=1)
+    before = PromptEnhancerNode.IS_CHANGED(
+        base_model="mine", model="m", mode="text", seed=1
+    )
     path.write_text("---\nmax_words: 80\n---\nBody", encoding="utf-8")
-    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", model="m", mode="text", seed=1) != before
+    assert (
+        PromptEnhancerNode.IS_CHANGED(base_model="mine", model="m", mode="text", seed=1)
+        != before
+    )
 
 
 def test_enhance_calls_backend_and_runs_pipeline(monkeypatch):
@@ -285,7 +297,13 @@ def test_input_order_and_mode_combo(monkeypatch):
     types_ = PromptEnhancerNode.INPUT_TYPES()
     assert list(types_["required"]) == ["prompt", "base_model", "model", "mode", "seed"]
     assert list(types_["optional"]) == [
-        "clip", "trigger_words", "image", "temperature", "max_length", "thinking", "keep_loaded",
+        "clip",
+        "trigger_words",
+        "image",
+        "temperature",
+        "max_length",
+        "thinking",
+        "keep_loaded",
     ]
     modes, options = types_["required"]["mode"]
     assert modes == ["text", "vision"]
@@ -296,9 +314,22 @@ def test_input_order_and_mode_combo(monkeypatch):
 @pytest.mark.parametrize(
     "names, expected",
     [
-        (["gguf: a.gguf", "gguf: Qwen3-Heretic.gguf", "native: x-uncensored.safetensors"], "native: x-uncensored.safetensors"),
-        (["gguf: a.gguf", "native: Qwen3-8B-ABLITERATED.safetensors"], "native: Qwen3-8B-ABLITERATED.safetensors"),
-        (["gguf: a.gguf", "gguf: Qwen3-Heretic.gguf", "native: b.safetensors"], "gguf: Qwen3-Heretic.gguf"),
+        (
+            [
+                "gguf: a.gguf",
+                "gguf: Qwen3-Heretic.gguf",
+                "native: x-uncensored.safetensors",
+            ],
+            "native: x-uncensored.safetensors",
+        ),
+        (
+            ["gguf: a.gguf", "native: Qwen3-8B-ABLITERATED.safetensors"],
+            "native: Qwen3-8B-ABLITERATED.safetensors",
+        ),
+        (
+            ["gguf: a.gguf", "gguf: Qwen3-Heretic.gguf", "native: b.safetensors"],
+            "gguf: Qwen3-Heretic.gguf",
+        ),
         (["gguf: a.gguf", "native: b.safetensors"], "gguf: a.gguf"),
         ([NONE_FOUND], NONE_FOUND),
     ],
@@ -326,7 +357,9 @@ def test_text_mode_empty_prompt_with_image_raises(backends):
 def test_vision_mode_requires_image(backends):
     with pytest.raises(ValueError) as error:
         run(object(), mode="vision")
-    assert str(error.value) == "vision mode needs an image; connect one to the image input"
+    assert (
+        str(error.value) == "vision mode needs an image; connect one to the image input"
+    )
     assert backends["native"] == []
 
 
@@ -361,10 +394,18 @@ def test_gguf_entry_dispatches_to_gguf(backends):
     found = entry("gguf: q.gguf", vision=True)
     backends["entries"]["gguf: q.gguf"] = found
     final, system = run(
-        None, model="gguf: q.gguf", image=IMAGE, mode="vision",
-        temperature=0.5, max_length=256, thinking=True, keep_loaded=True,
+        None,
+        model="gguf: q.gguf",
+        image=IMAGE,
+        mode="vision",
+        temperature=0.5,
+        max_length=256,
+        thinking=True,
+        keep_loaded=True,
     )
-    assert backends["gguf"] == [(found, system, "a cat", IMAGE, 7, 0.5, 256, True, True)]
+    assert backends["gguf"] == [
+        (found, system, "a cat", IMAGE, 7, 0.5, 256, True, True)
+    ]
     assert backends["native"] == []
     assert final == f"A cat. {NO_TEXT}"
 
@@ -382,7 +423,9 @@ def test_native_entry_loads_and_dispatches(backends):
     backends["entries"]["native: q.safetensors"] = found
     final, system = run(None, model="native: q.safetensors")
     assert backends["load"] == [found]
-    assert backends["native"] == [("loaded-clip", system, "a cat", None, 7, 0.7, 1024, False)]
+    assert backends["native"] == [
+        ("loaded-clip", system, "a cat", None, 7, 0.7, 1024, False)
+    ]
     assert backends["gguf"] == []
     assert final == f"A cat. {NO_TEXT}"
 
@@ -402,7 +445,20 @@ def test_validate_inputs_accepts_missing_model():
 
 def test_is_changed_follows_model_and_mode(tmp_path):
     write_override(tmp_path, "mine.md", "first")
-    base = PromptEnhancerNode.IS_CHANGED(base_model="mine", model="a", mode="text", seed=1)
-    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", model="a", mode="text", seed=2) == base
-    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", model="b", mode="text", seed=1) != base
-    assert PromptEnhancerNode.IS_CHANGED(base_model="mine", model="a", mode="vision", seed=1) != base
+    base = PromptEnhancerNode.IS_CHANGED(
+        base_model="mine", model="a", mode="text", seed=1
+    )
+    assert (
+        PromptEnhancerNode.IS_CHANGED(base_model="mine", model="a", mode="text", seed=2)
+        == base
+    )
+    assert (
+        PromptEnhancerNode.IS_CHANGED(base_model="mine", model="b", mode="text", seed=1)
+        != base
+    )
+    assert (
+        PromptEnhancerNode.IS_CHANGED(
+            base_model="mine", model="a", mode="vision", seed=1
+        )
+        != base
+    )

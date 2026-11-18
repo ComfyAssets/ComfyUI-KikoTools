@@ -91,7 +91,14 @@ def _detect_native(path: Path) -> Optional[str]:
         try:
             detected = comfy.sd.detect_te_model(_read_header(path))
             _native_cache[key] = detected.name if detected is not None else None
-        except (OSError, ValueError, KeyError, TypeError, IndexError, struct.error) as e:
+        except (
+            OSError,
+            ValueError,
+            KeyError,
+            TypeError,
+            IndexError,
+            struct.error,
+        ) as e:
             logger.warning("Skipping unreadable text encoder %s: %s", path, e)
             _native_cache[key] = None
     return _native_cache[key]
@@ -135,7 +142,11 @@ def _gguf_entries(roots: List[str]) -> List[ModelEntry]:
             ):
                 continue
             mmproj = next(
-                (p for p in sorted(path.parent.glob("*.gguf")) if "mmproj" in p.name.lower()),
+                (
+                    p
+                    for p in sorted(path.parent.glob("*.gguf"))
+                    if "mmproj" in p.name.lower()
+                ),
                 None,
             )
             entries.append(
@@ -155,7 +166,9 @@ def list_models() -> List[ModelEntry]:
     import folder_paths
 
     text_encoder_roots = [
-        root for root in folder_paths.get_folder_paths("text_encoders") if os.path.isdir(root)
+        root
+        for root in folder_paths.get_folder_paths("text_encoders")
+        if os.path.isdir(root)
     ]
     entries = _native_entries(text_encoder_roots)
     if llama_available():

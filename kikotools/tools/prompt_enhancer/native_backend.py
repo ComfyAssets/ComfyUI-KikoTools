@@ -9,7 +9,9 @@ UPDATE_COMFY = (
     "This encoder ignored the system prompt. Update ComfyUI (Sept 2026 or newer) "
     "or use a chat encoder such as Qwen3, Qwen3-VL or Qwen3.5"
 )
-NO_GENERATE = "This ComfyUI is too old for text generation. Update ComfyUI (Sept 2026 or newer)"
+NO_GENERATE = (
+    "This ComfyUI is too old for text generation. Update ComfyUI (Sept 2026 or newer)"
+)
 SYSTEM_CHECK_CHARS = 40
 
 # (path, clip) of the last encoder loaded by load_native; ComfyUI manages its VRAM
