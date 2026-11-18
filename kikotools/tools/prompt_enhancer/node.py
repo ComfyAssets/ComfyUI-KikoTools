@@ -21,14 +21,11 @@ UNCENSORED_HINTS = ("uncensored", "abliterated", "heretic")
 
 
 def default_model(names):
-    return next(
-        (
-            name
-            for name in names
-            if any(hint in name.lower() for hint in UNCENSORED_HINTS)
-        ),
-        names[0],
-    )
+    uncensored = [
+        name for name in names if any(hint in name.lower() for hint in UNCENSORED_HINTS)
+    ]
+    native = [name for name in uncensored if name.startswith("native:")]
+    return (native or uncensored or names)[0]
 
 
 def generate_with_model(

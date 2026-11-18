@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 NONE_FOUND = "(none found)"
 MAX_HEADER_BYTES = 16 * 1024 * 1024
-GGUF_NAME_HINTS = ("qwen", "llama", "joycaption")
+GGUF_NAME_HINTS = ("qwen", "llama")
+GGUF_NAME_SKIPS = ("mmproj", "joycaption")
 
 NATIVE_CLIP_TYPES = {
     "QWEN3VL_4B": "flux3",
@@ -129,7 +130,9 @@ def _gguf_entries(roots: List[str]) -> List[ModelEntry]:
     for root in roots:
         for path, relative in _walk(root, ".gguf"):
             lower = path.name.lower()
-            if "mmproj" in lower or not any(hint in lower for hint in GGUF_NAME_HINTS):
+            if any(skip in lower for skip in GGUF_NAME_SKIPS) or not any(
+                hint in lower for hint in GGUF_NAME_HINTS
+            ):
                 continue
             mmproj = next(
                 (p for p in sorted(path.parent.glob("*.gguf")) if "mmproj" in p.name.lower()),

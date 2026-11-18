@@ -134,6 +134,16 @@ def test_umt5_gguf_excluded(fake_comfy):
     assert models.list_models() == []
 
 
+@pytest.mark.parametrize(
+    "name",
+    ["llama-joycaption-beta-one-hf-llava-Q4_K_M.gguf", "JoyCaption-alpha-two.gguf"],
+)
+def test_joycaption_gguf_hidden(fake_comfy, name):
+    touch(fake_comfy.llm / "joy" / name)
+    touch(fake_comfy.llm / "joy" / "llama-joycaption-mmproj-f16.gguf")
+    assert models.list_models() == []
+
+
 def test_gguf_in_text_encoders_listed(fake_comfy):
     touch(fake_comfy.text_encoders / "Llama-3.1-8B-Q4_K_M.gguf")
     assert models.model_names() == ["gguf: Llama-3.1-8B-Q4_K_M.gguf"]

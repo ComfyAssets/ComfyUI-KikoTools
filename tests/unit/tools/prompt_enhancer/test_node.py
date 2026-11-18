@@ -295,13 +295,14 @@ def test_input_order_and_mode_combo(monkeypatch):
 @pytest.mark.parametrize(
     "names, expected",
     [
-        (["gguf: a.gguf", "gguf: Qwen3-Heretic.gguf", "native: x-uncensored.safetensors"], "gguf: Qwen3-Heretic.gguf"),
+        (["gguf: a.gguf", "gguf: Qwen3-Heretic.gguf", "native: x-uncensored.safetensors"], "native: x-uncensored.safetensors"),
         (["gguf: a.gguf", "native: Qwen3-8B-ABLITERATED.safetensors"], "native: Qwen3-8B-ABLITERATED.safetensors"),
+        (["gguf: a.gguf", "gguf: Qwen3-Heretic.gguf", "native: b.safetensors"], "gguf: Qwen3-Heretic.gguf"),
         (["gguf: a.gguf", "native: b.safetensors"], "gguf: a.gguf"),
         ([NONE_FOUND], NONE_FOUND),
     ],
 )
-def test_default_model_prefers_uncensored(monkeypatch, names, expected):
+def test_default_model_prefers_native_uncensored(monkeypatch, names, expected):
     monkeypatch.setattr(node_module, "model_names", lambda: names)
     listed, options = PromptEnhancerNode.INPUT_TYPES()["required"]["model"]
     assert listed == names
