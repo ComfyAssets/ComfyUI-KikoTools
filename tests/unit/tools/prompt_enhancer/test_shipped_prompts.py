@@ -66,3 +66,11 @@ def test_no_content_policy_phrases(stem):
     text = (prompt.text + "\n" + prompt.image_text).lower()
     for phrase in POLICY_PHRASES:
         assert phrase not in text
+
+
+def test_krea2_has_text_example_without_no_text_sentence():
+    examples = shipped("krea2").text.split("\nIdea:")[1:]
+    prompts = [example.partition("Prompt:")[2] for example in examples]
+    assert any(
+        '"' in prompt and "Absolutely no text" not in prompt for prompt in prompts
+    )
