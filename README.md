@@ -488,22 +488,31 @@ For the portable build you can instead add `set CIVITAI_API_KEY=your-civitai-key
 Restart ComfyUI after setting them.
 
 #### 🧠 Kiko Prompt Enhancer
-Rewrites a short prompt in the style the chosen base model likes, using the text encoder you already loaded (the `CLIP` input). No extra dependencies and no network access.
+Rewrites a short prompt in the style the chosen base model likes, using a local text encoder or GGUF model, or the encoder you already loaded (the `CLIP` input). No network access.
 
-- **Inputs**: `clip`, `prompt`, `base_model`, `seed`
+- **Inputs**: `prompt`, `base_model`, `model`, `mode`, `seed`
 - **base_model**: one system prompt per model: `anima`, `flux2-klein`, `illustrious`, `krea2`, `moss`, `qwen-image`, `sdxl-realism`, `wan-i2v`, `wan-t2v`, `z-image`
+- **model**: the LLM that does the rewriting. `native: <file>` entries are safetensors text encoders from `models/text_encoders` that ComfyUI can generate text with (Qwen3 4B/8B, Qwen3-VL 4B/8B, Qwen2.5 7B, Qwen3.5); `gguf: <file>` entries are GGUF files from `models/LLM` or `models/text_encoders`. The default is the first entry whose name contains `uncensored`, `abliterated` or `heretic`, otherwise the first entry. If nothing is found the list shows `(none found)`
+- **mode**: `text` (default) rewrites the prompt; `vision` describes or animates the connected image. Vision mode without an image stops with "vision mode needs an image", and a model that cannot read images stops with "cannot read images; pick a vision model". Native Qwen3.5, Qwen3-VL and Qwen2.5 7B encoders can read images; a GGUF can when an `mmproj` file sits in the same folder
+- **clip** (optional): a connected `CLIP` overrides `model`. Without it, `model` must be set
 - **trigger_words** (optional): comma-separated; placed first in the result and also removed from the prompt text before the LLM sees it. Describe the subject in plain words in the prompt ("a woman", not the trigger)
-- **image** (optional): describes or animates an image. Needs a vision-capable encoder such as Qwen3-VL or Qwen3.5; otherwise the node stops with a clear error
-- **Advanced**: `temperature`, `max_length`, `thinking`
+- **image** (optional): used only in `vision` mode
+- **Advanced**: `temperature`, `max_length`, `thinking`, `keep_loaded` (keeps a GGUF model in memory between runs; off by default, so it is freed after each run)
 - **Outputs**: `prompt` and `system_prompt` (the system prompt that was used). There is no negative output, because most CFG 1 setups ignore negatives
+
+**GGUF models** need `llama-cpp-python`, which KikoTools does not install; without it GGUF entries are not listed and a GGUF run fails with an install message. Before a GGUF model loads, ComfyUI's loaded models are unloaded to free VRAM. It runs with all layers on the GPU, flash attention on CUDA and an 8192 token context.
 
 **Customising:** put Markdown files in `ComfyUI/user/kikotools/system_prompts/`. A file with the same name as a shipped prompt replaces it; a new name adds a model to `base_model`. Updates never touch this folder. To start from a shipped prompt, right-click the node and choose "Copy system prompt to user folder", then edit the copy.
 
-A prompt file may start with front matter holding `max_words` (the result is trimmed back to the last sentence end (or tag boundary) within the limit; trigger words don't count), and may include a `## With an image` section that is added to the system prompt when an image is connected:
+A prompt file may start with front matter and may include a `## With an image` section that is added to the system prompt when an image is used:
+
+- `max_words`: the result is trimmed back to the last sentence end (or tag boundary) within the limit; trigger words don't count
+- `no_text_sentence`: a sentence appended to the result only when it contains no double-quoted `"..."` span (so images that should show text are left alone). The cap is lowered by the sentence's word count
 
 ```markdown
 ---
 max_words: 100
+no_text_sentence: No text, no letters, no watermark.
 ---
 You rewrite the user's idea into ...
 

@@ -5,12 +5,22 @@
 ### Prompt Enhancer
 
 - New Kiko Prompt Enhancer node. It rewrites a short prompt in the style of the
-  chosen base model, using the text encoder from the `CLIP` input, with an
-  optional image and trigger words that are placed first in the result and
-  removed from the prompt before the LLM sees it. It ships ten system prompts (anima, flux2-klein, illustrious, krea2,
-  moss, qwen-image, sdxl-realism, wan-i2v, wan-t2v, z-image). Files in
+  chosen base model, with an optional image and trigger words that are placed
+  first in the result and removed from the prompt before the LLM sees it. It
+  ships ten system prompts (anima, flux2-klein, illustrious, krea2, moss,
+  qwen-image, sdxl-realism, wan-i2v, wan-t2v, z-image). Files in
   `ComfyUI/user/kikotools/system_prompts/` replace or add prompts, and updates
   leave that folder alone. Needs ComfyUI from September 2026 or newer.
+- A `model` picker lists `native:` text encoders from `text_encoders` and
+  `gguf:` models from `models/LLM` or `text_encoders`; it defaults to the first
+  uncensored, abliterated or heretic entry. GGUF needs `llama-cpp-python`
+  (optional, not installed by KikoTools) and unloads ComfyUI's models first;
+  `keep_loaded` keeps it in memory between runs. A vision GGUF needs an
+  `mmproj` file in the same folder.
+- A `mode` input (`text` or `vision`) decides whether the `image` input is
+  used. The `clip` input is now optional and overrides `model` when connected.
+- Prompt files accept a `no_text_sentence:` front-matter key, appended when the
+  result has no double-quoted text; the shipped krea2 prompt uses it.
 
 ## 1.5.0
 
