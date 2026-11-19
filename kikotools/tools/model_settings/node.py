@@ -15,12 +15,19 @@ logger = logging.getLogger(__name__)
 
 OVERRIDES_FILE = os.path.join("kikotools", "model_settings.json")
 LM_APP_NAME = "ComfyUI-LoRA-Manager"
+MODEL_EXTENSIONS = (".safetensors", ".gguf", ".ckpt", ".pt", ".pth", ".sft")
 
 
 def model_paths(model_name: str) -> List[str]:
-    """Absolute paths the name may refer to, across the model folders."""
+    """Absolute paths the name may refer to, across the model folders.
+
+    An absolute path (Checkpoint Folder Iterator allows folders outside the
+    model roots) is only used when it is an existing model file, so the node
+    never reads sidecars next to arbitrary paths.
+    """
     if os.path.isabs(model_name):
-        return [model_name]
+        is_model = model_name.lower().endswith(MODEL_EXTENSIONS)
+        return [model_name] if is_model and os.path.isfile(model_name) else []
     import folder_paths
 
     paths = []

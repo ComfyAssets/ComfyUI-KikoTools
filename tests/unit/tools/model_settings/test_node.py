@@ -4,6 +4,7 @@ from contextlib import ExitStack
 from unittest.mock import patch
 
 from kikotools.tools.model_settings import ModelRecommendedSettingsNode
+from kikotools.tools.model_settings.node import model_paths
 from kikotools.tools.sampler_combo.logic import SAMPLERS, SCHEDULERS
 
 NODE = "kikotools.tools.model_settings.node"
@@ -98,3 +99,16 @@ class TestModelRecommendedSettingsNode:
         with patch(f"{NODE}.overrides_mtime", return_value=2.0):
             b = ModelRecommendedSettingsNode.IS_CHANGED(model_name="x")
         assert a != b
+
+
+class TestModelPaths:
+    def test_absolute_path_to_a_model_file_is_used(self, tmp_path):
+        model = tmp_path / "a.safetensors"
+        model.write_bytes(b"x")
+        assert model_paths(str(model)) == [str(model)]
+
+    def test_absolute_path_that_is_not_a_model_file_is_ignored(self, tmp_path):
+        other = tmp_path / "secrets.json"
+        other.write_text("{}")
+        assert model_paths(str(other)) == []
+        assert model_paths(str(tmp_path / "missing.safetensors")) == []
