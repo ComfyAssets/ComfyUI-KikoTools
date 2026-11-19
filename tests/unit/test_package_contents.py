@@ -18,6 +18,7 @@ RUNTIME_DIRS = ("kikotools", "web")
 DEVELOPMENT = (
     "tests/unit/test_package_contents.py",
     "scripts/run_mypy.sh",
+    "scripts/changelog_section.py",
     "tools/testing/package.json",
     "docs/ui-migration.md",
     "examples/workflows/display_text_example.json",
