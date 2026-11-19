@@ -37,7 +37,9 @@ def test_missing_version_fails_with_message(tmp_path):
 
 def test_last_section_runs_to_end_of_file(tmp_path):
     changelog = tmp_path / "CHANGELOG.md"
-    changelog.write_text("# Changelog\n\n## 2.0.0\n\nNew.\n\n## 1.0.0\n\nFirst.\nSecond.\n")
+    changelog.write_text(
+        "# Changelog\n\n## 2.0.0\n\nNew.\n\n## 1.0.0\n\nFirst.\nSecond.\n"
+    )
 
     result = run("v1.0.0", changelog)
 

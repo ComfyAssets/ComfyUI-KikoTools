@@ -14,10 +14,15 @@ from pathlib import Path
 def changelog_section(changelog: str, tag: str) -> str:
     version = tag.removeprefix("v")
     lines = changelog.splitlines()
-    start = next((i for i, line in enumerate(lines) if line.strip() == f"## {version}"), None)
+    start = next(
+        (i for i, line in enumerate(lines) if line.strip() == f"## {version}"), None
+    )
     if start is None:
         raise ValueError(f"CHANGELOG.md has no '## {version}' section for tag {tag}")
-    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+    end = next(
+        (i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")),
+        len(lines),
+    )
     body = "\n".join(lines[start + 1 : end]).strip()
     if not body:
         raise ValueError(f"CHANGELOG.md section '## {version}' is empty")
@@ -30,7 +35,9 @@ def main() -> int:
         return 2
     path = Path(sys.argv[2] if len(sys.argv) == 3 else "CHANGELOG.md")
     try:
-        sys.stdout.write(changelog_section(path.read_text(encoding="utf-8"), sys.argv[1]))
+        sys.stdout.write(
+            changelog_section(path.read_text(encoding="utf-8"), sys.argv[1])
+        )
     except (OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
