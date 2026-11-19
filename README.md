@@ -60,6 +60,7 @@ switching, workflow persistence and cleanup. See the retained
 | [📏 Width Height Selector](#-width-height-selector) | Preset-based dimension selection with visual swap | 🖼️ Resolution |
 | [🎲 Seed History](#-seed-history) | Advanced seed tracking with interactive history | 🌱 Seeds |
 | [⚙️ Sampler Combo](#️-sampler-combo) | Unified sampling configuration interface | 🌀 Samplers |
+| [🧭 Model Recommended Settings](#-model-recommended-settings) | Steps, CFG, sampler and scheduler from a model's Civitai info | 🌀 Samplers |
 | [📦 Empty Latent Batch](#-empty-latent-batch) | Create empty latent batches with preset support | 📦 Latents |
 | [🎯 Model Resolution Picker](#-model-resolution-picker) | Pick a model family and size from ratio chips, with latent and width/height outputs | 🖼️ Resolution |
 | [💾 Kiko Save Image](#-kiko-save-image) | Enhanced image saving with popup viewer | 💾 Images |
@@ -141,6 +142,27 @@ Advanced seed tracking with interactive history management and UI.
 - Compare results from different seeds efficiently
 
 ![Seed History](docs/screenshots/seed-history/dark.png)
+
+#### 🧭 Model Recommended Settings
+Outputs the steps, CFG, sampler and scheduler a model's author recommends, ready to wire into KSampler.
+
+- Reads the Civitai info LoRA Manager (or Civitai Helper) already stored for the model: a `.metadata.json` / `.civitai.info` next to the file, or LoRA Manager's central sidecar folder. Nothing is downloaded
+- Settings the description calls recommended win; otherwise the most common values on the example images, then anything else the description states ("8 steps · CFG 1 · ER SDE · Beta")
+- Civitai sampler names are translated ("DPM++ 2M Karras" → `dpmpp_2m` + `karras`)
+- The widgets are the fallback, and each `use_model_*` switch keeps that field on its widget (all off = the same settings for every model)
+- A sampler or scheduler that is not installed (e.g. `bong_tangent`) falls back to the widget, or to your substitute
+- `info` says where every value came from
+- Wire `model_name` from Checkpoint Folder Iterator's `ckpt_name`, and every model in a sweep runs with its own settings
+
+Overrides go in `ComfyUI/user/kikotools/model_settings.json` (names or globs match the file name without extension):
+
+```json
+{
+  "models": {"Jib_Mix_Moss_*": {"steps": 8, "scheduler": "bong_tangent"}},
+  "schedulers": {"bong_tangent": "beta"},
+  "samplers": {"res_2s": "er_sde"}
+}
+```
 
 #### ⚙️ Sampler Combo
 Unified sampling configuration interface combining sampler, scheduler, steps, and CFG.

@@ -11,6 +11,7 @@ from .tools.batch_list_converter import (
 )
 from .tools.batch_prompts import BatchPromptsNode
 from .tools.checkpoint_folder_iterator import CheckpointFolderIteratorNode
+from .tools.model_settings import ModelRecommendedSettingsNode
 from .tools.display_any import DisplayAnyNode
 from .tools.display_text import DisplayTextNode
 from .tools.embedding_autocomplete import KikoEmbeddingAutocomplete
@@ -76,6 +77,7 @@ NODE_CLASS_MAPPINGS = {
     "PlotParameters+": PlotParametersNode,
     "LoRAFolderBatch": LoRAFolderBatchNode,
     "CheckpointFolderIterator": CheckpointFolderIteratorNode,
+    "KikoModelSettings": ModelRecommendedSettingsNode,
     "ModelCompareSheet": ModelCompareSheetNode,
     "WidthHeightToVec2": WidthHeightToVec2Node,
     "KikoWorkflowTimer": KikoWorkflowTimerNode,
@@ -116,6 +118,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "PlotParameters+": "Plot Parameters",
     "LoRAFolderBatch": "LoRA Folder Batch",
     "CheckpointFolderIterator": "Checkpoint Folder Iterator",
+    "KikoModelSettings": "Model Recommended Settings",
     "ModelCompareSheet": "Model Compare Sheet",
     "WidthHeightToVec2": "Width Height to VEC2",
     "KikoWorkflowTimer": "Workflow Timer",
