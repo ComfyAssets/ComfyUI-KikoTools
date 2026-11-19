@@ -19,6 +19,16 @@ I tried forking, patching, and submitting merge requests, but eventually decided
 
 I’m sharing them here with the community, and I hope you find them as useful as I do.
 
+## 1.6.0 — Kiko Prompt Enhancer
+
+A new node that rewrites a short prompt in the style each base model was trained
+on (SDXL realism, Illustrious, Anima, Flux.2 Klein, Z-Image, MOSS, Krea 2,
+Qwen-Image 2.1, Wan T2V/I2V). Pick the LLM that does the rewriting from your local
+text encoders or GGUF models, use `text` or `vision` mode, and keep LoRA trigger
+words exactly as typed. The system prompts are plain Markdown files you can
+override per model. See the [node documentation](#-kiko-prompt-enhancer) and the
+[release notes](CHANGELOG.md).
+
 ## 1.3.0 — Model Resolution Picker
 
 A new node that picks a native resolution for a model family from a chip grid of
@@ -63,6 +73,7 @@ switching, workflow persistence and cleanup. See the retained
 | [🧹 Kiko Purge VRAM](#-kiko-purge-vram) | Intelligent VRAM management with detailed reporting | 🛠️ Utils |
 | [📂 Local Image Loader](#-local-image-loader) | Visual gallery browser for local media files | 💾 Images |
 | [🌐 Model Downloader](#-model-downloader) | Download models from CivitAI, HuggingFace, and custom URLs | 🛠️ Utils |
+| [🧠 Kiko Prompt Enhancer](#-kiko-prompt-enhancer) | Rewrite a short prompt in a base model's style with the loaded text encoder | 🧠 Prompts |
 | [⏱️ Workflow Timer](#️-workflow-timer) | Real-time execution timer with customizable display | 🛠️ Utils |
 | [🗂️ Project File Path](#️-project-file-path) | Build safe, organized save prefixes like `MyProject/images/image` | 🛠️ Utils |
 
@@ -129,7 +140,7 @@ Advanced seed tracking with interactive history management and UI.
 - Maintain reproducibility across sessions
 - Compare results from different seeds efficiently
 
-![Seed History functionality is shown in various workflow examples]
+![Seed History](docs/screenshots/seed-history/dark.png)
 
 #### ⚙️ Sampler Combo
 Unified sampling configuration interface combining sampler, scheduler, steps, and CFG.
@@ -183,6 +194,8 @@ Choose a model family and a size from ratio chips, and get an empty latent plus 
 - Feed one node to both the latent and the size inputs of a workflow
 
 ![Model Resolution Picker](docs/screenshots/resolution-picker/ModelResolutionPicker-dark.png)
+
+Example workflow: [model_resolution_picker_example.json](examples/workflows/model_resolution_picker_example.json)
 
 #### 💾 Kiko Save Image
 Enhanced image saving with format selection, quality control, and floating popup viewer.
@@ -344,6 +357,10 @@ Run the same prompt through every checkpoint in a folder, one model per queued r
 - Outputs MODEL/CLIP/VAE for the indexed file plus `ckpt_name`, `label`, `index`, `count`
 - Only one checkpoint is loaded at a time, so large folders do not exhaust RAM
 
+![Checkpoint Folder Iterator](docs/screenshots/checkpoint-folder-iterator/dark.png)
+
+Example workflow: [checkpoint_folder_iterator_example.json](examples/workflows/checkpoint_folder_iterator_example.json)
+
 #### 🧩 Model Compare Sheet
 Output node that pairs with Checkpoint Folder Iterator.
 
@@ -356,6 +373,10 @@ Output node that pairs with Checkpoint Folder Iterator.
 - A run at index 0 moves tiles already in the folder to `<run_name>_<timestamp>`, so an interrupted sweep never leaks into the new grid
 - Rerunning a nonzero index replaces its complete batch, even when the label or batch size changes; other indexes are preserved
 - Replacement PNGs are fully written before existing tiles are changed; a failed tile write preserves the prior tiles and grid
+
+![Model Compare Sheet](docs/screenshots/model-compare-sheet/dark.png)
+
+Example workflow (with Project File Path in `run_name`): [model_compare_sheet_example.json](examples/workflows/model_compare_sheet_example.json)
 
 #### 📊 Plot Parameters
 Visual analysis tool for understanding parameter relationships and effects.
@@ -439,6 +460,10 @@ Visual gallery browser for loading local images, videos, and audio files directl
 - Preview media files before loading into workflow
 - Browse to a training dataset and pass its folder to a captioning or training node
 
+![Local Image Loader](docs/screenshots/live-image-loader/classic.png)
+
+Example workflow: [local_image_loader_example.json](examples/workflows/local_image_loader_example.json) · [Nodes 2.0 screenshot](docs/screenshots/live-image-loader/nodes2.png)
+
 #### 🌐 Model Downloader
 Download models, LoRAs, and other assets directly from CivitAI, HuggingFace, and custom URLs within ComfyUI.
 
@@ -486,6 +511,49 @@ For the portable build you can instead add `set CIVITAI_API_KEY=your-civitai-key
 
 Restart ComfyUI after setting them.
 
+![Model Downloader](docs/screenshots/model-downloader/dark.png)
+
+Example workflow: [model_downloader_example.json](examples/workflows/model_downloader_example.json). Queue it once to download, then refresh and unmute the generation group.
+
+#### 🧠 Kiko Prompt Enhancer
+Rewrites a short prompt in the style the chosen base model likes, using a local text encoder or GGUF model, or the encoder you already loaded (the `CLIP` input). No network access.
+
+- **Inputs**: `prompt`, `base_model`, `model`, `mode`, `seed`
+- **base_model**: one system prompt per model: `anima`, `flux2-klein`, `illustrious`, `krea2`, `moss`, `qwen-image`, `sdxl-realism`, `wan-i2v`, `wan-t2v`, `z-image`
+- **model**: the LLM that does the rewriting. `native: <file>` entries are safetensors text encoders from `models/text_encoders` that ComfyUI can generate text with (Qwen3 4B/8B, Qwen3-VL 4B/8B, Qwen2.5 7B, Qwen3.5); `gguf: <file>` entries are GGUF files from `models/LLM` or `models/text_encoders`. The default is the first `native:` entry whose name contains `uncensored`, `abliterated` or `heretic`, then the first such entry of any kind, otherwise the first entry. If nothing is found the list shows `(none found)`
+- **mode**: `text` (default) rewrites the prompt; `vision` describes or animates the connected image. Vision mode without an image stops with "vision mode needs an image", and a model that cannot read images stops with "cannot read images; pick a vision model". Native Qwen3.5, Qwen3-VL and Qwen2.5 7B encoders can read images; a GGUF can when an `mmproj` file sits in the same folder
+- **clip** (optional): a connected `CLIP` overrides `model`, so a workflow saved with a model this machine doesn't have still runs. Without a clip, a missing model stops with "No model named '<model>' and no clip connected; pick a model or connect an encoder"
+- **trigger_words** (optional): comma-separated; placed first in the result and also removed from the prompt text before the LLM sees it. Describe the subject in plain words in the prompt ("a woman", not the trigger)
+- **image** (optional): used only in `vision` mode
+- **Advanced**: `temperature`, `max_length`, `thinking`, `keep_loaded` (keeps a GGUF model in memory between runs; off by default, so it is freed after each run)
+- **Outputs**: `prompt` and `system_prompt` (the system prompt that was used). There is no negative output, because most CFG 1 setups ignore negatives
+
+**GGUF models** need `llama-cpp-python`, which KikoTools does not install; without it `gguf:` entries are not listed (a saved workflow that names one will not find its model). Only `.gguf` files whose names contain `qwen` or `llama` are listed; `mmproj` and JoyCaption files are never listed. Thinking is switched on or off through the model's own chat template (`enable_thinking`). Before a GGUF model loads, ComfyUI's loaded models are unloaded to free VRAM. It runs with all layers on the GPU, flash attention on CUDA and an 8192 token context.
+
+**Customising:** put Markdown files in `ComfyUI/user/kikotools/system_prompts/`. A file with the same name as a shipped prompt replaces it; a new name adds a model to `base_model`. Updates never touch this folder. To start from a shipped prompt, right-click the node and choose "Copy system prompt to user folder", then edit the copy.
+
+A prompt file may start with front matter and may include a `## With an image` section that is added to the system prompt when an image is used:
+
+- `max_words`: the result is trimmed back to the last sentence end (or tag boundary) within the limit; trigger words don't count
+- `no_text_sentence`: a sentence appended to the result only when it contains no quoted `"..."` or `“...”` span (so images that should show text are left alone). The cap is lowered by the sentence's word count
+
+```markdown
+---
+max_words: 100
+no_text_sentence: No text, no letters, no watermark.
+---
+You rewrite the user's idea into ...
+
+## With an image
+The image is the first frame ...
+```
+
+**Requirements:** for `native:` models and a connected `clip`, ComfyUI from September 2026 or newer (system-prompt support in the text encoder) and a chat-capable encoder such as Qwen3; older versions stop with an "Update ComfyUI" error. GGUF runs do not need this.
+
+![Kiko Prompt Enhancer](docs/screenshots/prompt-enhancer/dark.png)
+
+Example workflow: [prompt_enhancer_example.json](examples/workflows/prompt_enhancer_example.json)
+
 #### ⏱️ Workflow Timer
 Real-time execution timer that displays workflow duration with millisecond precision.
 
@@ -506,6 +574,10 @@ Real-time execution timer that displays workflow duration with millisecond preci
 - **Workflow Timer: Color** - Custom color picker for timer display
 - **Workflow Timer: Enable Glow** - Toggle pulsing glow effect on/off
 
+![Workflow Timer](docs/screenshots/workflow-timer/dark.png)
+
+Example workflow: [workflow_timer_example.json](examples/workflows/workflow_timer_example.json) · [Color picker screenshot](docs/screenshots/workflow-timer/color-picker.png)
+
 #### 🎨 Custom Colors
 
 Right-click a node and choose **🫶 Custom Colors** to change its full color,
@@ -517,8 +589,7 @@ same change. Right-click a group for its color option.
 Existing Custom Colors settings control the available menu options and automatic
 title shading. Node and group colors are saved with the workflow.
 
-Screenshots: [Dark](docs/screenshots/custom-colors/dark.png) ·
-[Light](docs/screenshots/custom-colors/light.png).
+![Custom Colors](docs/screenshots/custom-colors/dark.png)
 
 #### 🧭 Follow Execution
 
@@ -527,8 +598,11 @@ canvas to follow/stop execution, show the executing node, or navigate to a node
 by type. **Auto-start** begins following when a workflow starts. Disabling the
 feature stops following immediately; enabling it again waits for a manual start
 or the next workflow start when Auto-start is enabled. The same host menus work
-in Classic and Nodes 2.0. See the [Classic](docs/screenshots/follow-execution/classic.png)
-and [Nodes 2.0](docs/screenshots/follow-execution/nodes2.png) menu screenshots.
+in Classic and Nodes 2.0.
+
+![Follow Execution](docs/screenshots/follow-execution/classic.png)
+
+[Nodes 2.0 screenshot](docs/screenshots/follow-execution/nodes2.png)
 
 #### 🗂️ Project File Path
 Builds an organized save prefix to wire into a save node's `filename_prefix`.
@@ -539,6 +613,10 @@ Builds an organized save prefix to wire into a save node's `filename_prefix`.
 - **Nested Folders**: Use `a/b` in `subfolder` for deeper structure
 - **Extensions**: Known file extensions (`.png`, `.mp4`, ...) are stripped from `filename`; `render_v1.5` is left as is
 - **Separator**: `auto`, `forward_slash` or `backslash`
+
+![Project File Path](docs/screenshots/project-file-path/dark.png)
+
+Example workflow: [project_file_path_example.json](examples/workflows/project_file_path_example.json)
 
 Based on the idea of the Project File Path Generator from djz-nodes.
 
@@ -569,6 +647,10 @@ This feature is an enhanced fork of the autocomplete functionality from [ComfyUI
 - Replace underscores with spaces in tags
 - Choose insertion keys (Tab, Enter, or both)
 - Load custom word lists from URLs with security validation
+
+![Embedding Autocomplete suggestions](docs/screenshots/embedding-autocomplete/suggestions-dark.png)
+
+[Settings screenshot](docs/screenshots/embedding-autocomplete/settings-dark.png)
 
 **Security Features:**
 - Validates CSV structure, tag names, categories, counts, and file size
@@ -797,6 +879,18 @@ Load Image → Image to Multiple Of → VAE Encode → KSampler
 **Method:** "center crop" or "rescale"
 **Output:** Adjusted image with compatible dimensions
 
+### Prompt Enhancer Example
+
+```
+1. Add "🧠 Kiko Prompt Enhancer" (🫶 ComfyAssets/🧠 Prompts)
+2. Type a short idea in prompt, e.g. "a red fox sleeping in fresh snow at dawn"
+3. Set base_model to the model you render with (e.g. krea2) and pick an LLM in model
+4. Put LoRA trigger words in trigger_words, not in the prompt
+5. Connect the prompt output to your positive CLIP Text Encode
+```
+
+For an image + text prompt, connect an image, set `mode` to `vision` and pick a vision-capable model.
+
 ### Common Workflows
 
 <details>
@@ -870,6 +964,7 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Local Image Loader** | Visual gallery browser for local media files | ✅ Complete | [Docs](examples/documentation/local_image_loader.md) |
 | **Model Downloader** | Download models from CivitAI, HuggingFace, and custom URLs | ✅ Complete | [Docs](#-model-downloader) |
 | **Workflow Timer** | Real-time execution timer with customizable display | ✅ Complete | [Docs](#️-workflow-timer) |
+| **Kiko Prompt Enhancer** | Rewrite a short prompt in a base model's preferred style with a local LLM | ✅ Complete | [Docs](#-kiko-prompt-enhancer) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 

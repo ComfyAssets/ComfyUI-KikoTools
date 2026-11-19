@@ -16,6 +16,15 @@ Classic and Nodes 2.0, renderer switching, saved workflows and cleanup.
 | Embedding Autocomplete | [Suggestions dark](embedding-autocomplete/suggestions-dark.png), [Suggestions light](embedding-autocomplete/suggestions-light.png), [Settings dark](embedding-autocomplete/settings-dark.png), [Settings light](embedding-autocomplete/settings-light.png) |
 | Custom Colors | [Dark](custom-colors/dark.png), [Light](custom-colors/light.png) |
 | Follow Execution | [Classic](follow-execution/classic.png), [Nodes 2.0](follow-execution/nodes2.png) |
+| Model Resolution Picker | [Dark](resolution-picker/ModelResolutionPicker-dark.png), [Light](resolution-picker/ModelResolutionPicker-light.png) |
+| Kiko Prompt Enhancer | [Dark](prompt-enhancer/dark.png), [Light](prompt-enhancer/light.png) |
+| Model Downloader | [Dark](model-downloader/dark.png), [Light](model-downloader/light.png) |
+| Checkpoint Folder Iterator | [Dark](checkpoint-folder-iterator/dark.png), [Light](checkpoint-folder-iterator/light.png) |
+| Model Compare Sheet | [Dark](model-compare-sheet/dark.png), [Light](model-compare-sheet/light.png) |
+| Project File Path | [Dark](project-file-path/dark.png), [Light](project-file-path/light.png) |
+
+Node captures load the matching file in `examples/workflows/` with placeholder
+model files, so dropdowns show neutral names.
 
 Screenshots record the tested appearance at capture time. Updated Playwright
 captures are temporary test artifacts until copied into this directory and
