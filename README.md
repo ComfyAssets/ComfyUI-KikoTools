@@ -140,7 +140,7 @@ Advanced seed tracking with interactive history management and UI.
 - Maintain reproducibility across sessions
 - Compare results from different seeds efficiently
 
-![Seed History functionality is shown in various workflow examples]
+![Seed History](docs/screenshots/seed-history/dark.png)
 
 #### ⚙️ Sampler Combo
 Unified sampling configuration interface combining sampler, scheduler, steps, and CFG.
@@ -194,6 +194,8 @@ Choose a model family and a size from ratio chips, and get an empty latent plus 
 - Feed one node to both the latent and the size inputs of a workflow
 
 ![Model Resolution Picker](docs/screenshots/resolution-picker/ModelResolutionPicker-dark.png)
+
+Example workflow: [model_resolution_picker_example.json](examples/workflows/model_resolution_picker_example.json)
 
 #### 💾 Kiko Save Image
 Enhanced image saving with format selection, quality control, and floating popup viewer.
@@ -355,6 +357,10 @@ Run the same prompt through every checkpoint in a folder, one model per queued r
 - Outputs MODEL/CLIP/VAE for the indexed file plus `ckpt_name`, `label`, `index`, `count`
 - Only one checkpoint is loaded at a time, so large folders do not exhaust RAM
 
+![Checkpoint Folder Iterator](docs/screenshots/checkpoint-folder-iterator/dark.png)
+
+Example workflow: [checkpoint_folder_iterator_example.json](examples/workflows/checkpoint_folder_iterator_example.json)
+
 #### 🧩 Model Compare Sheet
 Output node that pairs with Checkpoint Folder Iterator.
 
@@ -367,6 +373,10 @@ Output node that pairs with Checkpoint Folder Iterator.
 - A run at index 0 moves tiles already in the folder to `<run_name>_<timestamp>`, so an interrupted sweep never leaks into the new grid
 - Rerunning a nonzero index replaces its complete batch, even when the label or batch size changes; other indexes are preserved
 - Replacement PNGs are fully written before existing tiles are changed; a failed tile write preserves the prior tiles and grid
+
+![Model Compare Sheet](docs/screenshots/model-compare-sheet/dark.png)
+
+Example workflow (with Project File Path in `run_name`): [model_compare_sheet_example.json](examples/workflows/model_compare_sheet_example.json)
 
 #### 📊 Plot Parameters
 Visual analysis tool for understanding parameter relationships and effects.
@@ -450,6 +460,10 @@ Visual gallery browser for loading local images, videos, and audio files directl
 - Preview media files before loading into workflow
 - Browse to a training dataset and pass its folder to a captioning or training node
 
+![Local Image Loader](docs/screenshots/live-image-loader/classic.png)
+
+Example workflow: [local_image_loader_example.json](examples/workflows/local_image_loader_example.json) · [Nodes 2.0 screenshot](docs/screenshots/live-image-loader/nodes2.png)
+
 #### 🌐 Model Downloader
 Download models, LoRAs, and other assets directly from CivitAI, HuggingFace, and custom URLs within ComfyUI.
 
@@ -497,6 +511,10 @@ For the portable build you can instead add `set CIVITAI_API_KEY=your-civitai-key
 
 Restart ComfyUI after setting them.
 
+![Model Downloader](docs/screenshots/model-downloader/dark.png)
+
+Example workflow: [model_downloader_example.json](examples/workflows/model_downloader_example.json). Queue it once to download, then refresh and unmute the generation group.
+
 #### 🧠 Kiko Prompt Enhancer
 Rewrites a short prompt in the style the chosen base model likes, using a local text encoder or GGUF model, or the encoder you already loaded (the `CLIP` input). No network access.
 
@@ -532,6 +550,10 @@ The image is the first frame ...
 
 **Requirements:** for `native:` models and a connected `clip`, ComfyUI from September 2026 or newer (system-prompt support in the text encoder) and a chat-capable encoder such as Qwen3; older versions stop with an "Update ComfyUI" error. GGUF runs do not need this.
 
+![Kiko Prompt Enhancer](docs/screenshots/prompt-enhancer/dark.png)
+
+Example workflow: [prompt_enhancer_example.json](examples/workflows/prompt_enhancer_example.json)
+
 #### ⏱️ Workflow Timer
 Real-time execution timer that displays workflow duration with millisecond precision.
 
@@ -552,6 +574,10 @@ Real-time execution timer that displays workflow duration with millisecond preci
 - **Workflow Timer: Color** - Custom color picker for timer display
 - **Workflow Timer: Enable Glow** - Toggle pulsing glow effect on/off
 
+![Workflow Timer](docs/screenshots/workflow-timer/dark.png)
+
+Example workflow: [workflow_timer_example.json](examples/workflows/workflow_timer_example.json) · [Color picker screenshot](docs/screenshots/workflow-timer/color-picker.png)
+
 #### 🎨 Custom Colors
 
 Right-click a node and choose **🫶 Custom Colors** to change its full color,
@@ -563,8 +589,7 @@ same change. Right-click a group for its color option.
 Existing Custom Colors settings control the available menu options and automatic
 title shading. Node and group colors are saved with the workflow.
 
-Screenshots: [Dark](docs/screenshots/custom-colors/dark.png) ·
-[Light](docs/screenshots/custom-colors/light.png).
+![Custom Colors](docs/screenshots/custom-colors/dark.png)
 
 #### 🧭 Follow Execution
 
@@ -573,8 +598,11 @@ canvas to follow/stop execution, show the executing node, or navigate to a node
 by type. **Auto-start** begins following when a workflow starts. Disabling the
 feature stops following immediately; enabling it again waits for a manual start
 or the next workflow start when Auto-start is enabled. The same host menus work
-in Classic and Nodes 2.0. See the [Classic](docs/screenshots/follow-execution/classic.png)
-and [Nodes 2.0](docs/screenshots/follow-execution/nodes2.png) menu screenshots.
+in Classic and Nodes 2.0.
+
+![Follow Execution](docs/screenshots/follow-execution/classic.png)
+
+[Nodes 2.0 screenshot](docs/screenshots/follow-execution/nodes2.png)
 
 #### 🗂️ Project File Path
 Builds an organized save prefix to wire into a save node's `filename_prefix`.
@@ -585,6 +613,10 @@ Builds an organized save prefix to wire into a save node's `filename_prefix`.
 - **Nested Folders**: Use `a/b` in `subfolder` for deeper structure
 - **Extensions**: Known file extensions (`.png`, `.mp4`, ...) are stripped from `filename`; `render_v1.5` is left as is
 - **Separator**: `auto`, `forward_slash` or `backslash`
+
+![Project File Path](docs/screenshots/project-file-path/dark.png)
+
+Example workflow: [project_file_path_example.json](examples/workflows/project_file_path_example.json)
 
 Based on the idea of the Project File Path Generator from djz-nodes.
 
@@ -615,6 +647,10 @@ This feature is an enhanced fork of the autocomplete functionality from [ComfyUI
 - Replace underscores with spaces in tags
 - Choose insertion keys (Tab, Enter, or both)
 - Load custom word lists from URLs with security validation
+
+![Embedding Autocomplete suggestions](docs/screenshots/embedding-autocomplete/suggestions-dark.png)
+
+[Settings screenshot](docs/screenshots/embedding-autocomplete/settings-dark.png)
 
 **Security Features:**
 - Validates CSV structure, tag names, categories, counts, and file size
