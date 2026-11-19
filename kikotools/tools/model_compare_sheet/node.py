@@ -18,9 +18,12 @@ from .logic import (
     build_contact_sheet,
     list_tiles,
     preview_of,
+    read_fingerprint,
     replace_index_tiles,
     resolve_run_dir,
+    sweep_fingerprint,
     tile_filename,
+    write_fingerprint,
 )
 
 
@@ -29,6 +32,11 @@ class ModelCompareSheetNode(ComfyAssetsBaseNode):
     Save each run's image into output/model_compare/<run_name>/ and rebuild a
     labeled contact sheet from every tile saved so far. Pair with Checkpoint
     Folder Iterator: after the last queued run the grid holds every model.
+
+    A run at index 0, or a run whose settings (prompt, sampler settings, size,
+    LoRAs: everything but the model index and seeds) differ from the ones the
+    grid was started with, moves the existing tiles to <run_name>_<timestamp>
+    and starts a new grid, so one sheet never mixes prompts.
     """
 
     @classmethod
@@ -49,7 +57,11 @@ class ModelCompareSheetNode(ComfyAssetsBaseNode):
                 "tile_width": ("INT", {"default": 512, "min": 64, "max": 4096}),
                 "font_size": ("INT", {"default": 28, "min": 8, "max": 256}),
             },
-            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
+            "hidden": {
+                "prompt": "PROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+                "unique_id": "UNIQUE_ID",
+            },
         }
 
     RETURN_TYPES = ("IMAGE",)
@@ -69,6 +81,7 @@ class ModelCompareSheetNode(ComfyAssetsBaseNode):
         font_size: int,
         prompt: Optional[Dict] = None,
         extra_pnginfo: Optional[Dict] = None,
+        unique_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         import folder_paths
 
@@ -97,12 +110,18 @@ class ModelCompareSheetNode(ComfyAssetsBaseNode):
                         pnginfo=metadata,
                     )
                 names.append(name)
-            if index == 0:
+            fingerprint = sweep_fingerprint(prompt, unique_id)
+            recorded = read_fingerprint(run_dir)
+            changed = None not in (fingerprint, recorded) and fingerprint != recorded
+            if index == 0 or changed:
                 archived = archive_previous_sweep(run_dir)
                 if archived:
-                    self.log_info(f"New sweep: previous tiles moved to {archived}")
+                    reason = "settings changed" if index else "new sweep"
+                    self.log_info(f"{reason}: previous tiles moved to {archived}")
             os.makedirs(run_dir, exist_ok=True)
             replace_index_tiles(run_dir, index, staging, names)
+            if fingerprint:
+                write_fingerprint(run_dir, fingerprint)
 
         sheet = build_contact_sheet(list_tiles(run_dir), columns, tile_width, font_size)
         sheet.save(os.path.join(run_dir, GRID_FILENAME))

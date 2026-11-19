@@ -101,6 +101,99 @@ class TestArchiveOnNewSweep:
             "grid_preview.png",
         ]
 
+    def _prompt(self, text):
+        return {
+            "1": {"class_type": "CheckpointFolderIterator", "inputs": {"index": 0}},
+            "2": {"class_type": "CLIPTextEncode", "inputs": {"text": text}},
+            "5": {"class_type": "ModelCompareSheet", "inputs": {"index": ["1", 5]}},
+        }
+
+    def test_changed_settings_mid_sweep_start_a_new_grid(self, tmp_path):
+        with _fake_output_dir(tmp_path):
+            node = ModelCompareSheetNode()
+            node.collect(
+                _image(),
+                "a",
+                0,
+                "run1",
+                4,
+                32,
+                8,
+                prompt=self._prompt("cat"),
+                unique_id="5",
+            )
+            node.collect(
+                _image(),
+                "b",
+                1,
+                "run1",
+                4,
+                32,
+                8,
+                prompt=self._prompt("dog"),
+                unique_id="5",
+            )
+        run_dir = tmp_path / "model_compare" / "run1"
+        assert sorted(p.name for p in run_dir.glob("*.png")) == [
+            "01_b.png",
+            "grid.png",
+            "grid_preview.png",
+        ]
+        archived = [p for p in run_dir.parent.iterdir() if p.name.startswith("run1_")]
+        assert [p.name for p in archived[0].glob("0*.png")] == ["00_a.png"]
+
+    def test_same_settings_keep_growing_the_grid(self, tmp_path):
+        with _fake_output_dir(tmp_path):
+            node = ModelCompareSheetNode()
+            node.collect(
+                _image(),
+                "a",
+                0,
+                "run1",
+                4,
+                32,
+                8,
+                prompt=self._prompt("cat"),
+                unique_id="5",
+            )
+            node.collect(
+                _image(),
+                "b",
+                1,
+                "run1",
+                4,
+                32,
+                8,
+                prompt=self._prompt("cat"),
+                unique_id="5",
+            )
+        run_dir = tmp_path / "model_compare" / "run1"
+        assert sorted(p.name for p in run_dir.glob("0*.png")) == [
+            "00_a.png",
+            "01_b.png",
+        ]
+
+    def test_folder_without_recorded_settings_is_kept(self, tmp_path):
+        with _fake_output_dir(tmp_path):
+            node = ModelCompareSheetNode()
+            node.collect(_image(), "a", 0, "run1", 4, 32, 8)
+            node.collect(
+                _image(),
+                "b",
+                1,
+                "run1",
+                4,
+                32,
+                8,
+                prompt=self._prompt("dog"),
+                unique_id="5",
+            )
+        run_dir = tmp_path / "model_compare" / "run1"
+        assert sorted(p.name for p in run_dir.glob("0*.png")) == [
+            "00_a.png",
+            "01_b.png",
+        ]
+
     def test_index_zero_on_empty_folder_archives_nothing(self, tmp_path):
         with _fake_output_dir(tmp_path):
             ModelCompareSheetNode().collect(_image(), "a", 0, "run1", 4, 32, 8)

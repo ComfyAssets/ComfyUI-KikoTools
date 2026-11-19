@@ -1,10 +1,12 @@
 """Logic for the Model Compare Sheet node: tile files on disk into a labeled grid."""
 
+import hashlib
+import json
 import math
 import os
 import re
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -12,6 +14,7 @@ from ...base.model_folders import is_within, natural_sort
 
 GRID_FILENAME = "grid.png"
 PREVIEW_FILENAME = "grid_preview.png"
+SETTINGS_FILENAME = ".sweep_settings"
 PREVIEW_WIDTH = 1024
 BACKGROUND = (28, 28, 28)
 LABEL_COLOR = (235, 235, 235)
@@ -110,6 +113,46 @@ def archive_previous_sweep(run_dir: str) -> Optional[str]:
         archive = f"{run_dir}_{stamp}_{n}"
     os.rename(run_dir, archive)
     return archive
+
+
+def sweep_fingerprint(prompt: Optional[Dict], sheet_id: Optional[str]) -> Optional[str]:
+    """Hash of everything in the queued prompt that should be equal across one sweep.
+
+    Left out: the sheet node itself (layout only), the index input of the node
+    that feeds the sheet's index (the iterator, which changes every run), and
+    every input whose name contains "seed", so randomized seeds do not split a
+    sweep. Returns None when the prompt or the sheet's node id is unknown.
+    """
+    if not prompt or sheet_id is None or str(sheet_id) not in prompt:
+        return None
+    sheet_id = str(sheet_id)
+    index_link = prompt[sheet_id].get("inputs", {}).get("index")
+    iterator_id = str(index_link[0]) if isinstance(index_link, list) else None
+    kept = {}
+    for node_id, node in prompt.items():
+        if node_id == sheet_id:
+            continue
+        inputs = {
+            name: value
+            for name, value in (node.get("inputs") or {}).items()
+            if "seed" not in name and not (node_id == iterator_id and name == "index")
+        }
+        kept[node_id] = [node.get("class_type"), inputs]
+    blob = json.dumps(kept, sort_keys=True, default=str)
+    return hashlib.sha256(blob.encode()).hexdigest()
+
+
+def read_fingerprint(run_dir: str) -> Optional[str]:
+    try:
+        with open(os.path.join(run_dir, SETTINGS_FILENAME), encoding="utf-8") as f:
+            return f.read().strip() or None
+    except OSError:
+        return None
+
+
+def write_fingerprint(run_dir: str, fingerprint: str) -> None:
+    with open(os.path.join(run_dir, SETTINGS_FILENAME), "w", encoding="utf-8") as f:
+        f.write(fingerprint)
 
 
 def _font(font_size: int) -> ImageFont.ImageFont:
