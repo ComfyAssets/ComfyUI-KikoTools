@@ -73,6 +73,16 @@ class TestListCheckpointEntries:
             ("ext_v1.safetensors", str(elsewhere / "ext_v1.safetensors"))
         ]
 
+    def test_scans_the_given_folder_key(self, tmp_path):
+        _touch(str(tmp_path / "Moss" / "sft.safetensors"))
+        fp = MagicMock()
+        fp.folder_names_and_paths = {"diffusion_models": [[str(tmp_path)]]}
+        with patch.dict(sys.modules, {"folder_paths": fp}):
+            entries = list_checkpoint_entries("Moss", "", "", "diffusion_models")
+        assert entries == [
+            ("Moss/sft.safetensors", str(tmp_path / "Moss" / "sft.safetensors"))
+        ]
+
 
 class TestPickCheckpoint:
     def test_returns_the_indexed_item(self):

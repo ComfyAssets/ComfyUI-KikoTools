@@ -355,6 +355,7 @@ Run the same prompt through every checkpoint in a folder, one model per queued r
 - **index** with `control_after_generate`: set 0 + *increment*, then queue a batch count equal to the checkpoint count
 - Queuing past the last checkpoint fails that run with a clear message instead of wrapping around, so the finished sweep is never restarted or archived by accident
 - Outputs MODEL/CLIP/VAE for the indexed file plus `ckpt_name`, `label`, `index`, `count`
+- **model_type** `diffusion_model` scans `models/diffusion_models` instead and loads the file like Load Diffusion Model (MOSS, Flux and other split models); only MODEL is set, so wire CLIP and VAE from their own loaders
 - Only one checkpoint is loaded at a time, so large folders do not exhaust RAM
 
 ![Checkpoint Folder Iterator](docs/screenshots/checkpoint-folder-iterator/dark.png)
