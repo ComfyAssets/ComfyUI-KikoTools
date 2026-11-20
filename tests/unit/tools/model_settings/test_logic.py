@@ -75,6 +75,12 @@ class TestFromImages:
             "scheduler": "karras",
         }
 
+    def test_zero_cfg_is_kept_but_zero_steps_is_not(self):
+        assert from_images([_img(0, 0, "Euler"), _img(0, 0, "Euler")]) == {
+            "cfg": 0.0,
+            "sampler": "euler",
+        }
+
     def test_no_images_gives_nothing(self):
         assert from_images([]) == {}
 
@@ -102,6 +108,32 @@ class TestFromDescription:
         text = "Hires fix 8 steps. CFG Scale: 2.5 Steps: 25 Shift: 5"
         found = from_description(text, SAMPLERS, SCHEDULERS)
         assert (found["steps"], found["cfg"]) == (25, 2.5)
+
+    def test_comfy_identifiers_with_underscores(self):
+        text = "sampler: er_sde, scheduler: sgm_uniform"
+        assert from_description(text, SAMPLERS, SCHEDULERS) == {
+            "sampler": "er_sde",
+            "scheduler": "sgm_uniform",
+        }
+
+    def test_labelled_scheduler_that_is_not_installed_is_kept(self):
+        text = "Sampler: res_2s, Scheduler: bong_tangent"
+        assert from_description(text, SAMPLERS, SCHEDULERS) == {
+            "scheduler": "bong_tangent"
+        }
+
+    def test_uninstalled_scheduler_after_a_sampler_is_kept(self):
+        text = "I run it at 4-9 steps er_sde/Bong_tangent, cfg =1"
+        assert from_description(text, SAMPLERS, SCHEDULERS) == {
+            "steps": 4,
+            "cfg": 1.0,
+            "sampler": "er_sde",
+            "scheduler": "bong_tangent",
+        }
+
+    def test_prose_after_the_word_scheduler_is_not_a_scheduler(self):
+        text = "The scheduler is up to you. Euler works."
+        assert from_description(text, SAMPLERS, SCHEDULERS) == {"sampler": "euler"}
 
     def test_prose_words_are_not_read_as_schedulers(self):
         text = "A simple, normal model. Use 30 steps."
@@ -234,6 +266,18 @@ class TestSourcesFromSidecar:
         assert [name for name, _ in sources] == ["description", "Civitai images"]
         values, _ = resolve(sources, WIDGETS, ALL_ON, SAMPLERS, SCHEDULERS, {})
         assert (values["steps"], values["cfg"]) == (25, 3.5)
+
+    def test_settings_before_the_recommended_passage_are_ignored(self):
+        sidecar = {
+            "modelDescription": "Old version used 50 steps, CFG 7, Euler. "
+            "Recommended settings: 8 steps, CFG 1, ER SDE Beta",
+            "civitai": {"images": self.IMAGES},
+        }
+        sources = sources_from_sidecar(sidecar, SAMPLERS, SCHEDULERS)
+        assert sources[0] == (
+            "description",
+            {"steps": 8, "cfg": 1.0, "sampler": "er_sde", "scheduler": "beta"},
+        )
 
     def test_images_come_first_when_nothing_is_called_recommended(self):
         sidecar = {

@@ -52,8 +52,9 @@ def map_sampler(name: str) -> Tuple[str, Optional[str]]:
     return sampler, scheduler
 
 
-def _mode(values: Iterable) -> Any:
-    counts = Counter(v for v in values if v not in (None, "", 0))
+def _mode(values: Iterable, zero_is_value: bool = False) -> Any:
+    missing = (None, "") if zero_is_value else (None, "", 0)
+    counts = Counter(v for v in values if v not in missing)
     return counts.most_common(1)[0][0] if counts else None
 
 
@@ -74,7 +75,7 @@ def from_images(images: List[dict]) -> Dict[str, Any]:
             scheduler.append(named)
     found = {
         "steps": _mode(steps),
-        "cfg": _mode(cfg),
+        "cfg": _mode(cfg, zero_is_value=True),
         "sampler": _mode(sampler),
         "scheduler": _mode(scheduler),
     }
@@ -93,10 +94,18 @@ def _plain_text(text: str) -> str:
 def _find_phrase(text: str, phrases: Iterable[str]) -> Optional[Tuple[int, int, str]]:
     best = None
     for phrase in phrases:
-        m = re.search(r"(?<![a-z0-9])" + re.escape(phrase) + r"(?![a-z0-9])", text)
+        # "er sde" also matches the ComfyUI spelling "er_sde"
+        pattern = re.escape(phrase).replace(r"\ ", "[ _]")
+        m = re.search(r"(?<![a-z0-9_])" + pattern + r"(?![a-z0-9_])", text)
         if m and (best is None or (m.start(), -len(phrase)) < (best[0], -len(best[2]))):
             best = (m.start(), m.end(), phrase)
     return best
+
+
+def _identifier(fragment: str) -> Optional[str]:
+    """Leading ComfyUI-style name ("bong_tangent, cfg 1" -> "bong_tangent")."""
+    m = re.match(r"([a-z0-9]+_[a-z0-9_]+)", fragment)
+    return m.group(1) if m else None
 
 
 def from_description(
@@ -106,6 +115,9 @@ def from_description(
 
     A scheduler is only read right after a sampler name or after the word
     "scheduler", so prose words such as "simple" or "normal" are not taken.
+    One that is not installed is kept when written as a ComfyUI name
+    ("er_sde/bong_tangent", "scheduler: bong_tangent"), so resolve() can
+    substitute it.
     """
     text = _plain_text(text)
     found: Dict[str, Any] = {}
@@ -128,14 +140,16 @@ def from_description(
         sched = _find_phrase(after, scheduler_names)
         if sched and sched[0] == 0:
             found["scheduler"] = scheduler_names[sched[2]]
-        elif named:
-            found["scheduler"] = named
+        elif named or _identifier(after):
+            found["scheduler"] = named or _identifier(after)
     if "scheduler" not in found:
-        m = re.search(r"\bscheduler\s*[:=]?\s*([a-z_ ]+)", text)
+        m = re.search(r"\bscheduler\s*([:=]?)\s*([a-z0-9_ ]+)", text)
         if m:
-            sched = _find_phrase(m.group(1), scheduler_names)
+            sched = _find_phrase(m.group(2), scheduler_names)
             if sched and sched[0] == 0:
                 found["scheduler"] = scheduler_names[sched[2]]
+            elif m.group(1) and _identifier(m.group(2)):
+                found["scheduler"] = _identifier(m.group(2))
     return found
 
 
@@ -237,9 +251,15 @@ def sources_from_sidecar(
         if t
     )
     images = ("Civitai images", from_images(civitai.get("images") or []))
-    stated = ("description", from_description(description, samplers, schedulers))
+    text = _plain_text(description)
+    recommended = RECOMMENDED.search(text)
     # Settings the author calls recommended beat the example images, which are
-    # often made with extra passes; otherwise the images are the better guess.
-    if RECOMMENDED.search(_plain_text(description)):
-        return [stated, images]
-    return [images, stated]
+    # often made with extra passes; settings written before them (an older
+    # version's, say) are ignored. Otherwise the images are the better guess.
+    if recommended:
+        passage = text[recommended.start() :]
+        return [
+            ("description", from_description(passage, samplers, schedulers)),
+            images,
+        ]
+    return [images, ("description", from_description(text, samplers, schedulers))]
