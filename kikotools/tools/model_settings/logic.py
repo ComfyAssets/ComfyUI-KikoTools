@@ -109,12 +109,12 @@ def from_description(
     """
     text = _plain_text(text)
     found: Dict[str, Any] = {}
-    m = re.search(
-        r"steps?\s*[:=]\s*(\d{1,3})\b|\b(\d{1,3})\s*(?:[-–]\s*\d{1,3}\s*)?-?\s*steps?\b",
-        text,
+    # "Steps: 25" beats "25 steps"; "cfg 2.5 steps: 25" is not "5 steps"
+    m = re.search(r"steps?\s*[:=]\s*(\d{1,3})\b", text) or re.search(
+        r"(?<![\d.])(\d{1,3})\s*(?:[-–]\s*\d{1,3}\s*)?-?\s*steps?\b", text
     )
     if m:
-        found["steps"] = int(m.group(1) or m.group(2))
+        found["steps"] = int(m.group(1))
     m = re.search(r"\bcfg(?:\s*scale)?\s*[:=]?\s*(\d+(?:\.\d+)?)", text)
     if m:
         found["cfg"] = float(m.group(1))

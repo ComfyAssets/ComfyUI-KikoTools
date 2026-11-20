@@ -98,6 +98,11 @@ class TestFromDescription:
             "scheduler": "simple",
         }
 
+    def test_cfg_decimal_before_steps_label_is_not_a_step_count(self):
+        text = "Hires fix 8 steps. CFG Scale: 2.5 Steps: 25 Shift: 5"
+        found = from_description(text, SAMPLERS, SCHEDULERS)
+        assert (found["steps"], found["cfg"]) == (25, 2.5)
+
     def test_prose_words_are_not_read_as_schedulers(self):
         text = "A simple, normal model. Use 30 steps."
         assert from_description(text, SAMPLERS, SCHEDULERS) == {"steps": 30}
