@@ -161,6 +161,11 @@ class TestSweepFingerprint:
             _prompt("a dog"), "5"
         )
 
+    def test_rewiring_the_sheet_to_another_image_source_counts(self):
+        rewired = _prompt()
+        rewired["5"]["inputs"]["images"] = ["7", 0]
+        assert sweep_fingerprint(rewired, "5") != sweep_fingerprint(_prompt(), "5")
+
     def test_unknown_prompt_or_sheet_gives_none(self):
         assert sweep_fingerprint(None, "5") is None
         assert sweep_fingerprint(_prompt(), None) is None

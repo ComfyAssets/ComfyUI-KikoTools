@@ -118,7 +118,8 @@ def archive_previous_sweep(run_dir: str) -> Optional[str]:
 def sweep_fingerprint(prompt: Optional[Dict], sheet_id: Optional[str]) -> Optional[str]:
     """Hash of everything in the queued prompt that should be equal across one sweep.
 
-    Left out: the sheet node itself (layout only), the index input of the node
+    Left out: the sheet node's own inputs except the image source it is wired
+    to (the rest is layout), the index input of the node
     that feeds the sheet's index (the iterator, which changes every run), and
     every input whose name contains "seed", so randomized seeds do not split a
     sweep. Returns None when the prompt or the sheet's node id is unknown.
@@ -128,7 +129,7 @@ def sweep_fingerprint(prompt: Optional[Dict], sheet_id: Optional[str]) -> Option
     sheet_id = str(sheet_id)
     index_link = prompt[sheet_id].get("inputs", {}).get("index")
     iterator_id = str(index_link[0]) if isinstance(index_link, list) else None
-    kept = {}
+    kept = {"sheet images": prompt[sheet_id].get("inputs", {}).get("images")}
     for node_id, node in prompt.items():
         if node_id == sheet_id:
             continue
