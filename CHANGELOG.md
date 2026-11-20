@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.7.0
+
+### Model Recommended Settings
+
+- New node that outputs the steps, CFG, sampler and scheduler a model's author
+  recommends, ready to wire into KSampler. It reads the Civitai info LoRA
+  Manager or Civitai Helper already stored for the model (a `.metadata.json` or
+  `.civitai.info` next to the file, or LoRA Manager's central sidecar folder);
+  nothing is downloaded. Wire `model_name` from Checkpoint Folder Iterator's
+  `ckpt_name` and every model in a sweep runs with its own settings.
+- Settings the description calls recommended win, read from that passage on, so
+  an older version's settings earlier in the text are ignored. Otherwise the
+  most common values on the example images come first. Civitai sampler names
+  ("DPM++ 2M Karras") and ComfyUI names (`er_sde`, `sgm_uniform`) are both
+  understood.
+- A sampler or scheduler that is not installed (e.g. `bong_tangent`) falls back
+  to the widget, or to a substitute from `ComfyUI/user/kikotools/model_settings.json`,
+  which also holds per-model overrides. `use_model_*` switches keep a field on
+  its widget, and `info` says where every value came from.
+
+### Checkpoint Folder Iterator
+
+- New `model_type` input. `diffusion_model` scans `models/diffusion_models` and
+  loads each file like Load Diffusion Model (MOSS, Flux and other split
+  models); CLIP and VAE come from their own loaders. The input is last and
+  defaults to `checkpoint`, so saved workflows keep their widget values.
+
+### Model Compare Sheet
+
+- A sweep that changes mid-way starts a new grid. Each run records a
+  fingerprint of the queued prompt; when the prompt, settings, LoRAs or the
+  sheet's image source change, the tiles already in the folder move to
+  `<run_name>_<timestamp>` as they do at index 0. The model index, seeds and
+  the sheet's layout (columns, tile width, font size) do not count. Folders
+  from earlier versions have no fingerprint and are left alone.
+
 ## 1.6.0
 
 ### Prompt Enhancer

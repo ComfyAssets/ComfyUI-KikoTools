@@ -21,6 +21,7 @@ Classic and Nodes 2.0, renderer switching, saved workflows and cleanup.
 | Model Downloader | [Dark](model-downloader/dark.png), [Light](model-downloader/light.png) |
 | Checkpoint Folder Iterator | [Dark](checkpoint-folder-iterator/dark.png), [Light](checkpoint-folder-iterator/light.png) |
 | Model Compare Sheet | [Dark](model-compare-sheet/dark.png), [Light](model-compare-sheet/light.png) |
+| Model Recommended Settings | [Dark](model-settings/dark.png) |
 | Project File Path | [Dark](project-file-path/dark.png), [Light](project-file-path/light.png) |
 
 Node captures load the matching file in `examples/workflows/` with placeholder

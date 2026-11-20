@@ -19,6 +19,19 @@ I tried forking, patching, and submitting merge requests, but eventually decided
 
 I’m sharing them here with the community, and I hope you find them as useful as I do.
 
+## 1.7.0 — Model sweeps
+
+Compare every model in a folder with the settings each one was made for. The new
+[Model Recommended Settings](#-model-recommended-settings) node reads a model's
+recommended steps, CFG, sampler and scheduler from the Civitai info LoRA Manager
+already stored, with substitutes for schedulers you don't have installed.
+[Checkpoint Folder Iterator](#-checkpoint-folder-iterator) can now sweep
+`models/diffusion_models` (MOSS, Flux and other split models), and
+[Model Compare Sheet](#-model-compare-sheet) starts a new grid when the prompt or
+settings change mid-sweep. See the [release notes](CHANGELOG.md).
+
+![Model Recommended Settings](docs/screenshots/model-settings/dark.png)
+
 ## 1.6.0 — Kiko Prompt Enhancer
 
 A new node that rewrites a short prompt in the style each base model was trained
@@ -147,10 +160,10 @@ Advanced seed tracking with interactive history management and UI.
 Outputs the steps, CFG, sampler and scheduler a model's author recommends, ready to wire into KSampler.
 
 - Reads the Civitai info LoRA Manager (or Civitai Helper) already stored for the model: a `.metadata.json` / `.civitai.info` next to the file, or LoRA Manager's central sidecar folder. Nothing is downloaded
-- Settings the description calls recommended win; otherwise the most common values on the example images, then anything else the description states ("8 steps · CFG 1 · ER SDE · Beta")
-- Civitai sampler names are translated ("DPM++ 2M Karras" → `dpmpp_2m` + `karras`)
+- Settings the description calls recommended win, read from that passage on (an older version's settings earlier in the text are ignored); otherwise the most common values on the example images, then anything else the description states ("8 steps · CFG 1 · ER SDE · Beta")
+- Civitai sampler names are translated ("DPM++ 2M Karras" → `dpmpp_2m` + `karras`), and ComfyUI names (`er_sde`, `sgm_uniform`) are read as written
 - The widgets are the fallback, and each `use_model_*` switch keeps that field on its widget (all off = the same settings for every model)
-- A sampler or scheduler that is not installed (e.g. `bong_tangent`) falls back to the widget, or to your substitute
+- A sampler or scheduler that is not installed (e.g. `er_sde/bong_tangent` in a description) falls back to the widget, or to your substitute
 - `info` says where every value came from
 - Wire `model_name` from Checkpoint Folder Iterator's `ckpt_name`, and every model in a sweep runs with its own settings
 
@@ -158,11 +171,15 @@ Overrides go in `ComfyUI/user/kikotools/model_settings.json` (names or globs mat
 
 ```json
 {
-  "models": {"Jib_Mix_Moss_*": {"steps": 8, "scheduler": "bong_tangent"}},
+  "models": {"my-fast-merge*": {"steps": 8, "scheduler": "bong_tangent"}},
   "schedulers": {"bong_tangent": "beta"},
   "samplers": {"res_2s": "er_sde"}
 }
 ```
+
+![Model Recommended Settings](docs/screenshots/model-settings/dark.png)
+
+Example workflow (a diffusion-model sweep with Checkpoint Folder Iterator and Model Compare Sheet): [model_recommended_settings_example.json](examples/workflows/model_recommended_settings_example.json)
 
 #### ⚙️ Sampler Combo
 Unified sampling configuration interface combining sampler, scheduler, steps, and CFG.
@@ -382,7 +399,7 @@ Run the same prompt through every checkpoint in a folder, one model per queued r
 
 ![Checkpoint Folder Iterator](docs/screenshots/checkpoint-folder-iterator/dark.png)
 
-Example workflow: [checkpoint_folder_iterator_example.json](examples/workflows/checkpoint_folder_iterator_example.json)
+Example workflows: [checkpoint_folder_iterator_example.json](examples/workflows/checkpoint_folder_iterator_example.json) · [diffusion models, with per-model settings](examples/workflows/model_recommended_settings_example.json)
 
 #### 🧩 Model Compare Sheet
 Output node that pairs with Checkpoint Folder Iterator.
@@ -989,6 +1006,9 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Model Downloader** | Download models from CivitAI, HuggingFace, and custom URLs | ✅ Complete | [Docs](#-model-downloader) |
 | **Workflow Timer** | Real-time execution timer with customizable display | ✅ Complete | [Docs](#️-workflow-timer) |
 | **Kiko Prompt Enhancer** | Rewrite a short prompt in a base model's preferred style with a local LLM | ✅ Complete | [Docs](#-kiko-prompt-enhancer) |
+| **Model Recommended Settings** | Steps, CFG, sampler and scheduler from a model's Civitai info | ✅ Complete | [Docs](#-model-recommended-settings) |
+| **Checkpoint Folder Iterator** | One checkpoint or diffusion model per queued run, from a folder | ✅ Complete | [Docs](#-checkpoint-folder-iterator) |
+| **Model Compare Sheet** | Labeled grid of a model sweep, one tile per run | ✅ Complete | [Docs](#-model-compare-sheet) |
 | **Batch Image Processor** | Process multiple images with consistent settings | 🚧 Planned | Coming Soon |
 | **Advanced Prompt Utilities** | Enhanced prompt manipulation and generation | 🚧 Planned | Coming Soon |
 
