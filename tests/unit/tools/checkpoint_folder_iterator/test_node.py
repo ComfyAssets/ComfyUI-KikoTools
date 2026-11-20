@@ -21,6 +21,7 @@ def _fake_comfy_modules():
     comfy.sd.load_checkpoint_guess_config = MagicMock(
         return_value=("MODEL", "CLIP", "VAE", "extra")
     )
+    comfy.sd.load_diffusion_model = MagicMock(return_value="UNET")
     return (
         patch.dict(
             sys.modules, {"folder_paths": fp, "comfy": comfy, "comfy.sd": comfy.sd}
@@ -69,3 +70,29 @@ class TestCheckpointFolderIteratorNode:
         with ctx, patch(f"{NODE}.list_checkpoint_entries", return_value=[]):
             with pytest.raises(ValueError, match="No checkpoints"):
                 CheckpointFolderIteratorNode().load("Empty", 0, "", "")
+
+    def test_model_type_defaults_to_checkpoint(self):
+        model_type = CheckpointFolderIteratorNode.INPUT_TYPES()["optional"][
+            "model_type"
+        ]
+        assert model_type[0] == ["checkpoint", "diffusion_model"]
+        assert model_type[1]["default"] == "checkpoint"
+
+    def test_diffusion_model_scans_diffusion_models_and_loads_model_only(self):
+        ctx, _, comfy = _fake_comfy_modules()
+        unets = [
+            ("Moss/sft.safetensors", "/models/diffusion_models/Moss/sft.safetensors")
+        ]
+        with (
+            ctx,
+            patch(f"{NODE}.list_checkpoint_entries", return_value=unets) as listing,
+        ):
+            out = CheckpointFolderIteratorNode().load(
+                "Moss", 0, "", "", model_type="diffusion_model"
+            )
+        assert listing.call_args.args[3] == "diffusion_models"
+        comfy.sd.load_diffusion_model.assert_called_once_with(
+            "/models/diffusion_models/Moss/sft.safetensors"
+        )
+        comfy.sd.load_checkpoint_guess_config.assert_not_called()
+        assert out == ("UNET", None, None, "Moss/sft.safetensors", "sft", 0, 1)
