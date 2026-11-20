@@ -9,15 +9,18 @@ T = TypeVar("T")
 
 
 def list_checkpoint_entries(
-    folder_path: str, include_pattern: str = "", exclude_pattern: str = ""
+    folder_path: str,
+    include_pattern: str = "",
+    exclude_pattern: str = "",
+    folder_key: str = "checkpoints",
 ) -> List[Tuple[str, str]]:
     """(name, absolute_path) pairs for every checkpoint, filtered, in natural order.
 
     The absolute path is what gets loaded, so folders outside the configured
-    checkpoints roots work too; the name is relative to the root (or to the
+    roots of folder_key work too; the name is relative to the root (or to the
     folder itself when it lives outside every root) and is used for labels.
     """
-    entries = scan_model_entries(folder_path, "checkpoints")
+    entries = scan_model_entries(folder_path, folder_key)
     names = [name for name, _ in entries]
     kept = set(filter_by_pattern(names, include_pattern, exclude_pattern))
     return [(name, path) for name, path in entries if name in kept]
