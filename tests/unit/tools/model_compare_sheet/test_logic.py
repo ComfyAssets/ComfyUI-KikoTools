@@ -10,6 +10,7 @@ from kikotools.tools.model_compare_sheet.logic import (
     label_from_filename,
     list_tiles,
     resolve_run_dir,
+    sweep_fingerprint,
     tile_filename,
 )
 
@@ -110,3 +111,62 @@ class TestBuildContactSheet:
         sheet = build_contact_sheet(paths, columns=1, tile_width=50, font_size=10)
         band = sheet.crop((0, 100, 50, 120))
         assert len(band.getcolors(maxcolors=4096) or []) > 1
+
+
+def _prompt(text="a cat", index=0, seed=1000, columns=3):
+    return {
+        "1": {
+            "class_type": "CheckpointFolderIterator",
+            "inputs": {"folder": "Moss", "index": index},
+        },
+        "2": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": text, "clip": ["9", 0]},
+        },
+        "3": {
+            "class_type": "KSampler",
+            "inputs": {"seed": seed, "steps": 25, "model": ["1", 0]},
+        },
+        "4": {"class_type": "SeedHistory", "inputs": {"seed": seed}},
+        "5": {
+            "class_type": "ModelCompareSheet",
+            "inputs": {
+                "images": ["6", 0],
+                "label": ["1", 4],
+                "index": ["1", 5],
+                "columns": columns,
+            },
+        },
+    }
+
+
+class TestSweepFingerprint:
+    def test_iterator_index_does_not_count(self):
+        assert sweep_fingerprint(_prompt(index=0), "5") == sweep_fingerprint(
+            _prompt(index=4), "5"
+        )
+
+    def test_seeds_do_not_count(self):
+        assert sweep_fingerprint(_prompt(seed=1), "5") == sweep_fingerprint(
+            _prompt(seed=2), "5"
+        )
+
+    def test_sheet_layout_does_not_count(self):
+        assert sweep_fingerprint(_prompt(columns=3), "5") == sweep_fingerprint(
+            _prompt(columns=5), "5"
+        )
+
+    def test_prompt_change_counts(self):
+        assert sweep_fingerprint(_prompt("a cat"), "5") != sweep_fingerprint(
+            _prompt("a dog"), "5"
+        )
+
+    def test_rewiring_the_sheet_to_another_image_source_counts(self):
+        rewired = _prompt()
+        rewired["5"]["inputs"]["images"] = ["7", 0]
+        assert sweep_fingerprint(rewired, "5") != sweep_fingerprint(_prompt(), "5")
+
+    def test_unknown_prompt_or_sheet_gives_none(self):
+        assert sweep_fingerprint(None, "5") is None
+        assert sweep_fingerprint(_prompt(), None) is None
+        assert sweep_fingerprint(_prompt(), "99") is None

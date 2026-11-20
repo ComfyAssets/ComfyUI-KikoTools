@@ -394,6 +394,7 @@ Output node that pairs with Checkpoint Folder Iterator.
 - After the last queued run the preview shows the complete sheet
 - Wire Project File Path into `run_name` for `project/date/sweep` folders
 - A run at index 0 moves tiles already in the folder to `<run_name>_<timestamp>`, so an interrupted sweep never leaks into the new grid
+- A run whose settings differ from the ones the grid was started with (prompt, sampler settings, size, LoRAs: everything except the iterator's index and seeds) also starts a new grid the same way, so one sheet never mixes prompts even when the index was not reset
 - Rerunning a nonzero index replaces its complete batch, even when the label or batch size changes; other indexes are preserved
 - Replacement PNGs are fully written before existing tiles are changed; a failed tile write preserves the prior tiles and grid
 
