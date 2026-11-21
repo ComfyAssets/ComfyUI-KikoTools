@@ -23,9 +23,11 @@ MAX_HEADER_BYTES = 16 * 1024 * 1024
 GGUF_NAME_HINTS = ("qwen", "llama")
 GGUF_NAME_SKIPS = ("mmproj", "joycaption")
 
+# Qwen3-VL needs a CLIP type that loads the whole model for generation: flux3 (8-layer tap) and boogu
+# (no-think template) stop after one token.
 NATIVE_CLIP_TYPES = {
-    "QWEN3VL_4B": "flux3",
-    "QWEN3VL_8B": "boogu",
+    "QWEN3VL_4B": "krea2",
+    "QWEN3VL_8B": "ideogram4",
     "QWEN3_4B": "lumina2",
     "QWEN3_8B": "flux2",
     "QWEN25_7B": "qwen_image",
