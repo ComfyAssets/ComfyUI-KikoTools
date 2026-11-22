@@ -201,8 +201,21 @@ class TestLocalImageLoaderNode:
 
     def test_node_properties(self):
         """Test node properties."""
-        assert LocalImageLoaderNode.RETURN_TYPES == ("IMAGE", "STRING", "STRING")
-        assert LocalImageLoaderNode.RETURN_NAMES == ("image", "info", "folder")
+        assert LocalImageLoaderNode.RETURN_TYPES == (
+            "IMAGE",
+            "STRING",
+            "STRING",
+            "H3_REF_LIST",
+            "IMAGE",
+        )
+        assert LocalImageLoaderNode.RETURN_NAMES == (
+            "image",
+            "info",
+            "folder",
+            "refs",
+            "refs_preview",
+        )
+        assert len(LocalImageLoaderNode.OUTPUT_TOOLTIPS) == 5
         assert LocalImageLoaderNode.FUNCTION == "load_media"
         assert LocalImageLoaderNode.CATEGORY == "🫶 ComfyAssets/💾 Images"
 
@@ -212,7 +225,7 @@ class TestLocalImageLoaderNode:
         mock_load_selections.return_value = {}
 
         node = LocalImageLoaderNode()
-        image, info, folder = node.load_media("test_id")
+        image, info, folder, *_ = node.load_media("test_id")
 
         # Check empty returns
         assert isinstance(image, torch.Tensor)
@@ -245,7 +258,7 @@ class TestLocalImageLoaderNode:
             ),
         ):
             node = LocalImageLoaderNode()
-            image, info, folder = node.load_media("test_id")
+            image, info, folder, *_ = node.load_media("test_id")
 
         # Check returns
         assert torch.equal(image, test_tensor)
@@ -262,7 +275,7 @@ class TestLocalImageLoaderNode:
             }
         }
 
-        image, info, folder = LocalImageLoaderNode().load_media("test_id")
+        image, info, folder, *_ = LocalImageLoaderNode().load_media("test_id")
 
         assert image.shape == (1, 1, 1, 4)
         assert info == ""
@@ -282,7 +295,7 @@ class TestLocalImageLoaderNode:
                 return_value=[str(tmp_path)],
             ),
         ):
-            image, info, folder = LocalImageLoaderNode().load_media("test_id")
+            image, info, folder, *_ = LocalImageLoaderNode().load_media("test_id")
 
         assert image.shape == (1, 1, 1, 4)
         assert folder == os.path.realpath(folder_path)
@@ -306,7 +319,7 @@ class TestLocalImageLoaderNode:
                 return_value=[str(tmp_path)],
             ),
         ):
-            _, _, folder = LocalImageLoaderNode().load_media("test_id")
+            _, _, folder, *_ = LocalImageLoaderNode().load_media("test_id")
 
         assert folder == os.path.realpath(tmp_path / "b")
 
@@ -326,7 +339,7 @@ class TestLocalImageLoaderNode:
                 return_value=[str(tmp_path / "root")],
             ),
         ):
-            _, _, folder = LocalImageLoaderNode().load_media("test_id")
+            _, _, folder, *_ = LocalImageLoaderNode().load_media("test_id")
 
         assert folder == ""
 
@@ -342,3 +355,75 @@ class TestLocalImageLoaderNode:
         ):
             result = LocalImageLoaderNode.IS_CHANGED()
             assert result == 12345.0
+
+
+class TestLoadMediaRefs:
+    def _run(self, tmp_path, refs):
+        with (
+            patch(
+                "kikotools.tools.local_image_loader.node.load_selections",
+                return_value={"n": {"refs": {"paths": refs}}},
+            ),
+            patch(
+                "kikotools.tools.local_image_loader.node.get_allowed_roots",
+                return_value=[str(tmp_path / "root")],
+            ),
+        ):
+            return LocalImageLoaderNode().load_media("n")
+
+    def _root(self, tmp_path):
+        (tmp_path / "root").mkdir()
+        return tmp_path / "root"
+
+    def test_no_refs_gives_empty_list_and_tensor(self, tmp_path):
+        self._root(tmp_path)
+        _, _, _, refs, preview = self._run(tmp_path, [])
+        assert refs == []
+        assert preview.shape == (1, 1, 1, 4)
+
+    def test_refs_in_order_matched_to_first(self, tmp_path):
+        root = self._root(tmp_path)
+        Image.new("RGB", (64, 32), "red").save(root / "a.png")
+        Image.new("RGB", (20, 40), "blue").save(root / "b.png")
+        image, _, _, refs, preview = self._run(
+            tmp_path, [str(root / "a.png"), str(root / "b.png")]
+        )
+        assert [r.shape for r in refs] == [(1, 32, 64, 3)] * 2
+        assert preview.shape == (2, 32, 64, 3)
+        assert refs[0][0, 0, 0, 0] > 0.9
+        assert refs[1][0, 0, 0, 2] > 0.9
+        assert image.shape == (1, 1, 1, 4)
+
+    def test_missing_and_disallowed_skipped_keeping_order(self, tmp_path, caplog):
+        root = self._root(tmp_path)
+        Image.new("RGB", (8, 8), "red").save(root / "a.png")
+        Image.new("RGB", (8, 8), "blue").save(root / "c.png")
+        (tmp_path / "other.png").write_bytes(b"x")
+        Image.new("RGB", (8, 8)).save(tmp_path / "out.png")
+        with caplog.at_level("WARNING"):
+            _, _, _, refs, preview = self._run(
+                tmp_path,
+                [
+                    str(root / "a.png"),
+                    str(root / "gone.png"),
+                    str(tmp_path / "out.png"),
+                    str(root / "c.png"),
+                ],
+            )
+        assert len(refs) == 2 and preview.shape[0] == 2
+        assert refs[1][0, 0, 0, 2] > 0.9
+        assert "gone.png" in caplog.text and "out.png" in caplog.text
+
+    def test_corrupt_file_skipped(self, tmp_path):
+        root = self._root(tmp_path)
+        (root / "bad.png").write_bytes(b"not an image")
+        Image.new("RGB", (8, 8)).save(root / "ok.png")
+        _, _, _, refs, _ = self._run(
+            tmp_path, [str(root / "bad.png"), str(root / "ok.png")]
+        )
+        assert len(refs) == 1
+
+    def test_all_unusable_gives_empty(self, tmp_path):
+        root = self._root(tmp_path)
+        _, _, _, refs, preview = self._run(tmp_path, [str(root / "gone.png")])
+        assert refs == [] and preview.shape == (1, 1, 1, 4)
