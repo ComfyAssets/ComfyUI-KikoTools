@@ -189,6 +189,17 @@ test('gallery HTML escaping handles filenames and attribute delimiters', () => {
     assert.equal(escape(`<img src="x" onerror='run()'>&`), '&lt;img src=&quot;x&quot; onerror=&#39;run()&#39;&gt;&amp;');
 });
 
+test('toggleRef appends new paths in order and removes existing ones without mutating the list', () => {
+    const { context } = load('kiko_local_image_loader.js', { document: { getElementById: () => ({}) } });
+    const toggleRef = vm.runInContext('toggleRef', context);
+    const first = ['a.png'];
+    const second = toggleRef(first, 'b.png');
+    assert.deepEqual(Array.from(second), ['a.png', 'b.png']);
+    assert.deepEqual(Array.from(toggleRef(second, 'a.png')), ['b.png']);
+    assert.deepEqual(Array.from(first), ['a.png']);
+    assert.equal(vm.runInContext('MAX_REFS', context), 256);
+});
+
 test('gallery HTTP errors preserve actionable server detail and handle non-JSON responses', async () => {
     const { context } = load('kiko_local_image_loader.js', { document: { getElementById: () => ({}) } });
     const describe = vm.runInContext('describeHttpError', context);

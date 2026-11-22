@@ -118,7 +118,7 @@ def create_app(root: Path) -> web.Application:
         cls = plugin.NODE_CLASS_MAPPINGS[name]
         result = await asyncio.to_thread(getattr(cls(), cls.FUNCTION), **data)
         if name == "KikoLocalImageLoader":
-            tensor, info, folder = result
+            tensor, info, folder = result[:3]
             return web.json_response(
                 {
                     "shape": list(tensor.shape),

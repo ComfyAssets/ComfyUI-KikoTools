@@ -12,8 +12,10 @@ export function createImageBrowser(id, settings, scope) {
         <div class="kiko-status-message" role="status">Loading…</div>
         <div class="kiko-cardholder" data-view="grid"></div>
         <div class="ca-browser-footer"><span data-file-count></span><div class="kiko-pagination"></div></div>
+        <div class="ca-refs-bar"><span data-refs-count role="status">Refs: 0</span></div>
         <div class="ca-selection"><span class="ca-field-label">Selected media</span><strong data-selection>No media selected</strong></div>
     </div>`;
+    element.querySelector('.ca-refs-bar').append(createButton('Clear refs', 'kiko-clear-refs'));
     const saved = createSelect([['', '— Saved paths —']], 'kiko-path-presets');
     saved.setAttribute('aria-label', 'Saved paths');
     const remove = createButton('×', 'kiko-delete-path ca-danger');
