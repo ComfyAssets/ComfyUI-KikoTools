@@ -19,7 +19,7 @@ straight into the `refs_bundle` input of **Create H3 RefMod**
 ## Decisions (agreed with Vito)
 
 - **Crop to first:** the first picked photo keeps its own size and becomes the
-  canvas. Every other photo is scaled to cover the canvas (lanczos) and
+  canvas. Every other photo is scaled to cover the canvas (bicubic, antialiased) and
   center-cropped, which is the same rule H3 applies. H3's own resize then only
   scales uniformly and crops nothing more. No new widget.
 - **Preview output:** the size-matched photos also come out as one IMAGE batch.

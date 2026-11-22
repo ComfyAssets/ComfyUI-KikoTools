@@ -624,39 +624,62 @@ app.registerExtension({
                     if (!response.ok) throw new Error(await describeHttpError(response));
                 }
 
+                // Posts run one at a time so the server's last write is the gallery's last request
+                let refsQueue = Promise.resolve();
+                let refsRequest = 0;
+                let confirmedRefs = [];
+                function sendRefs(paths) {
+                    const sent = refsQueue.then(() => postRefs(paths));
+                    refsQueue = sent.catch(() => {});
+                    return sent;
+                }
+
                 async function setRefs(next) {
                     if (next.length > MAX_REFS) {
                         showStatus(`At most ${MAX_REFS} refs can be picked`);
                         return;
                     }
-                    const previous = refs;
+                    const request = ++refsRequest;
                     refs = next;
                     renderRefs();
                     try {
-                        await postRefs(next);
+                        await sendRefs(next);
                         if (scope.signal.aborted) return;
+                        confirmedRefs = next;
+                        if (request !== refsRequest) return;
                         node.properties.kiko_refs = [...next];
                         node.setDirtyCanvas(true);
                     } catch (error) {
-                        if (scope.signal.aborted) return;
-                        if (refs === next) {
-                            refs = previous;
-                            renderRefs();
-                        }
+                        if (scope.signal.aborted || request !== refsRequest) return;
+                        refs = confirmedRefs;
+                        renderRefs();
                         showStatus(`Refs not saved: ${error.message}`);
                     }
                 }
 
+                // Make the server's refs for this node id match the gallery
+                let refsSynced = false;
                 this.restoreRefs = async () => {
+                    refsSynced = true;
+                    const request = ++refsRequest;
                     const saved = node.properties?.kiko_refs;
-                    refs = Array.isArray(saved) ? saved.filter(path => typeof path === 'string') : [];
+                    const paths = Array.isArray(saved) ? [...new Set(saved.filter(path => typeof path === 'string'))] : [];
+                    refs = paths.slice(0, MAX_REFS);
                     renderRefs();
                     try {
-                        await postRefs(refs);
+                        await sendRefs(refs);
+                        if (scope.signal.aborted) return;
+                        confirmedRefs = refs;
+                        if (refs.length < paths.length) showStatus(`Only the first ${MAX_REFS} refs were loaded`);
                     } catch (error) {
-                        if (!scope.signal.aborted) showStatus(`Refs not restored: ${error.message}`);
+                        if (scope.signal.aborted || request !== refsRequest) return;
+                        refs = confirmedRefs = [];
+                        renderRefs();
+                        showStatus(`Refs were not loaded and were cleared: ${error.message}`);
+                        sendRefs([]).catch(() => {});
                     }
                 };
+                queueMicrotask(() => { if (!refsSynced) this.restoreRefs(); });
                 scope.listen(clearRefsBtn, 'click', () => setRefs([]));
 
                 // Select media

@@ -9,7 +9,8 @@
   click still selects the single `image` output.
 - New `refs` output for the `refs_bundle` input of Create H3 RefMod
   (ComfyUI-MiniMaxH3Mod). The first pick sets the size; the others are scaled to
-  cover it and center-cropped, the same rule Create H3 RefMod uses, so `refs_preview` shows what gets encoded.
+  cover it and center-cropped, the same rule Create H3 RefMod uses, so
+  `refs_preview` shows what gets encoded.
 - New `refs_preview` output with the same size-matched images as one IMAGE
   batch, so you can see what will be encoded.
 - Refs are images only, up to 256. Picks are saved with the workflow.

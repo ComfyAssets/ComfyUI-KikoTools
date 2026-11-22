@@ -495,7 +495,7 @@ Visual gallery browser for loading local images, videos, and audio files directl
 - **Refs for MiniMax H3**: Ctrl/Cmd-click images to pick them in order. Each picked image shows a number, and a `Refs: N` bar with a **Clear refs** button shows the count. A plain click still selects the single `image` output
 - **`refs` Output**: The picked images as a list for the `refs_bundle` input of Create H3 RefMod (ComfyUI-MiniMaxH3Mod). Images only, up to 256. Picks are saved with the workflow
 - **Ref Size**: The first pick sets the size. The others are scaled to cover it and center-cropped, the same rule Create H3 RefMod uses, so what you see in `refs_preview` is what gets encoded
-- **`refs_preview` Output**: The same size-matched images as one IMAGE batch, to check what will be encoded
+- **`refs_preview` Output**: The same size-matched images as one IMAGE batch, to check what will be encoded. It is a second copy of the refs in memory, so leave it unconnected for large photo sets
 
 **Use Cases:**
 - Load reference images from local folders for img2img workflows
