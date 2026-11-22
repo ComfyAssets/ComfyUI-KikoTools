@@ -492,6 +492,10 @@ Visual gallery browser for loading local images, videos, and audio files directl
 - **Smart Sorting**: Sort by name, date, or file size in ascending or descending order
 - **Pagination Support**: Efficiently browse large directories with page controls
 - **Folder Output**: Outputs the path of the folder the gallery shows, so a folder can be picked by browsing
+- **Refs for MiniMax H3**: Ctrl/Cmd-click images to pick them in order. Each picked image shows a number, and a `Refs: N` bar with a **Clear refs** button shows the count. A plain click still selects the single `image` output
+- **`refs` Output**: The picked images as a list for the `refs_bundle` input of Create H3 RefMod (ComfyUI-MiniMaxH3Mod). Images only, up to 256. Picks are saved with the workflow
+- **Ref Size**: The first pick sets the size. The others are scaled to cover it and center-cropped, the same rule H3 uses, so nothing else gets cut
+- **`refs_preview` Output**: The same size-matched images as one IMAGE batch, to check what will be encoded
 
 **Use Cases:**
 - Load reference images from local folders for img2img workflows
@@ -500,6 +504,7 @@ Visual gallery browser for loading local images, videos, and audio files directl
 - Extract prompts and settings from previously generated images
 - Preview media files before loading into workflow
 - Browse to a training dataset and pass its folder to a captioning or training node
+- Pick 5-8 photos of a character and build an H3 RefMod from them
 
 ![Local Image Loader](docs/screenshots/live-image-loader/classic.png)
 
