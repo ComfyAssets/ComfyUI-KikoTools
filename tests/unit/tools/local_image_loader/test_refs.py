@@ -63,7 +63,12 @@ class TestMatchRefsToFirst:
 
     @pytest.mark.parametrize(
         "canvas,other",
-        [((33, 47), (101, 7)), ((1, 1), (5, 3)), ((7, 5), (1, 1)), ((50, 31), (31, 50))],
+        [
+            ((33, 47), (101, 7)),
+            ((1, 1), (5, 3)),
+            ((7, 5), (1, 1)),
+            ((50, 31), (31, 50)),
+        ],
     )
     def test_odd_sizes_never_end_up_off_by_one(self, canvas, other):
         result = match_refs_to_first([_img(*canvas), _img(*other)])
