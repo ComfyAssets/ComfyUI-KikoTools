@@ -14,6 +14,8 @@ real_llama_available = models.llama_available
 DETECTED = {
     "qwen35_marker": "QWEN35_9B",
     "qwen3_marker": "QWEN3_4B",
+    "qwen3vl4b_marker": "QWEN3VL_4B",
+    "qwen3vl8b_marker": "QWEN3VL_8B",
     "t5_marker": "T5_XXL",
 }
 
@@ -86,6 +88,18 @@ def test_native_text_only_qwen3_4b(fake_comfy):
     [entry] = models.list_models()
     assert entry.clip_type == "lumina2"
     assert entry.vision is False
+
+
+@pytest.mark.parametrize(
+    "marker, clip_type",
+    [("qwen3vl4b_marker", "krea2"), ("qwen3vl8b_marker", "ideogram4")],
+)
+def test_qwen3vl_loads_as_full_generate_model(fake_comfy, marker, clip_type):
+    # flux3 and boogu load Qwen3-VL as a truncated or no-think encoder that stops after one token
+    write_safetensors(fake_comfy.text_encoders / "qwen3vl.safetensors", marker)
+    [entry] = models.list_models()
+    assert entry.clip_type == clip_type
+    assert entry.vision is True
 
 
 def test_unmapped_native_excluded(fake_comfy):
