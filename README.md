@@ -19,6 +19,15 @@ I tried forking, patching, and submitting merge requests, but eventually decided
 
 I’m sharing them here with the community, and I hope you find them as useful as I do.
 
+## 1.8.0: refs for MiniMax H3
+
+Ctrl-click photos in the [Local Image Loader](#-local-image-loader) gallery to pick
+them in order. The new `refs` output feeds them to Create H3 RefMod in
+ComfyUI-MiniMaxH3Mod, every photo matched to the first photo's size, and
+`refs_preview` shows what Create H3 RefMod will encode. The
+[Kiko Prompt Enhancer](#-kiko-prompt-enhancer) now writes full prompts with the
+Qwen3-VL 4B and 8B text encoders. See the [release notes](CHANGELOG.md).
+
 ## 1.7.0 — Model sweeps
 
 Compare every model in a folder with the settings each one was made for. The new
@@ -85,7 +94,7 @@ switching, workflow persistence and cleanup. See the retained
 | [🎬 Film Grain](#-film-grain) | Add realistic film grain effects to images | 💾 Images |
 | [🔤 Embedding Autocomplete](#-embedding-autocomplete) | Smart autocomplete for embeddings, LoRAs, and tags | 🔧 Utils |
 | [🧹 Kiko Purge VRAM](#-kiko-purge-vram) | Intelligent VRAM management with detailed reporting | 🛠️ Utils |
-| [📂 Local Image Loader](#-local-image-loader) | Visual gallery browser for local media files | 💾 Images |
+| [📂 Local Image Loader](#-local-image-loader) | Gallery that loads a local image, a folder path, or ordered refs for MiniMax H3 | 💾 Images |
 | [🌐 Model Downloader](#-model-downloader) | Download models from CivitAI, HuggingFace, and custom URLs | 🛠️ Utils |
 | [🧠 Kiko Prompt Enhancer](#-kiko-prompt-enhancer) | Rewrite a short prompt in a base model's style with the loaded text encoder | 🧠 Prompts |
 | [⏱️ Workflow Timer](#️-workflow-timer) | Real-time execution timer with customizable display | 🛠️ Utils |
@@ -1002,7 +1011,7 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Sampler Select Helper** | Intelligent sampler selection with recommendations | ✅ Complete | [Docs](examples/documentation/sampler_select_helper.md) |
 | **Scheduler Select Helper** | Optimal scheduler selection for samplers | ✅ Complete | [Docs](examples/documentation/scheduler_select_helper.md) |
 | **Text Encode Sampler Params** | Combined text encoding and parameter management | ✅ Complete | [Docs](examples/documentation/text_encode_sampler_params.md) |
-| **Local Image Loader** | Visual gallery browser for local media files | ✅ Complete | [Docs](examples/documentation/local_image_loader.md) |
+| **Local Image Loader** | Gallery that loads a local image, a folder path, or ordered refs for MiniMax H3 | ✅ Complete | [Docs](examples/documentation/local_image_loader.md) |
 | **Model Downloader** | Download models from CivitAI, HuggingFace, and custom URLs | ✅ Complete | [Docs](#-model-downloader) |
 | **Workflow Timer** | Real-time execution timer with customizable display | ✅ Complete | [Docs](#️-workflow-timer) |
 | **Kiko Prompt Enhancer** | Rewrite a short prompt in a base model's preferred style with a local LLM | ✅ Complete | [Docs](#-kiko-prompt-enhancer) |
