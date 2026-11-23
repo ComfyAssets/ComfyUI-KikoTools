@@ -2203,6 +2203,27 @@ test('rejected refs roll back with a status message', async ({ page }) => {
     await expect(cat.locator('.kiko-ref-badge')).toHaveCount(0);
 });
 
+test('a failed later refs save keeps the earlier saved refs in the node properties', async ({ page, request }) => {
+    await openHost(page);
+    const id = await createNode(page, 'KikoLocalImageLoader');
+    const path = `${(await state(request)).input}/cat & dog.png`;
+    let posts = 0;
+    let held;
+    await page.route('**/set_node_refs', route => {
+        posts++;
+        if (posts === 1) { held = route; return; }
+        return route.fulfill({ status: 400, json: { error: 'Path not allowed' } });
+    });
+    const cat = refCard(page, 'cat & dog.png');
+    await cat.click({ modifiers: ['Control'] });
+    await expect.poll(() => posts).toBe(1);
+    await cat.click({ modifiers: ['Control'] });
+    await held.fulfill({ json: { status: 'ok' } });
+    await expect(page.locator('.kiko-status-message')).toContainText('Path not allowed');
+    await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 1');
+    expect(await page.evaluate(id => kikoHost.nodes.get(String(id)).properties.kiko_refs, id)).toEqual([path]);
+});
+
 test('loading a workflow restores refs from node properties and re-sends them', async ({ page, request }) => {
     await openHost(page);
     const id = await createNode(page, 'KikoLocalImageLoader');

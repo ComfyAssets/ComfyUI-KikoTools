@@ -651,7 +651,10 @@ app.registerExtension({
                         node.setDirtyCanvas(true);
                     } catch (error) {
                         if (scope.signal.aborted || request !== refsRequest) return;
+                        // An earlier request may have been confirmed without being saved to the workflow
                         refs = confirmedRefs;
+                        node.properties.kiko_refs = [...confirmedRefs];
+                        node.setDirtyCanvas(true);
                         renderRefs();
                         showStatus(`Refs not saved: ${error.message}`);
                     }
