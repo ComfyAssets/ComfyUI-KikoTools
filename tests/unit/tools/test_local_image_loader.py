@@ -394,6 +394,17 @@ class TestLoadMediaRefs:
         assert refs[1][0, 0, 0, 2] > 0.9
         assert image.shape == (1, 1, 1, 4)
 
+    def test_refs_share_the_preview_memory(self, tmp_path):
+        root = self._root(tmp_path)
+        Image.new("RGB", (64, 32), "red").save(root / "a.png")
+        Image.new("RGB", (20, 40), "blue").save(root / "b.png")
+        _, _, _, refs, preview = self._run(
+            tmp_path, [str(root / "a.png"), str(root / "b.png")]
+        )
+        storage = preview.untyped_storage().data_ptr()
+        assert all(r.untyped_storage().data_ptr() == storage for r in refs)
+        assert torch.equal(torch.cat(refs), preview)
+
     def test_missing_and_disallowed_skipped_keeping_order(self, tmp_path, caplog):
         root = self._root(tmp_path)
         Image.new("RGB", (8, 8), "red").save(root / "a.png")

@@ -191,7 +191,15 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
             folder = browsed
 
         refs = self._load_refs(node_selections.get("refs"), roots)
-        refs_preview = torch.cat(refs, dim=0) if refs else create_empty_tensor()
+        refs_preview = create_empty_tensor()
+        if refs:
+            # One copy: each ref becomes a view of the preview batch, freeing its own tensor as it is copied
+            refs_preview = torch.empty(
+                (len(refs), *refs[0].shape[1:]), dtype=refs[0].dtype
+            )
+            for i, ref in enumerate(refs):
+                refs_preview[i] = ref[0]
+                refs[i] = refs_preview[i : i + 1]
 
         return (image_tensor, info_string, folder, refs, refs_preview)
 
