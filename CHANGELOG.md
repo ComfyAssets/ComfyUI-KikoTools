@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.8.0
 
 ### Local Image Loader
 
@@ -14,6 +14,13 @@
 - New `refs_preview` output: the same images as one IMAGE batch, so you can see
   what Create H3 RefMod will encode. It shares memory with `refs`.
 - Refs are images only, up to 256. The workflow saves the picks.
+
+### Kiko Prompt Enhancer
+
+- Qwen3-VL 4B and 8B text encoders now write a full prompt. They returned only
+  the trigger words and the no-text sentence, because the model picker loaded
+  them as CLIP types that cannot generate text. 4B now loads as `krea2` and 8B
+  as `ideogram4`. (#135)
 
 ## 1.7.0
 

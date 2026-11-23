@@ -2,158 +2,81 @@
 
 ## Overview
 
-The Local Image Loader node provides a visual gallery interface for browsing and selecting images, videos, and audio files from your local filesystem directly within ComfyUI. This streamlined version focuses on essential functionality without the complexity of tagging or metadata management.
+The Local Image Loader is a gallery inside the node. You browse a local folder, click an image, and the node outputs it. It can also output the folder you browsed to, and an ordered set of photos for Create H3 RefMod in ComfyUI-MiniMaxH3Mod.
 
-## Features
+The gallery lists videos and audio files too, but the node outputs images only.
 
-- **Visual Gallery Browser**: Browse local directories with thumbnail previews
-- **Multi-Media Support**: Load images, videos, and audio files
-- **Directory Navigation**: Navigate through folders with ease
-- **Sorting Options**: Sort by name, date, or file size
-- **Saved Paths**: Save frequently used directory paths for quick access
-- **Pagination**: Handle large directories with paginated display
-- **Lightbox Preview**: Full-size preview with zoom and pan capabilities
-
-## Node Inputs
-
-### Required Inputs
-None - The node uses a visual interface for file selection
-
-### Hidden Inputs
-- `unique_id`: Automatically assigned node identifier
-
-## Node Outputs
+## Node outputs
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `image` | IMAGE | The selected image as a tensor |
-| `info` | STRING | JSON metadata about the selected image |
-| `folder` | STRING | The folder the gallery is showing, or the selected image's folder |
+| `image` | IMAGE | The selected image. |
+| `info` | STRING | JSON with the image's file name, width, height, color mode and format, plus the prompt, workflow or A1111 `parameters` saved in the file when there are any. |
+| `folder` | STRING | The folder the gallery shows, or the selected image's folder. |
+| `refs` | H3_REF_LIST | The picked refs in pick order, all at the first pick's size, for the `refs_bundle` input of Create H3 RefMod. |
+| `refs_preview` | IMAGE | The same refs as one image batch, to check what Create H3 RefMod will encode. It shares memory with `refs`. |
 
-Browse to a folder and queue: `folder` passes its path on without selecting an image, for nodes that read a whole folder, such as a dataset captioner.
+The node has no inputs. Its hidden `unique_id` ties the gallery's choices to this node.
 
 ## Usage
 
-### Basic Workflow
+1. Add **Local Image Loader** from 🫶 ComfyAssets → 💾 Images.
+2. Type or paste a folder path and press Enter or **Browse**. The path field suggests folders as you type.
+3. Click an image to select it for the `image` and `info` outputs.
+4. To pass a whole folder on, browse to it and queue. The `folder` output has its path even when no image is selected, for nodes such as a dataset captioner.
 
-1. **Add the Node**: Search for "Local Image Loader" in the node menu
-2. **Browse Directory**: Enter a directory path or use saved paths
-3. **Select Media**: Click on thumbnails to select files
-4. **Connect Outputs**: Use the outputs in your workflow
+### Refs for MiniMax H3
 
-### Interface Controls
+1. Ctrl-click (Cmd-click on a Mac) photos in the order you want. Each picked photo shows its number, and the `Refs: N` bar counts them. Ctrl-click a picked photo again to remove it; the others renumber.
+2. Picks can come from different folders. **Clear refs** removes them all.
+3. Connect `refs` to `refs_bundle` on Create H3 RefMod, and `refs_preview` to a Preview Image node if you want to see the result.
 
-#### Path Management
-- **Directory Input**: Enter or paste a directory path
-- **Saved Paths Dropdown**: Quick access to saved directories
-- **Save Path Button** (💾): Save current directory to favorites
-- **Browse Button** (📁): Load the entered directory
+The first pick sets the size. The node scales each other pick to cover that size and crops the center, the same rule Create H3 RefMod uses. Pick a photo with the shape you want first.
 
-#### View Options
-- **Videos Checkbox**: Show/hide video files
-- **Audio Checkbox**: Show/hide audio files
-- **Sort By**: Choose between Name, Date, or Size
-- **Sort Order**: Ascending (↑) or Descending (↓)
-- **Refresh Button** (🔄): Reload current directory
+Refs are images only, up to 256. The workflow saves the picks, and a file that is missing or outside the allowed folders when you queue is skipped with a warning in the console.
 
-#### Gallery Display
-- **Thumbnail Grid**: Visual preview of files
-- **Blue Border**: Selected items are highlighted
-- **Folder Icons**: Navigate into subdirectories
-- **Video Overlay**: Visual indicator for video files
-- **Pagination**: Navigate through pages of results
+### Gallery controls
 
-## File Support
+- **Saved paths**: **☆ Save path** adds the current folder to the list, and **×** removes the selected one.
+- **↑** opens the parent folder, and **↻** reloads the current one.
+- **Sort** by name, date or size, and **Order** ascending or descending.
+- **Filter this page** hides files whose names don't match.
+- **Grid** or **List** layout, and a **Thumbnail size** slider from 128 to 384 px.
+- Page controls at the bottom split large folders.
+- Double-click a file to open it full size in a new browser tab.
 
-### Supported Image Formats
-- `.jpg`, `.jpeg`
-- `.png`
-- `.bmp`
-- `.gif`
-- `.webp`
+## Supported files
 
-### Supported Video Formats
-- `.mp4`
-- `.webm`
-- `.mov`
-- `.mkv`
-- `.avi`
-
-### Supported Audio Formats
-- `.mp3`
-- `.wav`
-- `.ogg`
-- `.flac`
-
-## Image Metadata
-
-When an image is selected, the node extracts and returns metadata including:
-- **Basic Info**: Filename, width, height, format, mode
-- **Embedded Parameters**: Generation parameters if present
-- **Workflow Data**: Embedded ComfyUI workflow if present
-- **Prompt Data**: Embedded prompt information if present
+| Kind | Extensions | Output |
+|------|------------|--------|
+| Images | `.jpg`, `.jpeg`, `.png`, `.bmp`, `.gif`, `.webp` | `image`, `refs` |
+| Videos | `.mp4`, `.webm`, `.mov`, `.mkv`, `.avi` | listed only |
+| Audio | `.mp3`, `.wav`, `.ogg`, `.flac` | listed only |
 
 ## Examples
 
-### Loading an Image for Processing
-```
-Local Image Loader → Load Image → Image Processing Node
-                 ↓
-              [info] → Display Text (to show metadata)
-```
+Load an image and show its metadata:
 
-### Setting Up a Multi-Media Workflow
 ```
-Local Image Loader → [image] → Image Preview
-                 ↓
-           [video_path] → Video Player Node
-                 ↓
-           [audio_path] → Audio Player Node
+Local Image Loader [image] → your image node
+                   [info]  → Display Text
 ```
 
-## Tips and Best Practices
+Build an H3 RefMod from five to eight photos:
 
-1. **Save Frequently Used Paths**: Use the save button to bookmark directories you use often
-2. **Use Sorting**: Sort by date to find recent files quickly
-3. **Keyboard Navigation**: Press Enter in the path field to load a directory
-4. **Performance**: For directories with thousands of files, use pagination to navigate efficiently
-5. **Thumbnail Generation**: Thumbnails are generated on-demand and cached for performance
-
-## Differences from Original
-
-This version simplifies the original ComfyUI_Local_Image_Gallery by removing:
-- Tag filtering and management
-- Rating system
-- Global tag search
-- Metadata editing capabilities
-
-These features were removed to focus on the core functionality of browsing and selecting files, making the tool simpler and more straightforward to use.
+```
+Local Image Loader [refs]         → Create H3 RefMod [refs_bundle] → Save H3 RefMod
+                   [refs_preview] → Preview Image
+```
 
 ## Troubleshooting
 
-### Common Issues
+**The folder does not load.** Check that the path exists and ComfyUI can read it. The node serves files only from ComfyUI's input and output folders and your saved paths. Save the folder with **☆ Save path** to allow it. A drive root, your home folder and the folders above it can't be saved; save a folder inside your home folder instead.
 
-**Directory Not Loading**
-- Verify the path exists and you have read permissions
-- Check for special characters in the path
-- Try using absolute paths instead of relative ones
+**A ref is missing from `refs`.** The file was moved, deleted or is outside the allowed folders. The console names the skipped file.
 
-**Thumbnails Not Showing**
-- Ensure the files are in supported formats
-- Check if the images are corrupted
-- Try refreshing the gallery
+**Thumbnails are slow in a large folder.** Sort by date to find recent files, or split the folder into subfolders.
 
-**Large Directories Slow to Load**
-- Use sorting and pagination to manage large folders
-- Consider organizing files into subdirectories
-- Enable only the media types you need (images, videos, audio)
+## Technical details
 
-## Technical Details
-
-The node creates a visual widget that runs in the ComfyUI interface and communicates with the backend through API endpoints to:
-- List directory contents
-- Generate thumbnails
-- Save user preferences
-- Handle file selection
-
-All file operations are performed server-side for security, with proper path validation to prevent directory traversal attacks.
+The gallery calls the node's API routes to list folders, make 320 px thumbnails and save each node's choices. The server checks every path against the allowed folders before it reads a file, and checks the saved choices again when the workflow runs.
