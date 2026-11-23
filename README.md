@@ -480,31 +480,26 @@ Unified interface for text encoding and sampler parameter management.
 - Batch prompt processing
 
 #### 📂 Local Image Loader
-Visual gallery browser for loading local images, videos, and audio files directly into ComfyUI workflows.
+A gallery in the node for picking an image from a local folder and loading it into the workflow.
 
-- **Visual Gallery Interface**: Browse files with thumbnail previews in a masonry layout
-- **Multi-Media Support**: Load images (JPG, PNG, GIF, WebP), videos (MP4, WebM, MOV), and audio files (MP3, WAV, OGG, FLAC)
-- **Quick Navigation**: Navigate folders with breadcrumb path and parent directory button
-- **Responsive Layout**: Automatically adjusts thumbnail grid to available space
-- **Metadata Extraction**: Reads embedded prompt and workflow data from generated images
-- **Saved Paths**: Remember frequently used directories for quick access
-- **Double-Click Preview**: Open full-size media in new browser tab
-- **Smart Sorting**: Sort by name, date, or file size in ascending or descending order
-- **Pagination Support**: Efficiently browse large directories with page controls
-- **Folder Output**: Outputs the path of the folder the gallery shows, so a folder can be picked by browsing
-- **Refs for MiniMax H3**: Ctrl/Cmd-click images to pick them in order. Each picked image shows a number, and a `Refs: N` bar with a **Clear refs** button shows the count. A plain click still selects the single `image` output
-- **`refs` Output**: The picked images as a list for the `refs_bundle` input of Create H3 RefMod (ComfyUI-MiniMaxH3Mod). Images only, up to 256. Picks are saved with the workflow
-- **Ref Size**: The first pick sets the size. The others are scaled to cover it and center-cropped, the same rule Create H3 RefMod uses, so what you see in `refs_preview` is what gets encoded
-- **`refs_preview` Output**: The same size-matched images as one IMAGE batch, to check what will be encoded. It is a second copy of the refs in memory, so leave it unconnected for large photo sets
+- **Gallery.** Thumbnails fill the node's width. The breadcrumb path and the up button move between folders, and page controls split large folders.
+- **File types.** The node loads JPG, PNG, BMP, GIF and WebP images. The gallery also lists videos (MP4, WebM, MOV, MKV, AVI) and audio (MP3, WAV, OGG, FLAC), but the node does not output them.
+- **Sorting.** Sort by name, date or file size, ascending or descending.
+- **Saved paths.** Save a folder to the *Saved paths* list to open it again later.
+- **Full-size view.** Double-click a file to open it in a new browser tab.
+- **`info` output.** JSON with the image's file name, width, height, color mode and format. It also holds the prompt and workflow when ComfyUI saved them in the PNG, and the A1111 `parameters` text when there is one.
+- **`folder` output.** The path of the folder the gallery shows, so you can pick a folder by browsing to it.
+- **Refs for MiniMax H3.** Ctrl-click (Cmd-click on a Mac) images to pick them in order. Each picked image shows its number, and the `Refs: N` bar has a *Clear refs* button. A plain click still selects the single `image` output.
+- **`refs` output.** The picked images, in pick order, for the `refs_bundle` input of Create H3 RefMod in ComfyUI-MiniMaxH3Mod. It takes images only, up to 256. The workflow saves the picks.
+- **Ref size.** The first pick sets the size. The node scales each other pick to cover that size and crops the center, the same rule Create H3 RefMod uses.
+- **`refs_preview` output.** The same images as one IMAGE batch, so you can see what Create H3 RefMod will encode. It shares memory with `refs`, so connecting it costs no extra memory.
 
-**Use Cases:**
-- Load reference images from local folders for img2img workflows
-- Browse and select from collections of generated images
-- Quickly access frequently used asset directories
-- Extract prompts and settings from previously generated images
-- Preview media files before loading into workflow
-- Browse to a training dataset and pass its folder to a captioning or training node
-- Pick 5-8 photos of a character and build an H3 RefMod from them
+**Use cases:**
+- Load a reference image from a local folder for img2img.
+- Pick one image from a folder of generated images.
+- Read the prompt and settings of an image you generated earlier.
+- Browse to a training dataset and pass its folder to a captioning or training node.
+- Pick 5 to 8 photos of a character and build an H3 RefMod from them.
 
 ![Local Image Loader](docs/screenshots/live-image-loader/classic.png)
 

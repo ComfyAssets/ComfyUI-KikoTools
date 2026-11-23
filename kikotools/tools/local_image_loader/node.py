@@ -132,7 +132,7 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
         "The selected image's metadata as JSON.",
         "The folder the gallery shows, e.g. a training dataset to pass on by path.",
         "The picked photos, in pick order and matched to the first photo's size, for Create H3 RefMod's refs_bundle input.",
-        "The same photos as one image batch, to preview what gets encoded. It is a second copy in memory; leave it unconnected for large photo sets.",
+        "The same photos as one image batch, to preview what gets encoded. It shares memory with refs.",
     )
     FUNCTION = "load_media"
     CATEGORY = "🫶 ComfyAssets/💾 Images"
