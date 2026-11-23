@@ -17,6 +17,8 @@ from .logic import (
     is_within_roots,
     list_subdirectories,
     load_image_from_path,
+    load_ref_image,
+    match_refs_to_first,
     resolve_path,
     scan_directory,
 )
@@ -32,6 +34,7 @@ MEDIA_KINDS = ("image", "video", "audio")
 MAX_PER_PAGE = 200
 DEFAULT_PER_PAGE = 50
 MAX_DIRECTORY_SUGGESTIONS = 50
+MAX_REFS = 256
 
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))
 SELECTIONS_FILE = os.path.join(NODE_DIR, "selections.json")
@@ -114,16 +117,22 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
         "IMAGE",
         "STRING",
         "STRING",
+        "H3_REF_LIST",
+        "IMAGE",
     )
     RETURN_NAMES = (
         "image",
         "info",
         "folder",
+        "refs",
+        "refs_preview",
     )
     OUTPUT_TOOLTIPS = (
         "The selected image.",
         "The selected image's metadata as JSON.",
         "The folder the gallery shows, e.g. a training dataset to pass on by path.",
+        "The picked photos, in pick order and matched to the first photo's size, for Create H3 RefMod's refs_bundle input.",
+        "The same photos as one image batch, to preview what gets encoded. It shares memory with refs.",
     )
     FUNCTION = "load_media"
     CATEGORY = "🫶 ComfyAssets/💾 Images"
@@ -135,7 +144,9 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
             return os.path.getmtime(SELECTIONS_FILE)
         return float("inf")
 
-    def load_media(self, unique_id: str) -> Tuple[torch.Tensor, str, str]:
+    def load_media(
+        self, unique_id: str
+    ) -> Tuple[torch.Tensor, str, str, List[torch.Tensor], torch.Tensor]:
         """
         Load selected media based on node's unique ID.
 
@@ -143,7 +154,7 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
             unique_id: Unique identifier for this node instance
 
         Returns:
-            Tuple of (image tensor, info string, folder path)
+            Tuple of (image tensor, info string, folder path, refs list, refs batch)
         """
         image_tensor = create_empty_tensor()
         info_string = ""
@@ -179,7 +190,40 @@ class LocalImageLoaderNode(ComfyAssetsBaseNode):
         if browsed and os.path.isdir(browsed) and is_within_roots(browsed, roots):
             folder = browsed
 
-        return (image_tensor, info_string, folder)
+        refs = self._load_refs(node_selections.get("refs"), roots)
+        refs_preview = create_empty_tensor()
+        if refs:
+            # One copy: each ref becomes a view of the preview batch, freeing its own tensor as it is copied
+            refs_preview = torch.empty(
+                (len(refs), *refs[0].shape[1:]), dtype=refs[0].dtype
+            )
+            for i, ref in enumerate(refs):
+                refs_preview[i] = ref[0]
+                refs[i] = refs_preview[i : i + 1]
+
+        return (image_tensor, info_string, folder, refs, refs_preview)
+
+    @staticmethod
+    def _load_refs(refs_selection: Any, roots: List[str]) -> List[torch.Tensor]:
+        """Load picked refs in order, skipping files that are gone or not allowed."""
+        if not isinstance(refs_selection, dict):
+            return []
+        paths = refs_selection.get("paths")
+        if not isinstance(paths, list):
+            return []
+        images = []
+        for path in paths:
+            if not isinstance(path, str) or not path:
+                continue
+            real = resolve_path(path)
+            if not is_allowed_image_path(real, roots) or not os.path.isfile(real):
+                logger.warning("Skipping unavailable ref: %s", path)
+                continue
+            try:
+                images.append(load_ref_image(real))
+            except Exception as e:
+                logger.warning("Skipping ref %s: %s", path, e)
+        return match_refs_to_first(images)
 
 
 # ---------------------------------------------------------------------------
@@ -245,6 +289,36 @@ async def set_node_selection(request):
 
     selections = load_selections()
     selections.setdefault(str(node_id), {})[media_type] = {"path": path}
+    save_selections(selections)
+    return web.json_response({"status": "ok"})
+
+
+async def set_node_refs(request):
+    """Store the picked ref photos for a node (image files in allowed roots only)."""
+    try:
+        data = await request.json()
+    except Exception:
+        return _error(400, "Invalid JSON.")
+    if not isinstance(data, dict):
+        return _error(400, "Invalid payload.")
+
+    node_id = data.get("node_id")
+    paths = data.get("paths")
+    if (
+        node_id is None
+        or not isinstance(paths, list)
+        or not all(isinstance(p, str) and p and "\0" not in p for p in paths)
+    ):
+        return _error(400, "Missing required data.")
+    if len(paths) > MAX_REFS:
+        return _error(400, f"At most {MAX_REFS} refs.")
+
+    roots = get_allowed_roots()
+    if not all(is_allowed_image_path(resolve_path(p), roots) for p in paths):
+        return _error(403, "Path not allowed.")
+
+    selections = load_selections()
+    selections.setdefault(str(node_id), {})["refs"] = {"paths": paths}
     save_selections(selections)
     return web.json_response({"status": "ok"})
 
@@ -421,6 +495,7 @@ try:
     _routes = prompt_server.routes
     _prefix = "/kiko_local_image_loader"
     _routes.post(f"{_prefix}/set_node_selection")(set_node_selection)
+    _routes.post(f"{_prefix}/set_node_refs")(set_node_refs)
     _routes.get(f"{_prefix}/get_saved_paths")(get_saved_paths)
     _routes.post(f"{_prefix}/save_paths")(save_paths)
     _routes.get(f"{_prefix}/images")(get_local_images)

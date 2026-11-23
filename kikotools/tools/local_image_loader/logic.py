@@ -3,8 +3,10 @@
 import os
 import json
 import torch
+import math
 import numpy as np
-from PIL import Image
+import torch.nn.functional as F
+from PIL import Image, ImageOps
 from typing import Tuple, Dict, Any, List, Optional, Iterable
 
 
@@ -342,3 +344,41 @@ def search_files(
 def create_empty_tensor() -> torch.Tensor:
     """Create an empty tensor for when no image is selected."""
     return torch.zeros(1, 1, 1, 4)
+
+
+def load_ref_image(path: str) -> torch.Tensor:
+    """Load a photo as a [1, H, W, 3] float32 RGB tensor with EXIF orientation applied."""
+    with Image.open(path) as img:
+        img_rgb = ImageOps.exif_transpose(img).convert("RGB")
+        img_array = np.array(img_rgb).astype(np.float32) / 255.0
+    return torch.from_numpy(img_array)[None,]
+
+
+def match_refs_to_first(images: List[torch.Tensor]) -> List[torch.Tensor]:
+    """Scale every image to cover the first image's size, then center-crop to it."""
+    if not images:
+        return []
+
+    canvas_h, canvas_w = images[0].shape[1:3]
+    matched = [images[0]]
+    for image in images[1:]:
+        h, w = image.shape[1:3]
+        if (h, w) == (canvas_h, canvas_w):
+            matched.append(image)
+            continue
+
+        scale = max(canvas_h / h, canvas_w / w)
+        new_h = max(canvas_h, math.ceil(h * scale))
+        new_w = max(canvas_w, math.ceil(w * scale))
+        resized = F.interpolate(
+            image.movedim(-1, 1),
+            size=(new_h, new_w),
+            mode="bicubic",
+            antialias=True,
+            align_corners=False,
+        ).clamp(0.0, 1.0)
+        top = (new_h - canvas_h) // 2
+        left = (new_w - canvas_w) // 2
+        cropped = resized[:, :, top : top + canvas_h, left : left + canvas_w]
+        matched.append(cropped.movedim(1, -1).contiguous())
+    return matched

@@ -399,21 +399,21 @@ class TestLoadMediaGuard:
         env.sel.write_text(
             json.dumps({"7": {"image": {"path": str(env.outside / "o.png")}}})
         )
-        image, info, folder = node_mod.LocalImageLoaderNode().load_media("7")
+        image, info, folder, *_ = node_mod.LocalImageLoaderNode().load_media("7")
         assert image.shape == (1, 1, 1, 4) and info == "" and folder == ""
 
     def test_non_image_selection_refused(self, env):
         env.sel.write_text(
             json.dumps({"7": {"image": {"path": str(env.root / "notes.txt")}}})
         )
-        _, info, folder = node_mod.LocalImageLoaderNode().load_media("7")
+        _, info, folder, *_ = node_mod.LocalImageLoaderNode().load_media("7")
         assert info == "" and folder == ""
 
     def test_allowed_selection_loads(self, env):
         env.sel.write_text(
             json.dumps({"7": {"image": {"path": str(env.root / "a.png")}}})
         )
-        image, info, folder = node_mod.LocalImageLoaderNode().load_media("7")
+        image, info, folder, *_ = node_mod.LocalImageLoaderNode().load_media("7")
         assert image.shape == (1, 300, 400, 3)
         assert json.loads(info)["width"] == 400
         assert folder == os.path.realpath(env.root)
@@ -423,7 +423,7 @@ class TestLoadMediaGuard:
         env.sel.write_text(
             json.dumps({"7": {"image": {"path": str(env.root / "bad.png")}}})
         )
-        image, info, folder = node_mod.LocalImageLoaderNode().load_media("7")
+        image, info, folder, *_ = node_mod.LocalImageLoaderNode().load_media("7")
         assert info == "" and folder == ""
 
 
@@ -441,3 +441,68 @@ class TestPersistence:
         monkeypatch.setattr(node_mod, "CONFIG_FILE", "/nonexistent_dir/y.json")
         node_mod.save_selections({"a": 1})
         node_mod.save_config({"a": 1})
+
+
+class TestSetNodeRefs:
+    def _post(self, body_):
+        return run(node_mod.set_node_refs(req(body=body_)))
+
+    def test_saves_paths_in_order(self, env):
+        paths = [str(env.root / "a.png"), str(env.root / "alpha.png")]
+        r = self._post({"node_id": 5, "paths": paths})
+        assert r.status == 200
+        assert json.loads(env.sel.read_text())["5"]["refs"] == {"paths": paths}
+
+    def test_keeps_other_selections(self, env):
+        p = str(env.root / "a.png")
+        run(
+            node_mod.set_node_selection(
+                req(body={"node_id": 5, "path": p, "type": "image"})
+            )
+        )
+        self._post({"node_id": 5, "paths": [p]})
+        saved = json.loads(env.sel.read_text())["5"]
+        assert saved["image"] == {"path": p}
+        assert saved["refs"] == {"paths": [p]}
+
+    def test_empty_list_clears(self, env):
+        p = str(env.root / "a.png")
+        self._post({"node_id": 5, "paths": [p]})
+        r = self._post({"node_id": 5, "paths": []})
+        assert r.status == 200
+        assert json.loads(env.sel.read_text())["5"]["refs"] == {"paths": []}
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            ValueError("bad"),
+            [],
+            {"paths": []},
+            {"node_id": 1},
+            {"node_id": 1, "paths": "a.png"},
+            {"node_id": 1, "paths": [3]},
+            {"node_id": 1, "paths": [""]},
+            {"node_id": 1, "paths": ["a\0b.png"]},
+        ],
+    )
+    def test_malformed_400(self, env, payload):
+        assert self._post(payload).status == 400
+        assert not env.sel.exists()
+
+    def test_too_many_400(self, env):
+        p = str(env.root / "a.png")
+        assert self._post({"node_id": 1, "paths": [p] * 257}).status == 400
+        assert self._post({"node_id": 1, "paths": [p] * 256}).status == 200
+
+    @pytest.mark.parametrize("name", ["notes.txt", "clip.mp4", "song.mp3"])
+    def test_non_image_403_saves_nothing(self, env, name):
+        (env.root / name).write_bytes(b"x")
+        good = str(env.root / "a.png")
+        r = self._post({"node_id": 1, "paths": [good, str(env.root / name)]})
+        assert r.status == 403
+        assert not env.sel.exists()
+
+    def test_outside_root_403(self, env):
+        r = self._post({"node_id": 1, "paths": [str(env.outside / "o.png")]})
+        assert r.status == 403
+        assert not env.sel.exists()

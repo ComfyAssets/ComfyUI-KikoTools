@@ -274,7 +274,7 @@ test('gallery rejects disallowed folders and retries after a network error', asy
     const deniedSelection = await request.post('/kiko_local_image_loader/set_node_selection', { data: { node_id: id, path: `${info.outside}/secret.png`, type: 'image' } });
     expect(deniedSelection.status()).toBe(403);
     // Only the folder the gallery still shows is stored, never the denied one.
-    expect((await state(request)).selections).toEqual({ [String(id)]: { folder: { path: info.input } } });
+    expect((await state(request)).selections).toEqual({ [String(id)]: { folder: { path: info.input }, refs: { paths: [] } } });
     await page.locator('.kiko-path-input').fill(info.input);
     await page.route('**/kiko_local_image_loader/images?*', route => route.abort('failed'), { times: 1 });
     await page.locator('.kiko-browse').click();
@@ -2157,4 +2157,131 @@ test('prompt enhancer menu copies the system prompt and reports the result', asy
     await page.evaluate(() => { delete kikoHost.app.extensionManager; return window.copyPrompt(); });
     await expect.poll(() => info).toEqual(['Kiko Prompt Enhancer: Copied to /user/kiko/flux.md']);
     expect(posted).toEqual(Array(3).fill(['POST', { base_model: 'Flux' }]));
+});
+
+const refCard = (page, name) => page.locator('.kiko-gallery-card', { has: page.locator(`img[alt="${name}"]`) });
+const refsState = async (request, id) => (await state(request)).selections[String(id)]?.refs?.paths;
+
+test('Ctrl-click picks ordered refs that survive folder changes, renumber and clear', async ({ page, request }) => {
+    await openHost(page);
+    const id = await createNode(page, 'KikoLocalImageLoader');
+    const input = (await state(request)).input;
+    const cat = refCard(page, 'cat & dog.png');
+    await expect(cat).toBeVisible();
+    await cat.click({ modifiers: ['Control'] });
+    await expect(cat.locator('.kiko-ref-badge')).toHaveText('1');
+    await expect(cat).toHaveAttribute('aria-label', 'Select image cat & dog.png, Ref 1');
+    await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 1');
+    await expect.poll(() => refsState(request, id)).toEqual([`${input}/cat & dog.png`]);
+    expect((await state(request)).selections[String(id)].image).toBeUndefined();
+    await page.locator('.kiko-folder-name').filter({ hasText: /^sub$/ }).click();
+    const forest = refCard(page, 'forest.png');
+    await forest.click({ modifiers: ['Control'] });
+    await expect(forest.locator('.kiko-ref-badge')).toHaveText('2');
+    await page.locator('.kiko-up-folder').click();
+    await expect(cat.locator('.kiko-ref-badge')).toHaveText('1');
+    await cat.click({ modifiers: ['Control'] });
+    await expect(cat.locator('.kiko-ref-badge')).toHaveCount(0);
+    await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 1');
+    await expect.poll(() => refsState(request, id)).toEqual([`${input}/sub/forest.png`]);
+    // The server writes before it replies, so the node's properties catch up a moment later
+    await expect.poll(() => page.evaluate(id => kikoHost.nodes.get(String(id)).properties.kiko_refs, id)).toEqual([`${input}/sub/forest.png`]);
+    await cat.click();
+    await expect(cat).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'Clear refs' }).click();
+    await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 0');
+    await expect.poll(() => refsState(request, id)).toEqual([]);
+});
+
+test('rejected refs roll back with a status message', async ({ page }) => {
+    await openHost(page);
+    await createNode(page, 'KikoLocalImageLoader');
+    await page.route('**/set_node_refs', route => route.fulfill({ status: 400, json: { error: 'Path not allowed' } }));
+    const cat = refCard(page, 'cat & dog.png');
+    await cat.click({ modifiers: ['Control'] });
+    await expect(page.locator('.kiko-status-message')).toContainText('Path not allowed');
+    await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 0');
+    await expect(cat.locator('.kiko-ref-badge')).toHaveCount(0);
+});
+
+test('a failed later refs save keeps the earlier saved refs in the node properties', async ({ page, request }) => {
+    await openHost(page);
+    const id = await createNode(page, 'KikoLocalImageLoader');
+    const path = `${(await state(request)).input}/cat & dog.png`;
+    let posts = 0;
+    let held;
+    await page.route('**/set_node_refs', route => {
+        posts++;
+        if (posts === 1) { held = route; return; }
+        return route.fulfill({ status: 400, json: { error: 'Path not allowed' } });
+    });
+    const cat = refCard(page, 'cat & dog.png');
+    await cat.click({ modifiers: ['Control'] });
+    await expect.poll(() => posts).toBe(1);
+    await cat.click({ modifiers: ['Control'] });
+    await held.fulfill({ json: { status: 'ok' } });
+    await expect(page.locator('.kiko-status-message')).toContainText('Path not allowed');
+    await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 1');
+    expect(await page.evaluate(id => kikoHost.nodes.get(String(id)).properties.kiko_refs, id)).toEqual([path]);
+});
+
+test('loading a workflow restores refs from node properties and re-sends them', async ({ page, request }) => {
+    await openHost(page);
+    const id = await createNode(page, 'KikoLocalImageLoader');
+    const path = `${(await state(request)).input}/cat & dog.png`;
+    await page.evaluate(({ id, path }) => kikoHost.nodes.get(String(id)).configure({ properties: { kiko_refs: [path] } }), { id, path });
+    await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 1');
+    await expect(refCard(page, 'cat & dog.png').locator('.kiko-ref-badge')).toHaveText('1');
+    await expect.poll(() => refsState(request, id)).toEqual([path]);
+});
+
+test('refs stop at 256 without a request', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'KikoLocalImageLoader');
+    const saved = Array.from({ length: 256 }, (_, index) => `/missing/${index}.png`);
+    await page.route('**/set_node_refs', route => route.fulfill({ json: { status: 'ok' } }));
+    await page.evaluate(({ id, saved }) => kikoHost.nodes.get(String(id)).configure({ properties: { kiko_refs: saved } }), { id, saved });
+    await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 256');
+    let posts = 0;
+    await page.route('**/set_node_refs', route => { posts++; return route.fulfill({ json: { status: 'ok' } }); });
+    await refCard(page, 'cat & dog.png').click({ modifiers: ['Meta'] });
+    await expect(page.locator('.kiko-status-message')).toContainText('At most 256 refs');
+    expect(posts).toBe(0);
+});
+
+test('restore dedupes and trims saved refs with a status message', async ({ page }) => {
+    await openHost(page);
+    const id = await createNode(page, 'KikoLocalImageLoader');
+    const saved = [...Array.from({ length: 257 }, (_, index) => `/missing/${index}.png`), '/missing/0.png'];
+    await page.route('**/set_node_refs', route => route.fulfill({ json: { status: 'ok' } }));
+    await page.evaluate(({ id, saved }) => kikoHost.nodes.get(String(id)).configure({ properties: { kiko_refs: saved } }), { id, saved });
+    await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 256');
+    await expect(page.locator('.kiko-status-message')).toContainText('Only the first 256 refs');
+});
+
+test('a fresh node clears refs another workflow left under the same id', async ({ page, request }) => {
+    await openHost(page);
+    const first = await createNode(page, 'KikoLocalImageLoader');
+    const path = `${(await state(request)).input}/cat & dog.png`;
+    await page.evaluate(({ id, path }) => kikoHost.nodes.get(String(id)).configure({ properties: { kiko_refs: [path] } }), { id: first, path });
+    await expect.poll(() => refsState(request, first)).toEqual([path]);
+    await page.reload();
+    await expect(page.locator('body')).toHaveAttribute('data-ready', 'true');
+    expect(await createNode(page, 'KikoLocalImageLoader')).toBe(first);
+    await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 0');
+    await expect.poll(() => refsState(request, first)).toEqual([]);
+});
+
+test('a rejected restore clears the server refs and keeps the saved properties', async ({ page, request }) => {
+    await openHost(page);
+    const id = await createNode(page, 'KikoLocalImageLoader');
+    const input = (await state(request)).input;
+    await refCard(page, 'cat & dog.png').click({ modifiers: ['Control'] });
+    await expect.poll(() => refsState(request, id)).toEqual([`${input}/cat & dog.png`]);
+    const outside = `${(await state(request)).outside}/secret.png`;
+    await page.evaluate(({ id, outside }) => kikoHost.nodes.get(String(id)).configure({ properties: { kiko_refs: [outside] } }), { id, outside });
+    await expect(page.locator('.kiko-status-message')).toContainText('were not loaded and were cleared');
+    await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 0');
+    await expect.poll(() => refsState(request, id)).toEqual([]);
+    expect(await page.evaluate(id => kikoHost.nodes.get(String(id)).properties.kiko_refs, id)).toEqual([outside]);
 });

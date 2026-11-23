@@ -13,6 +13,13 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+const MAX_REFS = 256;
+
+// Add the path to the ordered refs list, or remove it when already present
+function toggleRef(refs, path) {
+    return refs.includes(path) ? refs.filter(ref => ref !== path) : [...refs, path];
+}
+
 // Build a readable error message from a non-OK fetch response
 async function describeHttpError(response) {
     let detail = '';
@@ -36,6 +43,12 @@ app.registerExtension({
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name === "KikoLocalImageLoader") {
             const onNodeCreated = nodeType.prototype.onNodeCreated;
+            const onConfigure = nodeType.prototype.onConfigure;
+            nodeType.prototype.onConfigure = function () {
+                const r = onConfigure?.apply(this, arguments);
+                this.restoreRefs?.();
+                return r;
+            };
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated?.apply(this, arguments);
 
@@ -76,6 +89,8 @@ app.registerExtension({
                 const refreshBtn = container.querySelector('.kiko-refresh');
                 const cardHolder = container.querySelector('.kiko-cardholder');
                 const pagination = container.querySelector('.kiko-pagination');
+                const refsCount = container.querySelector('[data-refs-count]');
+                const clearRefsBtn = container.querySelector('.kiko-clear-refs');
                 const statusMessage = container.querySelector('.kiko-status-message');
                 const autocompleteDropdown = container.querySelector('.kiko-autocomplete-dropdown');
 
@@ -84,6 +99,7 @@ app.registerExtension({
                 let currentDirectory = '';
                 let parentDirectory = null;
                 let currentItems = [];
+                let refs = [];
                 let selectedPaths = {
                     image: null,
                     video: null,
@@ -511,12 +527,17 @@ app.registerExtension({
                             // Trigger layout when image loads
 
                             // Single click to select
-                            card.onclick = () => selectMedia(item, 'image', card);
+                            card.onclick = (event) => {
+                                if (event.ctrlKey || event.metaKey) setRefs(toggleRef(refs, item.path));
+                                else selectMedia(item, 'image', card);
+                            };
+                            card.dataset.refPath = item.path;
 
                             // Double click to open in new tab
                             card.ondblclick = (e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                if (e.ctrlKey || e.metaKey) return;
                                 const fullImageUrl = `/kiko_local_image_loader/view?filepath=${encodeURIComponent(item.path)}`;
                                 window.open(fullImageUrl, '_blank');
                             };
@@ -572,8 +593,97 @@ app.registerExtension({
                     });
 
                     container.querySelector('[data-file-count]').textContent = `${visibleItems.length} of ${currentItems.length} items`;
+                    renderRefs();
 
                 }
+
+                // Refs: ordered image paths picked with Ctrl/Cmd-click
+                function renderRefs() {
+                    refsCount.textContent = `Refs: ${refs.length}`;
+                    clearRefsBtn.disabled = refs.length === 0;
+                    cardHolder.querySelectorAll('[data-ref-path]').forEach(card => {
+                        const position = refs.indexOf(card.dataset.refPath) + 1;
+                        const name = card.querySelector('img').alt;
+                        card.querySelector('.kiko-ref-badge')?.remove();
+                        card.title = position ? `Ref ${position}` : '';
+                        card.setAttribute('aria-label', position ? `Select image ${name}, Ref ${position}` : `Select image ${name}`);
+                        if (!position) return;
+                        const badge = document.createElement('span');
+                        badge.className = 'kiko-ref-badge';
+                        badge.textContent = String(position);
+                        card.querySelector('.kiko-card-media-wrapper').append(badge);
+                    });
+                }
+
+                async function postRefs(paths) {
+                    const response = await fetchApi('/kiko_local_image_loader/set_node_refs', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ node_id: node.id, paths })
+                    });
+                    if (!response.ok) throw new Error(await describeHttpError(response));
+                }
+
+                // Posts run one at a time so the server's last write is the gallery's last request
+                let refsQueue = Promise.resolve();
+                let refsRequest = 0;
+                let confirmedRefs = [];
+                function sendRefs(paths) {
+                    const sent = refsQueue.then(() => postRefs(paths));
+                    refsQueue = sent.catch(() => {});
+                    return sent;
+                }
+
+                async function setRefs(next) {
+                    if (next.length > MAX_REFS) {
+                        showStatus(`At most ${MAX_REFS} refs can be picked`);
+                        return;
+                    }
+                    const request = ++refsRequest;
+                    refs = next;
+                    renderRefs();
+                    try {
+                        await sendRefs(next);
+                        if (scope.signal.aborted) return;
+                        confirmedRefs = next;
+                        if (request !== refsRequest) return;
+                        node.properties.kiko_refs = [...next];
+                        node.setDirtyCanvas(true);
+                    } catch (error) {
+                        if (scope.signal.aborted || request !== refsRequest) return;
+                        // An earlier request may have been confirmed without being saved to the workflow
+                        refs = confirmedRefs;
+                        node.properties.kiko_refs = [...confirmedRefs];
+                        node.setDirtyCanvas(true);
+                        renderRefs();
+                        showStatus(`Refs not saved: ${error.message}`);
+                    }
+                }
+
+                // Make the server's refs for this node id match the gallery
+                let refsSynced = false;
+                this.restoreRefs = async () => {
+                    refsSynced = true;
+                    const request = ++refsRequest;
+                    const saved = node.properties?.kiko_refs;
+                    const paths = Array.isArray(saved) ? [...new Set(saved.filter(path => typeof path === 'string'))] : [];
+                    refs = paths.slice(0, MAX_REFS);
+                    renderRefs();
+                    try {
+                        await sendRefs(refs);
+                        if (scope.signal.aborted) return;
+                        confirmedRefs = refs;
+                        if (refs.length < paths.length) showStatus(`Only the first ${MAX_REFS} refs were loaded`);
+                    } catch (error) {
+                        if (scope.signal.aborted || request !== refsRequest) return;
+                        refs = confirmedRefs = [];
+                        renderRefs();
+                        showStatus(`Refs were not loaded and were cleared: ${error.message}`);
+                        sendRefs([]).catch(() => {});
+                    }
+                };
+                queueMicrotask(() => { if (!refsSynced) this.restoreRefs(); });
+                scope.listen(clearRefsBtn, 'click', () => setRefs([]));
 
                 // Select media
                 // The folder output is the folder the gallery shows.

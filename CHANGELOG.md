@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Local Image Loader
+
+- Ctrl-click (Cmd-click on a Mac) images in the gallery to pick refs in order.
+  Each picked image shows its number, and the `Refs: N` bar has a `Clear refs`
+  button. A plain click still selects the single `image` output.
+- New `refs` output for the `refs_bundle` input of Create H3 RefMod in
+  ComfyUI-MiniMaxH3Mod. The first pick sets the size. The node scales each other
+  pick to cover that size and crops the center, the same rule Create H3 RefMod
+  uses.
+- New `refs_preview` output: the same images as one IMAGE batch, so you can see
+  what Create H3 RefMod will encode. It shares memory with `refs`.
+- Refs are images only, up to 256. The workflow saves the picks.
+
 ## 1.7.0
 
 ### Model Recommended Settings
