@@ -2184,7 +2184,8 @@ test('Ctrl-click picks ordered refs that survive folder changes, renumber and cl
     await expect(cat.locator('.kiko-ref-badge')).toHaveCount(0);
     await expect(page.locator('[data-refs-count]')).toHaveText('Refs: 1');
     await expect.poll(() => refsState(request, id)).toEqual([`${input}/sub/forest.png`]);
-    expect(await page.evaluate(id => kikoHost.nodes.get(String(id)).properties.kiko_refs, id)).toEqual([`${input}/sub/forest.png`]);
+    // The server writes before it replies, so the node's properties catch up a moment later
+    await expect.poll(() => page.evaluate(id => kikoHost.nodes.get(String(id)).properties.kiko_refs, id)).toEqual([`${input}/sub/forest.png`]);
     await cat.click();
     await expect(cat).toHaveAttribute('aria-pressed', 'true');
     await page.getByRole('button', { name: 'Clear refs' }).click();
