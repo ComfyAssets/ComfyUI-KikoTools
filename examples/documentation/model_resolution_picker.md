@@ -47,6 +47,7 @@ The frontend reads the family table from `GET /kikotools/model_resolution/famili
 | Krea 2 | Krea 2 Turbo, Krea 2 Raw and Krea 2 finetunes (Big Love KreaEdit3) | 8x | 16 | 1.0, 2.0, 4.0 | 1024×1024 | image |
 | Qwen-Image 2.1 | Qwen-Image 2.1 and 2.1 Turbo | 16x | 32 | 1.0, 4.0 | 1024×1024 | image |
 | HunyuanImage 2.1 | HunyuanImage 2.1 | 32x | 32 | 4.0 | 2048×2048 | image |
+| MiniMax H3 Image | MiniMax H3 Image | 16x | 32 | 1.0, 4.0, 16.0 | 2048×2048 | image |
 | Wan 2.2 (keyframes) | Wan 2.2 (first/last-frame sizes) | 16x | 16 | 0.4, 0.9 | 1280×720 | video |
 | LTX-2 (keyframes) | LTX-2 (first/last-frame sizes) | 32x | 32 | 0.4, 0.9 | 768×512 | video |
 | HunyuanVideo 1.5 (keyframes) | HunyuanVideo 1.5 (first/last-frame sizes) | 16x | 16 | 0.4, 0.9 | 1280×720 | video |
