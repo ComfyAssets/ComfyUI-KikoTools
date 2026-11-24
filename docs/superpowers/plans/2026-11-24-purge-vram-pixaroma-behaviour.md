@@ -124,7 +124,7 @@ Patch `logic_module.mm` (and `gc.collect`) per test. Tests:
 - `test_input_types`: `list(required) == ["mode", "report_memory"]`; `required["mode"][0] == ["all", "models", "cache"]` with default `"all"`; `list(optional) == ["anything", "memory_threshold_mb", "collect_garbage", "every_run"]`; threshold `(default, min, max, step) == (0, 0, 262144, 100)`; both switches default `True`.
 - `test_validate_inputs`: `VALIDATE_INPUTS("all") is True`; `VALIDATE_INPUTS("soft") is True`; `VALIDATE_INPUTS("turbo")` is a `str` containing `all, models, cache`.
 - `test_is_changed`: `IS_CHANGED(every_run=True, mode="all")` is NaN; `IS_CHANGED(every_run=False, mode="all", memory_threshold_mb=0, collect_garbage=True)` equals itself on a second call and differs when `mode="cache"`; missing `every_run` is treated as `True`.
-- `test_unwired_does_nothing`: `purge_vram("all", True)` returns `(None, report)` with `"Nothing wired in"` in the report and no `mm` call other than none at all.
+- `test_unwired_does_nothing`: `purge_vram("all", True)` returns `(None, report)` with `"Nothing wired in"` in the report and no `mm` call at all.
 - `test_falsy_input_counts_as_wired`: `purge_vram("all", True, anything=0)` calls `unload_all_models` and returns `0` as passthrough.
 - `test_all_mode_runs_and_reports`: `get_free_memory` returns 2 GiB then 10 GiB, total 24 GiB; report contains `"Mode: all"`, `"Memory Freed: 8192.0 MB"`, `"Before: 2048.0 MB free of 24576.0 MB"`, `"After: 10240.0 MB free of 24576.0 MB"`.
 - `test_legacy_mode_is_mapped_and_named`: `purge_vram("soft", True, anything="x")` unloads models and the report contains `"Mode: all (from legacy 'soft')"`.
