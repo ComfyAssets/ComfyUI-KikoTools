@@ -19,6 +19,13 @@ I tried forking, patching, and submitting merge requests, but eventually decided
 
 I’m sharing them here with the community, and I hope you find them as useful as I do.
 
+## 1.9.0: MiniMax H3 Image sizes
+
+The [Model Resolution Picker](#-model-resolution-picker) has a new
+`MiniMax H3 Image` family with 1K, 2K and 4K sizes for every ratio chip, all on
+the model's 32-pixel grid and defaulting to 2048×2048. See the
+[release notes](CHANGELOG.md).
+
 ## 1.8.0: refs for MiniMax H3
 
 Ctrl-click photos in the [Local Image Loader](#-local-image-loader) gallery to pick
