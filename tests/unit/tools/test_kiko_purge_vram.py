@@ -1,5 +1,5 @@
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import call, patch, MagicMock
 
 import pytest
 
@@ -9,9 +9,13 @@ sys.modules["comfy"] = MagicMock()
 sys.modules["comfy.model_management"] = mock_mm
 
 from kikotools.tools.kiko_purge_vram.logic import (
-    purge_memory,
-    get_memory_stats,
-    format_memory_report,
+    MODES,
+    memory_view,
+    plan_steps,
+    read_memory_mb,
+    resolve_mode,
+    run_steps,
+    should_skip,
 )
 
 # Ensure mm is available in the logic module after import
@@ -19,190 +23,125 @@ import kikotools.tools.kiko_purge_vram.logic as logic_module
 
 logic_module.mm = mock_mm
 
-
-class TestMemoryStats:
-    @patch("torch.cuda.is_available")
-    @patch("torch.cuda.mem_get_info")
-    def test_get_memory_stats_with_cuda(self, mock_mem_info, mock_cuda_available):
-        mock_cuda_available.return_value = True
-        mock_mem_info.return_value = (4000000000, 8000000000)  # 4GB free, 8GB total
-
-        stats = get_memory_stats()
-
-        assert stats["cuda_available"] is True
-        assert stats["free_mb"] == pytest.approx(3814.7, rel=0.1)
-        assert stats["total_mb"] == pytest.approx(7629.4, rel=0.1)
-        assert stats["used_mb"] == pytest.approx(3814.7, rel=0.1)
-        assert stats["used_percent"] == pytest.approx(50.0, rel=0.1)
-
-    @patch("torch.cuda.is_available")
-    def test_get_memory_stats_without_cuda(self, mock_cuda_available):
-        mock_cuda_available.return_value = False
-
-        stats = get_memory_stats()
-
-        assert stats["cuda_available"] is False
-        assert stats["free_mb"] == 0
-        assert stats["total_mb"] == 0
-        assert stats["used_mb"] == 0
-        assert stats["used_percent"] == 0
+GIB = 1024**3
 
 
-class TestMemoryPurge:
-    @patch("torch.cuda.is_available")
-    @patch("torch.cuda.empty_cache")
-    @patch("torch.cuda.ipc_collect")
-    @patch("gc.collect")
-    def test_purge_memory_soft_mode(
-        self, mock_gc, mock_ipc, mock_empty_cache, mock_cuda
+@pytest.fixture
+def fresh_mm():
+    mm = MagicMock()
+    with (
+        patch.object(logic_module, "mm", mm),
+        patch.object(logic_module, "COMFY_AVAILABLE", True),
     ):
-        mock_cuda.return_value = True
-
-        with patch(
-            "kikotools.tools.kiko_purge_vram.logic.get_memory_stats"
-        ) as mock_stats:
-            mock_stats.side_effect = [
-                {"used_mb": 4000, "free_mb": 4000},
-                {"used_mb": 2000, "free_mb": 6000},
-            ]
-
-            freed_mb = purge_memory(mode="soft", unload_models=False)
-
-            mock_gc.assert_called_once()
-            mock_empty_cache.assert_called_once()
-            mock_ipc.assert_not_called()
-            assert freed_mb == 2000
-
-    @patch("torch.cuda.is_available")
-    @patch("torch.cuda.empty_cache")
-    @patch("torch.cuda.ipc_collect")
-    @patch("torch.cuda.synchronize")
-    @patch("gc.collect")
-    def test_purge_memory_aggressive_mode(
-        self, mock_gc, mock_sync, mock_ipc, mock_empty_cache, mock_cuda
-    ):
-        mock_cuda.return_value = True
-
-        with patch(
-            "kikotools.tools.kiko_purge_vram.logic.get_memory_stats"
-        ) as mock_stats:
-            mock_stats.side_effect = [
-                {"used_mb": 4000, "free_mb": 4000},
-                {"used_mb": 1500, "free_mb": 6500},
-            ]
-
-            freed_mb = purge_memory(mode="aggressive", unload_models=False)
-
-            assert mock_gc.call_count == 2
-            mock_empty_cache.assert_called()
-            mock_ipc.assert_called_once()
-            mock_sync.assert_called_once()
-            assert freed_mb == 2500
-
-    @patch("kikotools.tools.kiko_purge_vram.logic.COMFY_AVAILABLE", True)
-    @patch("torch.cuda.is_available")
-    @patch("gc.collect")
-    def test_purge_memory_models_only(self, mock_gc, mock_cuda):
-        mock_cuda.return_value = True
-
-        with patch(
-            "kikotools.tools.kiko_purge_vram.logic.get_memory_stats"
-        ) as mock_stats:
-            mock_stats.side_effect = [
-                {"used_mb": 6000, "free_mb": 2000},
-                {"used_mb": 1000, "free_mb": 7000},
-            ]
-
-            freed_mb = purge_memory(mode="models_only", unload_models=True)
-
-            mock_mm.unload_all_models.assert_called_once()
-            mock_mm.soft_empty_cache.assert_called_once()
-            mock_gc.assert_called()
-            assert freed_mb == 5000
-
-    @patch("torch.cuda.is_available")
-    @patch("torch.cuda.empty_cache")
-    @patch("gc.collect")
-    def test_purge_memory_cache_only(self, mock_gc, mock_empty_cache, mock_cuda):
-        mock_cuda.return_value = True
-
-        with patch(
-            "kikotools.tools.kiko_purge_vram.logic.get_memory_stats"
-        ) as mock_stats:
-            mock_stats.side_effect = [
-                {"used_mb": 3000, "free_mb": 5000},
-                {"used_mb": 2500, "free_mb": 5500},
-            ]
-
-            freed_mb = purge_memory(mode="cache_only", unload_models=False)
-
-            mock_gc.assert_not_called()
-            mock_empty_cache.assert_called_once()
-            assert freed_mb == 500
-
-    @patch("torch.cuda.is_available")
-    def test_purge_memory_no_cuda(self, mock_cuda):
-        mock_cuda.return_value = False
-
-        with patch("gc.collect") as mock_gc:
-            freed_mb = purge_memory(mode="soft", unload_models=False)
-
-            mock_gc.assert_called_once()
-            assert freed_mb == 0
+        yield mm
 
 
-class TestMemoryReport:
-    def test_format_memory_report_with_improvement(self):
-        before = {
-            "used_mb": 4000,
-            "free_mb": 4000,
-            "total_mb": 8000,
-            "used_percent": 50,
+class TestModes:
+    def test_resolve_mode_new_and_legacy(self):
+        assert resolve_mode("all") == ("all", None)
+        assert resolve_mode("soft") == ("all", "soft")
+        assert resolve_mode("aggressive") == ("all", "aggressive")
+        assert resolve_mode("models_only") == ("models", "models_only")
+        assert resolve_mode("cache_only") == ("cache", "cache_only")
+
+    def test_resolve_mode_rejects_unknown(self):
+        with pytest.raises(ValueError, match="all, models, cache"):
+            resolve_mode("turbo")
+
+    def test_plan_steps(self):
+        assert plan_steps("all", True) == {"models": True, "gc": True, "cache": True}
+        assert plan_steps("models", True) == {
+            "models": True,
+            "gc": True,
+            "cache": False,
         }
-        after = {"used_mb": 2000, "free_mb": 6000, "total_mb": 8000, "used_percent": 25}
-
-        report = format_memory_report(before, after, mode="soft", elapsed_ms=150)
-
-        assert "Memory Purge Report" in report
-        assert "Mode: soft" in report
-        assert "Memory Freed: 2000.0 MB" in report
-        assert "Before: 4000.0 MB used (50.0%)" in report
-        assert "After: 2000.0 MB used (25.0%)" in report
-        assert "Time: 150.0ms" in report
-
-    def test_format_memory_report_no_improvement(self):
-        before = {
-            "used_mb": 2000,
-            "free_mb": 6000,
-            "total_mb": 8000,
-            "used_percent": 25,
-        }
-        after = {"used_mb": 2000, "free_mb": 6000, "total_mb": 8000, "used_percent": 25}
-
-        report = format_memory_report(before, after, mode="cache_only", elapsed_ms=50)
-
-        assert "Memory Freed: 0.0 MB" in report
-        assert "Time: 50.0ms" in report
-
-    def test_format_memory_report_no_cuda(self):
-        before = {
-            "used_mb": 0,
-            "free_mb": 0,
-            "total_mb": 0,
-            "used_percent": 0,
-            "cuda_available": False,
-        }
-        after = {
-            "used_mb": 0,
-            "free_mb": 0,
-            "total_mb": 0,
-            "used_percent": 0,
-            "cuda_available": False,
+        assert plan_steps("cache", False) == {
+            "models": False,
+            "gc": False,
+            "cache": True,
         }
 
-        report = format_memory_report(before, after, mode="soft", elapsed_ms=10)
+    def test_memory_view(self):
+        assert [memory_view(m) for m in MODES] == ["comfy", "comfy", "driver"]
 
-        assert "CUDA not available" in report
+
+class TestRunSteps:
+    def test_run_steps_order_all(self, fresh_mm):
+        parent = MagicMock()
+        parent.attach_mock(fresh_mm, "mm")
+        with patch("gc.collect") as collect:
+            parent.attach_mock(collect, "collect")
+            run_steps(plan_steps("all", True))
+
+        assert parent.mock_calls == [
+            call.mm.unload_all_models(),
+            call.collect(),
+            call.mm.soft_empty_cache(True),
+        ]
+
+    def test_run_steps_models_skips_cache(self, fresh_mm):
+        with patch("gc.collect"):
+            run_steps(plan_steps("models", True))
+
+        fresh_mm.unload_all_models.assert_called_once()
+        fresh_mm.soft_empty_cache.assert_not_called()
+
+    def test_run_steps_cache_skips_unload(self, fresh_mm):
+        with patch("gc.collect") as collect:
+            run_steps(plan_steps("cache", True))
+
+        fresh_mm.unload_all_models.assert_not_called()
+        collect.assert_not_called()
+        fresh_mm.soft_empty_cache.assert_called_once_with(True)
+
+    def test_run_steps_without_comfy_only_collects(self, fresh_mm):
+        logic_module.COMFY_AVAILABLE = False
+        try:
+            with patch("gc.collect") as collect:
+                run_steps(plan_steps("all", True))
+        finally:
+            logic_module.COMFY_AVAILABLE = True
+
+        collect.assert_called_once()
+        assert fresh_mm.mock_calls == []
+
+
+class TestReadMemory:
+    def test_read_memory_comfy_view(self, fresh_mm):
+        fresh_mm.get_free_memory.return_value = 6 * GIB
+        fresh_mm.get_total_memory.return_value = 24 * GIB
+
+        assert read_memory_mb("comfy") == (6144.0, 24576.0)
+
+    def test_read_memory_driver_view(self, fresh_mm):
+        fresh_mm.get_free_memory.return_value = (8 * GIB, 2 * GIB)
+        fresh_mm.get_total_memory.return_value = 24 * GIB
+
+        free_mb, total_mb = read_memory_mb("driver")
+
+        assert free_mb == 6144.0
+        assert total_mb == 24576.0
+        assert fresh_mm.get_free_memory.call_args.kwargs == {"torch_free_too": True}
+
+    def test_read_memory_returns_none_when_mm_raises(self, fresh_mm):
+        fresh_mm.get_torch_device.side_effect = RuntimeError
+
+        assert read_memory_mb("comfy") is None
+
+    def test_read_memory_returns_none_without_comfy(self, fresh_mm):
+        logic_module.COMFY_AVAILABLE = False
+        try:
+            assert read_memory_mb("comfy") is None
+        finally:
+            logic_module.COMFY_AVAILABLE = True
+
+
+def test_should_skip():
+    assert should_skip(0, 9000.0) is False
+    assert should_skip(4000, 9000.0) is True
+    assert should_skip(4000, 4000.0) is True
+    assert should_skip(4000, 3999.0) is False
+    assert should_skip(4000, None) is False
 
 
 class TestKikoPurgeVRAMNode:
