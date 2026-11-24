@@ -22,10 +22,11 @@
 - A failing step now stops the run with an error, after the node repairs
   ComfyUI's loaded-model list so later jobs keep working. The traceback is
   logged.
-- The `models` step unloads loaded models one at a time instead of calling
-  ComfyUI's `unload_all_models()`, which can fail when one unload frees another
-  model mid-loop and leave ComfyUI unable to start the next job. This differs
-  deliberately from Free VRAM Pixaroma.
+- The `models` step drains ComfyUI's loaded-model list one entry at a time, then
+  calls `unload_all_models()` so other packs' hooks still run. Calling
+  `unload_all_models()` alone can fail when one unload frees another model
+  mid-loop and leave ComfyUI unable to start the next job.
+- Out-of-memory errors are re-raised unchanged so ComfyUI still handles them.
 - Behaviour based on Free VRAM Pixaroma from
   [ComfyUI-Pixaroma](https://github.com/pixaroma/ComfyUI-Pixaroma) by Pixaroma.
 

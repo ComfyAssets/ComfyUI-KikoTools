@@ -11,6 +11,7 @@ except ImportError:
     from kikotools.base.any_type import AnyType
 from .logic import (
     MODES,
+    is_out_of_memory,
     memory_view,
     plan_steps,
     read_memory_mb,
@@ -27,6 +28,19 @@ any_type = AnyType("*")
 CREDIT = "Behaviour based on Free VRAM Pixaroma from ComfyUI-Pixaroma by Pixaroma."
 NO_INPUT_REPORT = "Nothing wired in: connect a value to 'anything' to purge."
 MAX_THRESHOLD_MB = 262144
+
+
+def _repair_text(removed: int) -> str:
+    if removed == 0:
+        return (
+            "ComfyUI's loaded-model list was checked; "
+            "no half-unloaded entries were found."
+        )
+    noun = "entry" if removed == 1 else "entries"
+    return (
+        f"ComfyUI's loaded-model list was repaired ({removed} half-unloaded "
+        f"{noun} removed) so later jobs keep working."
+    )
 
 
 class KikoPurgeVRAM(BaseNode):
@@ -148,12 +162,13 @@ class KikoPurgeVRAM(BaseNode):
         try:
             run_steps(plan_steps(resolved, collect_garbage))
         except Exception as exc:
-            removed = repair_loaded_models()
             logger.exception("Kiko Purge VRAM: purge failed")
+            removed = repair_loaded_models()
+            if is_out_of_memory(exc):
+                raise  # ComfyUI recognises out-of-memory errors; keep them intact
             raise RuntimeError(
                 f"Kiko Purge VRAM could not free memory: {exc}. "
-                f"ComfyUI's loaded-model list was repaired ({removed} "
-                "half-unloaded entries removed) so later jobs keep working."
+                f"{_repair_text(removed)}"
             ) from exc
         elapsed_ms = (time.perf_counter() - start) * 1000
         after = read_memory_mb(view)

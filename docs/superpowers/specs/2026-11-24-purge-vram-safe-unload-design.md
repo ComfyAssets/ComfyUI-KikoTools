@@ -18,9 +18,12 @@ ComfyUI in that state, and stop hiding the failure.
 - Unloading one model can drop the last reference to another model's weights,
   which fires that entry's `weakref.finalize(..., cleanup_models)`. `cleanup_models`
   pops dead entries from the same list mid-loop, so a recorded position points
-  past the end: "list index out of range". This trigger is inferred from the code;
-  it is the only path that shrinks the list inside that loop. It was not reproduced
-  on a GPU.
+  past the end: "list index out of range". This trigger is the only path
+  that shrinks the list inside that loop. The IndexError and the follow-on
+  TypeError reproduce on CPU with the installed ComfyUI's real
+  `LoadedModel`/`ModelPatcher` classes (an ON_DETACH callback dropping the last
+  reference to other models). The drain-then-delegate unload leaves the list empty
+  and `cleanup_models_gc()` clean.
 - The entries already unloaded keep `real_model = None` and are never removed.
   `cleanup_models_gc` (run by every `load_models_gpu`, and by `execution.py` at the
   start of each prompt, outside any node's error handling) calls
@@ -30,13 +33,14 @@ ComfyUI in that state, and stop hiding the failure.
 
 ## Goals
 
-1. **Safe unload.** The `models` step no longer calls `unload_all_models()`.
-   It iterates over a copy of `mm.current_loaded_models` and, for each entry still
+1. **Safe unload.** The `models` step first drains the list, then calls
+   `unload_all_models()` once so other packs' hooks on it still run. It iterates over a copy of `mm.current_loaded_models` and, for each entry still
    in the live list: an entry whose `real_model is None` (already unloaded) or
    whose `model is None` (patcher collected) is removed without unloading;
    otherwise call `entry.model_unload()` and then remove that entry from the live
    list by identity if it is still there. Removal by identity makes the loop immune
-   to the list shrinking under it. If `mm` has no `current_loaded_models` list
+   to the list shrinking under it. Once the drain is done the list is empty (or holds
+   only entries added meanwhile), so `unload_all_models()` has nothing to trip on. If `mm` has no `current_loaded_models` list
    (a ComfyUI that renamed it), fall back to `mm.unload_all_models()`.
 2. **Repair on failure.** If any step raises, first remove from
    `mm.current_loaded_models` every entry whose `real_model is None`, so the next

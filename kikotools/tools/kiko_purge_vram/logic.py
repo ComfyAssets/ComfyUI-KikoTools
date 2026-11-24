@@ -83,7 +83,9 @@ def unload_models_safely() -> None:
 
     ComfyUI's unload_all_models() indexes into the live list and can raise
     IndexError when a finalizer removes entries mid-loop. Iterate a copy and
-    re-check each entry against the live list instead.
+    re-check each entry against the live list instead. Then call
+    unload_all_models() once, so hooks other packs wrap around it still run;
+    the list is empty by then, so its stale-index loop has nothing to trip on.
     """
     loaded = getattr(mm, "current_loaded_models", None)
     if not isinstance(loaded, list):
@@ -99,8 +101,20 @@ def unload_models_safely() -> None:
         entry.model_unload()
         unloaded_any = True
         _remove(loaded, entry)
+    mm.unload_all_models()
     if unloaded_any:
         mm.soft_empty_cache()
+
+
+def is_out_of_memory(exc: BaseException) -> bool:
+    """True when ComfyUI's own is_oom() recognises the error."""
+    checker = getattr(mm, "is_oom", None)
+    if not COMFY_AVAILABLE or not callable(checker):
+        return False
+    try:
+        return bool(checker(exc))
+    except Exception:
+        return False
 
 
 def repair_loaded_models() -> int:

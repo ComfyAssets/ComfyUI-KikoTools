@@ -33,6 +33,7 @@ GIB = 1024**3
 @pytest.fixture
 def fresh_mm():
     mm = MagicMock()
+    mm.is_oom.return_value = False
     with (
         patch.object(logic_module, "mm", mm),
         patch.object(logic_module, "COMFY_AVAILABLE", True),
@@ -75,15 +76,32 @@ class TestModes:
 
 
 class FakeLoaded:
-    def __init__(self, name, loaded=True, patcher=True, on_unload=None):
+    def __init__(
+        self,
+        name,
+        loaded=True,
+        patcher=True,
+        on_unload=None,
+        raise_before_clearing=False,
+        shared_model=None,
+    ):
         self.name = name
         self.real_model = (lambda: object()) if loaded else None
-        self.model = object() if patcher else None
+        self.model = shared_model or (object() if patcher else None)
         self.on_unload = on_unload
+        self.raise_before_clearing = raise_before_clearing
         self.unload_calls = 0
+
+    def __eq__(self, other):
+        # ComfyUI's LoadedModel compares patchers, not entries.
+        return isinstance(other, FakeLoaded) and self.model is other.model
+
+    __hash__ = object.__hash__
 
     def model_unload(self):
         self.unload_calls += 1
+        if self.on_unload and self.raise_before_clearing:
+            self.on_unload()
         self.real_model = None
         if self.on_unload:
             self.on_unload()
@@ -98,7 +116,52 @@ class TestSafeUnload:
 
         assert [e.unload_calls for e in entries] == [1, 1, 1]
         assert fresh_mm.current_loaded_models == []
-        fresh_mm.unload_all_models.assert_not_called()
+
+    def test_unload_delegates_to_unload_all_models_after_the_drain(self, fresh_mm):
+        entries = [FakeLoaded(n) for n in "ab"]
+        fresh_mm.current_loaded_models = list(entries)
+        order = []
+        for entry in entries:
+            entry.on_unload = lambda name=entry.name: order.append(name)
+        fresh_mm.unload_all_models.side_effect = lambda: order.append("unload_all")
+
+        unload_models_safely()
+
+        assert order == ["a", "b", "unload_all"]
+        fresh_mm.unload_all_models.assert_called_once_with()
+
+    def test_unload_delegates_even_when_nothing_needed_unloading(self, fresh_mm):
+        fresh_mm.current_loaded_models = [
+            FakeLoaded("x", loaded=False),
+            FakeLoaded("y", patcher=False),
+        ]
+
+        unload_models_safely()
+
+        fresh_mm.unload_all_models.assert_called_once_with()
+
+    def test_unload_removes_by_identity_when_entries_share_a_patcher(self, fresh_mm):
+        shared = object()
+        a = FakeLoaded("a", shared_model=shared)
+        b = FakeLoaded("b", shared_model=shared)
+        assert a == b
+        b.real_model = None
+        fresh_mm.current_loaded_models = [a, b]
+
+        unload_models_safely()
+
+        assert (a.unload_calls, b.unload_calls) == (1, 0)
+        assert fresh_mm.current_loaded_models == []
+
+    def test_repair_removes_by_identity_when_entries_share_a_patcher(self, fresh_mm):
+        shared = object()
+        good = FakeLoaded("good", shared_model=shared)
+        half = FakeLoaded("half", loaded=False, shared_model=shared)
+        fresh_mm.current_loaded_models = [good, half]
+
+        assert repair_loaded_models() == 1
+        assert fresh_mm.current_loaded_models[0] is good
+        assert len(fresh_mm.current_loaded_models) == 1
 
     def test_unload_survives_list_shrinking_mid_loop(self, fresh_mm):
         loaded = []
@@ -254,6 +317,12 @@ def _node():
     from kikotools.tools.kiko_purge_vram.node import KikoPurgeVRAM
 
     return KikoPurgeVRAM
+
+
+def _node_module():
+    import kikotools.tools.kiko_purge_vram.node as node_module
+
+    return node_module
 
 
 def _set_memory(mm, frees_gib, total_gib=24):
@@ -455,9 +524,77 @@ class TestPurgeVram:
         assert "Kiko Purge VRAM could not free memory" in message
         assert "boom" in message
         assert "repaired" in message
+        assert "1 half-unloaded entry removed" in message
         assert all(e.real_model is not None for e in fresh_mm.current_loaded_models)
         assert isinstance(caught.value.__cause__, RuntimeError)
         assert str(caught.value.__cause__) == "boom"
+
+    def test_step_error_reports_one_removed_entry(self, fresh_mm):
+        self._failing_models(fresh_mm)
+        with patch.object(_node_module(), "repair_loaded_models", return_value=1):
+            with pytest.raises(RuntimeError) as caught:
+                _node()().purge_vram("all", True, anything=1)
+
+        assert "1 half-unloaded entry removed" in str(caught.value)
+
+    def test_step_error_reports_many_removed_entries(self, fresh_mm):
+        self._failing_models(fresh_mm)
+        with patch.object(_node_module(), "repair_loaded_models", return_value=3):
+            with pytest.raises(RuntimeError) as caught:
+                _node()().purge_vram("all", True, anything=1)
+
+        assert "3 half-unloaded entries removed" in str(caught.value)
+
+    def test_step_error_logs_before_repairing(self, fresh_mm):
+        self._failing_models(fresh_mm)
+        order = []
+        with (
+            patch.object(
+                _node_module().logger,
+                "exception",
+                side_effect=lambda *a: order.append("log"),
+            ),
+            patch.object(
+                _node_module(),
+                "repair_loaded_models",
+                side_effect=lambda: order.append("repair") or 0,
+            ),
+        ):
+            with pytest.raises(RuntimeError):
+                _node()().purge_vram("all", True, anything=1)
+
+        assert order == ["log", "repair"]
+
+    def test_out_of_memory_error_is_reraised_unchanged(self, fresh_mm):
+        oom = MemoryError("out of memory")
+
+        def boom():
+            raise oom
+
+        failing = FakeLoaded("a", on_unload=boom)
+        fresh_mm.current_loaded_models = [failing, FakeLoaded("b")]
+        fresh_mm.is_oom.return_value = True
+        _set_memory(fresh_mm, [2, 2])
+
+        with pytest.raises(MemoryError) as caught:
+            _node()().purge_vram("all", True, anything=1)
+
+        assert caught.value is oom
+        assert all(e.real_model is not None for e in fresh_mm.current_loaded_models)
+
+    def test_failure_before_real_model_cleared_leaves_entry_and_says_so(self, fresh_mm):
+        def boom():
+            raise RuntimeError("boom")
+
+        failing = FakeLoaded("a", on_unload=boom, raise_before_clearing=True)
+        fresh_mm.current_loaded_models = [failing]
+        _set_memory(fresh_mm, [2, 2])
+
+        with pytest.raises(RuntimeError) as caught:
+            _node()().purge_vram("all", True, anything=1)
+
+        assert fresh_mm.current_loaded_models == [failing]
+        assert "no half-unloaded entries were found" in str(caught.value)
 
     def test_step_error_logs_traceback(self, fresh_mm, caplog):
         self._failing_models(fresh_mm)
