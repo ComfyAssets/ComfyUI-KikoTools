@@ -15,7 +15,7 @@ A light-theme capture is at `docs/screenshots/resolution-picker/ModelResolutionP
 - **Category**: `🫶 ComfyAssets/🖼️ Resolution`
 
 ### Inputs
-- **model**: Dropdown of the 14 shipped family labels (default `SDXL`)
+- **model**: Dropdown of the 16 shipped family labels (default `SDXL`)
 - **resolution**: Dropdown of `custom` plus size labels such as `1216×832 - 3:2 (1.0MP)` (default `custom`); see [Resolution dropdown](#resolution-dropdown)
 - **width**: Width in pixels (64-8192, step 8)
 - **height**: Height in pixels (64-8192, step 8)
@@ -47,6 +47,7 @@ The frontend reads the family table from `GET /kikotools/model_resolution/famili
 | Krea 2 | Krea 2 Turbo, Krea 2 Raw and Krea 2 finetunes (Big Love KreaEdit3) | 8x | 16 | 1.0, 2.0, 4.0 | 1024×1024 | image |
 | Qwen-Image 2.1 | Qwen-Image 2.1 and 2.1 Turbo | 16x | 32 | 1.0, 4.0 | 1024×1024 | image |
 | HunyuanImage 2.1 | HunyuanImage 2.1 | 32x | 32 | 4.0 | 2048×2048 | image |
+| MiniMax H3 Image | MiniMax H3 Image | 16x | 32 | 1.0, 4.0, 16.0 | 2048×2048 | image |
 | Wan 2.2 (keyframes) | Wan 2.2 (first/last-frame sizes) | 16x | 16 | 0.4, 0.9 | 1280×720 | video |
 | LTX-2 (keyframes) | LTX-2 (first/last-frame sizes) | 32x | 32 | 0.4, 0.9 | 768×512 | video |
 | HunyuanVideo 1.5 (keyframes) | HunyuanVideo 1.5 (first/last-frame sizes) | 16x | 16 | 0.4, 0.9 | 1280×720 | video |
@@ -156,7 +157,7 @@ The native `resolution` dropdown sits between `model` and `width` and mirrors th
 The Swap W×H button (the same control Width Height Selector and Empty Latent Batch use) exchanges width and height and lands on the mirrored chip, for example 3:4 becomes 4:3.
 
 ### Changing the model
-Switching the model keeps the current size if the new family lists it. Otherwise it falls back to the active chip's default size in the new family, then to the family default.
+Switching the model keeps the current size if the new family lists it. Otherwise it falls back to the active chip's default size in the new family, then to the family default. For MiniMax H3 Image, coming from 1024×1024 keeps the 1K preview tier; pick 2048×2048 for the area the model is tuned for.
 
 ### Custom ratio
 Choose the `Custom ratio` chip and type a ratio such as `16:9`. The panel computes sizes at the family's megapixel tiers, rounded to the family's step. Bad input is rejected with "Enter a ratio like 16:9".
@@ -178,12 +179,13 @@ Panel state is derived from the native widgets, so nothing extra is saved in the
 
 ## Manual GPU Check Before Merge
 
-The real-host CI never queues a generation, so the latent path is only unit-tested. Core `EmptyLatentImage` is the same 4-channel, 8x, marked latent this node emits, and the official Anima template already runs that path (channel repeat 4 → 16). Confirm two cases by hand on a GPU box. Each is one queued image through this node → KSampler → VAE Decode → Save:
+The real-host CI never queues a generation, so the latent path is only unit-tested. Core `EmptyLatentImage` is the same 4-channel, 8x, marked latent this node emits, and the official Anima template already runs that path (channel repeat 4 → 16). Confirm three cases by hand on a GPU box. Each is one queued image through this node → KSampler → VAE Decode → Save:
 
 1. `Flux.2 / Klein / MOSS` (16x) at 1248×832.
 2. `HunyuanImage 2.1` (32x) at 2560×1536.
+3. `MiniMax H3 Image` (16x) at 5472×3072, where the picker's empty latent should reach the sampler as `[1, 24, 1, 192, 342]`.
 
-For each case, the saved PNG's dimensions must equal the node's width and height outputs. Record both results in the PR description.
+For each case, the saved PNG's dimensions must equal the node's width and height outputs. Record all three results in the PR description.
 
 ## Related Nodes
 

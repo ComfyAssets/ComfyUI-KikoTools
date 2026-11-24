@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Model Resolution Picker
+
+- New `MiniMax H3 Image` family: 16x VAE, step 32, 1K / 2K / 4K tiers from
+  MiniMax's reference size formula, defaulting to 2048×2048. The 2K and 4K sizes
+  match MiniMax's published table; 1K sizes are rounded onto the 32 grid.
+  The `MiniMax H3 (keyframes)` row for the H3 video model is unchanged. Switching
+  to it from 1024×1024 keeps the 1K preview tier; pick 2048×2048 for the area the
+  model is tuned for.
+
 ## 1.8.0
 
 ### Local Image Loader
