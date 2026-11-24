@@ -1467,6 +1467,180 @@
       "notes": "HunyuanImage 2.1 model card resolution list"
     },
     {
+      "label": "MiniMax H3 Image",
+      "aliases": [],
+      "models": "MiniMax H3 Image",
+      "group": "image",
+      "vaeRatio": 16,
+      "step": 32,
+      "megapixels": [
+        1.0,
+        4.0,
+        16.0
+      ],
+      "default": [
+        2048,
+        2048
+      ],
+      "sizes": {
+        "1:1": [
+          [
+            1024,
+            1024
+          ],
+          [
+            2048,
+            2048
+          ],
+          [
+            4096,
+            4096
+          ]
+        ],
+        "4:5": [
+          [
+            928,
+            1152
+          ],
+          [
+            1824,
+            2304
+          ],
+          [
+            3648,
+            4576
+          ]
+        ],
+        "5:4": [
+          [
+            1152,
+            928
+          ],
+          [
+            2304,
+            1824
+          ],
+          [
+            4576,
+            3648
+          ]
+        ],
+        "3:4": [
+          [
+            896,
+            1184
+          ],
+          [
+            1760,
+            2368
+          ],
+          [
+            3552,
+            4736
+          ]
+        ],
+        "4:3": [
+          [
+            1184,
+            896
+          ],
+          [
+            2368,
+            1760
+          ],
+          [
+            4736,
+            3552
+          ]
+        ],
+        "2:3": [
+          [
+            832,
+            1248
+          ],
+          [
+            1664,
+            2496
+          ],
+          [
+            3360,
+            5024
+          ]
+        ],
+        "3:2": [
+          [
+            1248,
+            832
+          ],
+          [
+            2496,
+            1664
+          ],
+          [
+            5024,
+            3360
+          ]
+        ],
+        "9:16": [
+          [
+            768,
+            1376
+          ],
+          [
+            1536,
+            2720
+          ],
+          [
+            3072,
+            5472
+          ]
+        ],
+        "16:9": [
+          [
+            1376,
+            768
+          ],
+          [
+            2720,
+            1536
+          ],
+          [
+            5472,
+            3072
+          ]
+        ],
+        "21:9": [
+          [
+            1568,
+            672
+          ],
+          [
+            3136,
+            1344
+          ],
+          [
+            6272,
+            2688
+          ]
+        ],
+        "9:21": [
+          [
+            672,
+            1568
+          ],
+          [
+            1344,
+            3136
+          ],
+          [
+            2688,
+            6272
+          ]
+        ]
+      },
+      "notes": "MiniMax reference size formula (examples/context_ir.py) at 1K, 2K and 4K areas, step 32. 2K and 4K match MiniMax's published output table; 1K is rounded onto the 32 grid."
+    },
+    {
       "label": "Wan 2.2 (keyframes)",
       "aliases": [],
       "models": "Wan 2.2 keyframes: frame sizes for first/last-frame generation; the latent output is an image latent",

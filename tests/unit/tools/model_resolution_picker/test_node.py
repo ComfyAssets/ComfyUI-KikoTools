@@ -117,3 +117,25 @@ def test_registered_in_kikotools():
     assert (
         NODE_DISPLAY_NAME_MAPPINGS["ModelResolutionPicker"] == "Model Resolution Picker"
     )
+
+
+def test_h3_image_rounds_custom_sizes_to_32():
+    _, w, h = ModelResolutionPickerNode().create(
+        "MiniMax H3 Image", "custom", 1360, 768, 1
+    )
+    assert (w, h) == (1376, 768)
+
+
+def test_h3_image_listed_sizes_pass_through():
+    node = ModelResolutionPickerNode()
+    assert node.create("MiniMax H3 Image", "custom", 6272, 2688, 1)[1:] == (6272, 2688)
+    _, w, h = node.create("MiniMax H3 Image", "2048×2048 - 1:1 (4.0MP)", 1024, 1024, 1)
+    assert (w, h) == (2048, 2048)
+
+
+def test_h3_image_4k_latent_is_the_usual_empty_latent():
+    latent, w, h = ModelResolutionPickerNode().create(
+        "MiniMax H3 Image", "custom", 5472, 3072, 2
+    )
+    assert tuple(latent["samples"].shape) == (2, 4, 384, 684)
+    assert latent["downscale_ratio_spacial"] == 8

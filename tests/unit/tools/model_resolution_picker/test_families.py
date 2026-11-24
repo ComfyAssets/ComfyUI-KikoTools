@@ -76,6 +76,7 @@ def test_defaults_labels_and_must_includes():
         "Qwen-Image": [(1664, 928)],
         "Qwen-Image 2.1": [(2048, 2048), (2400, 1792), (2528, 1696), (2752, 1536)],
         "HunyuanImage 2.1": [(2560, 1536), (2304, 1792)],
+        "MiniMax H3 Image": [(2048, 2048), (1376, 768), (5472, 3072), (6272, 2688)],
         "Illustrious XL": [(1248, 1824), (1536, 1536), (1152, 2048)],
         "Wan 2.2 (keyframes)": [(1280, 704), (640, 640), (960, 960)],
         "LTX-2 (keyframes)": [(960, 544), (768, 512)],
@@ -114,3 +115,29 @@ def test_payload_is_json_shaped():
         and sdxl["vaeRatio"] == 8
         and sdxl["group"] == "image"
     )
+
+
+H3_IMAGE = {
+    "1:1": [(1024, 1024), (2048, 2048), (4096, 4096)],
+    "5:4": [(1152, 928), (2304, 1824), (4576, 3648)],
+    "4:3": [(1184, 896), (2368, 1760), (4736, 3552)],
+    "3:2": [(1248, 832), (2496, 1664), (5024, 3360)],
+    "16:9": [(1376, 768), (2720, 1536), (5472, 3072)],
+    "21:9": [(1568, 672), (3136, 1344), (6272, 2688)],
+}
+
+
+def test_minimax_h3_image_ships_the_reference_table():
+    family = resolve_family("MiniMax H3 Image")
+    assert (family.group, family.vae_ratio, family.step) == ("image", 16, 32)
+    assert tuple(family.megapixels) == (1.0, 4.0, 16.0)
+    assert tuple(family.default) == (2048, 2048)
+    expected = dict(H3_IMAGE)
+    for chip, sizes in H3_IMAGE.items():
+        expected[MIRROR[chip]] = [(h, w) for w, h in sizes]
+    assert {c: [tuple(s) for s in e] for c, e in family.sizes.items()} == expected
+
+
+def test_minimax_h3_image_sits_after_hunyuan_image():
+    labels = family_labels()
+    assert labels.index("MiniMax H3 Image") == labels.index("HunyuanImage 2.1") + 1
