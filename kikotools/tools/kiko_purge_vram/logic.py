@@ -34,7 +34,7 @@ def plan_steps(mode: str, collect_garbage: bool) -> Dict[str, bool]:
     """Decide which purge steps run for an already-resolved mode."""
     return {
         "models": mode in ("all", "models"),
-        "gc": collect_garbage and mode in ("all", "models"),
+        "gc": collect_garbage,
         "cache": mode in ("all", "cache"),
     }
 
@@ -50,7 +50,7 @@ def read_memory_mb(view: str) -> Optional[Tuple[float, float]]:
         return None
     try:
         device = mm.get_torch_device()
-        if view == "driver":
+        if view == "driver" and getattr(device, "type", None) not in ("cpu", "mps"):
             free_total, free_torch = mm.get_free_memory(device, torch_free_too=True)
             free_bytes = free_total - free_torch
         else:

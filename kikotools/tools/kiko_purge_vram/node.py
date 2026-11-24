@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -18,6 +19,8 @@ from .logic import (
     should_skip,
 )
 
+logger = logging.getLogger(__name__)
+
 any_type = AnyType("*")
 
 CREDIT = "Behaviour based on Free VRAM Pixaroma from ComfyUI-Pixaroma by Pixaroma."
@@ -37,7 +40,8 @@ class KikoPurgeVRAM(BaseNode):
                         "tooltip": (
                             "all: unload models, collect garbage, empty the cache. "
                             "models: unload models and collect garbage. "
-                            "cache: only empty the GPU cache."
+                            "cache: only empty the GPU cache. "
+                            "Garbage collection follows collect_garbage in every mode."
                         ),
                     },
                 ),
@@ -68,7 +72,7 @@ class KikoPurgeVRAM(BaseNode):
                     "BOOLEAN",
                     {
                         "default": True,
-                        "tooltip": "Run Python garbage collection after unloading models",
+                        "tooltip": "Run Python garbage collection (in every mode, before the cache is emptied)",
                     },
                 ),
                 "every_run": (
@@ -96,9 +100,11 @@ class KikoPurgeVRAM(BaseNode):
     )
 
     @classmethod
-    def VALIDATE_INPUTS(cls, mode: str) -> Union[bool, str]:
+    def VALIDATE_INPUTS(cls, mode: Optional[str]) -> Union[bool, str]:
         """Naming only `mode` makes ComfyUI skip its dropdown check, so old
         mode names keep loading; unknown ones are rejected here."""
+        if mode is None:  # linked input: ComfyUI passes None, run time resolves it
+            return True
         try:
             resolve_mode(mode)
         except ValueError as error:
@@ -107,7 +113,7 @@ class KikoPurgeVRAM(BaseNode):
 
     @classmethod
     def IS_CHANGED(cls, **kwargs: Any) -> Union[float, str]:
-        if kwargs.get("every_run", True):
+        if kwargs.get("every_run") is not False:
             return float("nan")
         return "|".join(
             str(kwargs.get(key))
@@ -137,17 +143,18 @@ class KikoPurgeVRAM(BaseNode):
             )
             return anything, report if report_memory else ""
 
-        start = time.time()
+        start = time.perf_counter()
         error: Optional[str] = None
         try:
             run_steps(plan_steps(resolved, collect_garbage))
         except Exception as exc:
             error = f"Could not free memory: {exc}"
-        elapsed_ms = (time.time() - start) * 1000
+            logger.warning("Kiko Purge VRAM: %s", error)
+        elapsed_ms = (time.perf_counter() - start) * 1000
         after = read_memory_mb(view)
 
         if not report_memory:
-            return anything, ""
+            return anything, error or ""
         return anything, self._report(
             resolved, legacy, memory_threshold_mb, before, after, elapsed_ms, error
         )

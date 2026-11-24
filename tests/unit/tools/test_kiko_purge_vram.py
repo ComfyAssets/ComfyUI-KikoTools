@@ -1,3 +1,5 @@
+import inspect
+import logging
 import sys
 from unittest.mock import call, patch, MagicMock
 
@@ -60,6 +62,11 @@ class TestModes:
             "gc": False,
             "cache": True,
         }
+        assert plan_steps("cache", True) == {
+            "models": False,
+            "gc": True,
+            "cache": True,
+        }
 
     def test_memory_view(self):
         assert [memory_view(m) for m in MODES] == ["comfy", "comfy", "driver"]
@@ -91,7 +98,7 @@ class TestRunSteps:
             run_steps(plan_steps("cache", True))
 
         fresh_mm.unload_all_models.assert_not_called()
-        collect.assert_not_called()
+        collect.assert_called_once()
         fresh_mm.soft_empty_cache.assert_called_once_with(True)
 
     def test_run_steps_without_comfy_only_collects(self, fresh_mm):
@@ -122,6 +129,17 @@ class TestReadMemory:
         assert free_mb == 6144.0
         assert total_mb == 24576.0
         assert fresh_mm.get_free_memory.call_args.kwargs == {"torch_free_too": True}
+
+    @pytest.mark.parametrize("device_type", ["cpu", "mps"])
+    def test_read_memory_driver_view_uses_comfy_figure_on_cpu_and_mps(
+        self, fresh_mm, device_type
+    ):
+        fresh_mm.get_torch_device.return_value.type = device_type
+        fresh_mm.get_free_memory.return_value = 6 * GIB
+        fresh_mm.get_total_memory.return_value = 24 * GIB
+
+        assert read_memory_mb("driver") == (6144.0, 24576.0)
+        assert fresh_mm.get_free_memory.call_args.kwargs == {}
 
     def test_read_memory_returns_none_when_mm_raises(self, fresh_mm):
         fresh_mm.get_torch_device.side_effect = RuntimeError
@@ -193,6 +211,32 @@ class TestNodeDefinition:
             "by Pixaroma."
         )
         assert credit in _node().DESCRIPTION
+
+    def test_validate_inputs_accepts_linked_input(self):
+        assert _node().VALIDATE_INPUTS(None) is True
+
+    def test_validate_inputs_signature_names_only_mode(self):
+        spec = inspect.getfullargspec(_node().VALIDATE_INPUTS)
+
+        assert "mode" in spec.args
+        assert spec.varkw is None
+
+    def test_is_changed_linked_every_run_counts_as_on(self):
+        value = _node().IS_CHANGED(every_run=None, mode="all")
+
+        assert value != value
+
+    def test_is_changed_tracks_threshold_and_garbage(self):
+        node = _node()
+        base = dict(every_run=False, mode="all")
+        first = node.IS_CHANGED(memory_threshold_mb=0, collect_garbage=True, **base)
+
+        assert first != node.IS_CHANGED(
+            memory_threshold_mb=500, collect_garbage=True, **base
+        )
+        assert first != node.IS_CHANGED(
+            memory_threshold_mb=0, collect_garbage=False, **base
+        )
 
     def test_validate_inputs(self):
         node = _node()
@@ -312,3 +356,27 @@ class TestPurgeVram:
             _node()().purge_vram("all", False, anything="x", collect_garbage=False)
 
         collect.assert_not_called()
+
+    def test_step_error_reported_with_report_off(self, fresh_mm, caplog):
+        _set_memory(fresh_mm, [2, 2])
+        fresh_mm.unload_all_models.side_effect = RuntimeError("boom")
+
+        with caplog.at_level(logging.WARNING):
+            result, report = _node()().purge_vram("all", False, anything="x")
+
+        assert result == "x"
+        assert "Could not free memory" in report
+        assert any(
+            r.levelno == logging.WARNING and "boom" in r.getMessage()
+            for r in caplog.records
+        )
+
+    def test_skip_with_report_off_returns_empty_and_keeps_models(self, fresh_mm):
+        _set_memory(fresh_mm, [9000 / 1024])
+
+        result, report = _node()().purge_vram(
+            "all", False, anything="x", memory_threshold_mb=4000
+        )
+
+        assert (result, report) == ("x", "")
+        fresh_mm.unload_all_models.assert_not_called()

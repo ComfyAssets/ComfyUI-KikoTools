@@ -727,15 +727,15 @@ Behaviour based on Free VRAM Pixaroma from [ComfyUI-Pixaroma](https://github.com
 
 **Key Features:**
 - **Three Modes**:
-  - `all` (default): unload models, collect garbage, then empty the GPU cache
-  - `models`: unload models and collect garbage, leaving the cache alone
-  - `cache`: only empty the GPU cache
+  - `all` (default): unload models, collect garbage (when `collect_garbage` is on), then empty the GPU cache
+  - `models`: unload models and collect garbage (when `collect_garbage` is on), leaving the cache alone
+  - `cache`: empty the GPU cache, collecting garbage first when `collect_garbage` is on
 - **Fixed Step Order**: models unload first, garbage is collected next (when `collect_garbage` is on), and the cache is emptied last
 - **Nothing Wired, Nothing Done**: with nothing connected to `anything`, the node does nothing and says so in the report
-- **Free-Memory Threshold**: with `memory_threshold_mb` above 0, the purge is skipped when at least that many MB are already free. `0` always runs
+- **Free-Memory Threshold**: with `memory_threshold_mb` above 0, the purge is skipped when at least that many MB are already free. `0` always runs. The threshold never skips when memory can't be read
 - **Every Run or Cached**: with `every_run` on (default), the node runs on each queue. Turn it off to let ComfyUI cache the node, so nodes after it do not re-run
 - **Passthrough Design**: `passthrough` returns the input unchanged, so the node works as a checkpoint without disrupting data flow
-- **Failures Do Not Stop the Workflow**: if a step fails, the error is reported and the input still passes through
+- **Failures Do Not Stop the Workflow**: if a step fails, the error is logged, shown in the report (even with `report_memory` off), and the input still passes through
 - **Detailed Reporting**: `memory_report` shows the mode, memory freed, before and after figures, and timing
 
 **Use Cases:**
@@ -751,7 +751,7 @@ Behaviour based on Free VRAM Pixaroma from [ComfyUI-Pixaroma](https://github.com
 - **report_memory**: Generate the memory report (on by default)
 - **memory_threshold_mb**: Skip the purge when at least this many MB are already free (0 = always purge). Note: in saved workflows this value now means "skip when free", not "purge when used"
 - **collect_garbage**: Run Python garbage collection after unloading models (on by default)
-- **every_run**: Run on every queue (on by default). Off lets ComfyUI cache the node
+- **every_run**: Run on every queue (on by default). Off lets ComfyUI cache the node. With it off, a run where only a later stage changed reuses the cached node, so it does not purge and the earlier model stays loaded
 
 **Legacy Mode Names:** Workflows saved with the old mode names still load and run. `soft` and `aggressive` map to `all`, `models_only` maps to `models`, and `cache_only` maps to `cache`. The report notes the old name.
 
@@ -761,7 +761,7 @@ Mode: all
 Memory Freed: 8192.0 MB
 Before: 2048.0 MB free of 24576.0 MB
 After: 10240.0 MB free of 24576.0 MB
-Time: 0.1ms
+Time: 412.6ms
 ```
 
 ### 💾 Kiko Save Image Features
