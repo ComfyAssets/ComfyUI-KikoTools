@@ -134,6 +134,7 @@ def test_h3_image_listed_sizes_pass_through():
 
 
 def test_h3_image_4k_latent_is_the_usual_empty_latent():
+    # The picker emits the SD-style 4-channel 8x empty latent; ComfyUI widens it to H3's 24 channels and 16x at sampling.
     latent, w, h = ModelResolutionPickerNode().create(
         "MiniMax H3 Image", "custom", 5472, 3072, 2
     )
