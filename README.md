@@ -100,7 +100,7 @@ switching, workflow persistence and cleanup. See the retained
 | [📉 Image Scale Down By](#-image-scale-down-by) | Scale images down by a factor with quality preservation | 🖼️ Resolution |
 | [🎬 Film Grain](#-film-grain) | Add realistic film grain effects to images | 💾 Images |
 | [🔤 Embedding Autocomplete](#-embedding-autocomplete) | Smart autocomplete for embeddings, LoRAs, and tags | 🔧 Utils |
-| [🧹 Kiko Purge VRAM](#-kiko-purge-vram) | Intelligent VRAM management with detailed reporting | 🛠️ Utils |
+| [🧹 Kiko Purge VRAM](#-kiko-purge-vram) | Free GPU memory between workflow stages: unload models, return the cache, or both | 🛠️ Utils |
 | [📂 Local Image Loader](#-local-image-loader) | Gallery that loads a local image, a folder path, or ordered refs for MiniMax H3 | 💾 Images |
 | [🌐 Model Downloader](#-model-downloader) | Download models from CivitAI, HuggingFace, and custom URLs | 🛠️ Utils |
 | [🧠 Kiko Prompt Enhancer](#-kiko-prompt-enhancer) | Rewrite a short prompt in a base model's style with the loaded text encoder | 🧠 Prompts |
@@ -721,18 +721,22 @@ This feature is an enhanced fork of the autocomplete functionality from [ComfyUI
 - Enhanced and modernized by KikoTools team
 
 ### 🧹 Kiko Purge VRAM
-**Intelligent GPU memory management with threshold-based triggering and detailed reporting.**
+**Frees GPU memory between workflow stages, then passes the input through unchanged.**
+
+Behaviour based on Free VRAM Pixaroma from [ComfyUI-Pixaroma](https://github.com/pixaroma/ComfyUI-Pixaroma) by Pixaroma.
 
 **Key Features:**
-- **4 Purge Modes**:
-  - `soft`: Basic garbage collection and cache clearing
-  - `aggressive`: Multiple GC passes with full CUDA cache clearing
-  - `models_only`: Unload all models and clear model cache
-  - `cache_only`: Clear CUDA cache without garbage collection
-- **Smart Thresholds**: Only purge when memory usage exceeds specified MB limit
-- **Detailed Reporting**: Shows before/after memory usage, freed MB, and timing
-- **Passthrough Design**: Acts as workflow checkpoint without disrupting data flow
-- **CPU Fallback**: Gracefully handles non-CUDA environments
+- **Three Modes**:
+  - `all` (default): unload models, collect garbage, then empty the GPU cache
+  - `models`: unload models and collect garbage, leaving the cache alone
+  - `cache`: only empty the GPU cache
+- **Fixed Step Order**: models unload first, garbage is collected next (when `collect_garbage` is on), and the cache is emptied last
+- **Nothing Wired, Nothing Done**: with nothing connected to `anything`, the node does nothing and says so in the report
+- **Free-Memory Threshold**: with `memory_threshold_mb` above 0, the purge is skipped when at least that many MB are already free. `0` always runs
+- **Every Run or Cached**: with `every_run` on (default), the node runs on each queue. Turn it off to let ComfyUI cache the node, so nodes after it do not re-run
+- **Passthrough Design**: `passthrough` returns the input unchanged, so the node works as a checkpoint without disrupting data flow
+- **Failures Do Not Stop the Workflow**: if a step fails, the error is reported and the input still passes through
+- **Detailed Reporting**: `memory_report` shows the mode, memory freed, before and after figures, and timing
 
 **Use Cases:**
 - Free memory between heavy processing stages
@@ -742,22 +746,22 @@ This feature is an enhanced fork of the autocomplete functionality from [ComfyUI
 - Clean up after batch processing
 
 **Parameters:**
-- **anything**: Any input (passed through unchanged)
-- **mode**: Purge strategy selection
-- **report_memory**: Generate detailed memory statistics
-- **memory_threshold_mb**: Only purge if usage exceeds (0 = always purge)
+- **anything**: Any input (passed through unchanged). Leave it unconnected and the node does nothing
+- **mode**: `all`, `models` or `cache`
+- **report_memory**: Generate the memory report (on by default)
+- **memory_threshold_mb**: Skip the purge when at least this many MB are already free (0 = always purge). Note: in saved workflows this value now means "skip when free", not "purge when used"
+- **collect_garbage**: Run Python garbage collection after unloading models (on by default)
+- **every_run**: Run on every queue (on by default). Off lets ComfyUI cache the node
+
+**Legacy Mode Names:** Workflows saved with the old mode names still load and run. `soft` and `aggressive` map to `all`, `models_only` maps to `models`, and `cache_only` maps to `cache`. The report notes the old name.
 
 **Example Output:**
 ```
-Memory usage (5000.0 MB) exceeds threshold (4000 MB)
-
-Memory Purge Report
--------------------
-Mode: soft
-Memory Freed: 2500.0 MB
-Before: 5000.0 MB used (62.5%)
-After: 2500.0 MB used (31.3%)
-Time: 150.0ms
+Mode: all
+Memory Freed: 8192.0 MB
+Before: 2048.0 MB free of 24576.0 MB
+After: 10240.0 MB free of 24576.0 MB
+Time: 0.1ms
 ```
 
 ### 💾 Kiko Save Image Features
