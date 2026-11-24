@@ -89,6 +89,7 @@ def unload_models_safely() -> None:
     if not isinstance(loaded, list):
         mm.unload_all_models()
         return
+    unloaded_any = False
     for entry in list(loaded):
         if not _contains(loaded, entry):
             continue
@@ -96,7 +97,10 @@ def unload_models_safely() -> None:
             _remove(loaded, entry)
             continue
         entry.model_unload()
+        unloaded_any = True
         _remove(loaded, entry)
+    if unloaded_any:
+        mm.soft_empty_cache()
 
 
 def repair_loaded_models() -> int:

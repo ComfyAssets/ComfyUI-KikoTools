@@ -128,6 +128,23 @@ class TestSafeUnload:
 
         fresh_mm.unload_all_models.assert_called_once_with()
 
+    def test_unload_empties_cache_once_after_unloading(self, fresh_mm):
+        fresh_mm.current_loaded_models = [FakeLoaded("a"), FakeLoaded("b")]
+
+        unload_models_safely()
+
+        fresh_mm.soft_empty_cache.assert_called_once_with()
+
+    def test_unload_does_not_empty_cache_when_nothing_unloaded(self, fresh_mm):
+        fresh_mm.current_loaded_models = [
+            FakeLoaded("x", loaded=False),
+            FakeLoaded("y", patcher=False),
+        ]
+
+        unload_models_safely()
+
+        fresh_mm.soft_empty_cache.assert_not_called()
+
     def test_repair_removes_half_unloaded_entries(self, fresh_mm):
         first, half, last = (
             FakeLoaded("a"),
