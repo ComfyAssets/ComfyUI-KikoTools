@@ -41,6 +41,21 @@ forces everything downstream to re-run. Behaviour only: no new frontend.
 - A non-zero saved threshold flips meaning (used-MB trigger becomes free-MB
   skip). The CHANGELOG says so. `0`, the default, is unchanged.
 
+## Credit (decided)
+
+The modes, step order, unwired guard, free-memory threshold and every-run switch
+are Pixaroma's design. Credit it in three places, with the same wording:
+
+> Behaviour based on Free VRAM Pixaroma from
+> [ComfyUI-Pixaroma](https://github.com/pixaroma/ComfyUI-Pixaroma) by Pixaroma.
+
+- The README section for Kiko Purge VRAM, under its heading.
+- The CHANGELOG entry.
+- The node's `DESCRIPTION`, as a closing sentence without the link markup.
+
+Write our own implementation; do not copy Pixaroma's source. Both projects are
+MIT licensed, and copied code would have to carry Pixaroma's copyright notice.
+
 ## Non-goals
 
 - Pixaroma's drawn memory bar, gear menu or node properties.
@@ -71,4 +86,4 @@ Pixaroma's was declined.
 - Tests: replace the four-mode tests with tests for the three modes' step order
   (mock `comfy.model_management`), legacy mapping and rejection, the unwired
   guard, both threshold views, and both `every_run` settings.
-- README section and table line, CHANGELOG `## Unreleased` entry.
+- README section and table line, CHANGELOG `## Unreleased` entry, each with the credit above.
