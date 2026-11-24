@@ -63,7 +63,7 @@ H3_IMAGE = {
 
 def test_minimax_h3_image_ships_the_reference_table():
     family = resolve_family("MiniMax H3 Image")
-    assert (family.group, family.vaeRatio, family.step) == ("image", 16, 32)
+    assert (family.group, family.vae_ratio, family.step) == ("image", 16, 32)
     assert tuple(family.megapixels) == (1.0, 4.0, 16.0)
     assert tuple(family.default) == (2048, 2048)
     expected = dict(H3_IMAGE)
@@ -77,7 +77,6 @@ def test_minimax_h3_image_sits_after_hunyuan_image():
     assert labels.index("MiniMax H3 Image") == labels.index("HunyuanImage 2.1") + 1
 ```
 
-Match the attribute names (`vaeRatio`, `megapixels`, `default`, `group`) to the family dataclass in `families.py` / `table.py`; rename in the test if the dataclass uses snake_case.
 
 In `test_node.py`, add:
 
