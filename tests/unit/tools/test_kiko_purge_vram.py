@@ -144,105 +144,171 @@ def test_should_skip():
     assert should_skip(4000, None) is False
 
 
-class TestKikoPurgeVRAMNode:
-    @patch("kikotools.tools.kiko_purge_vram.node.format_memory_report")
-    @patch("kikotools.tools.kiko_purge_vram.node.purge_memory")
-    @patch("kikotools.tools.kiko_purge_vram.node.get_memory_stats")
-    @patch("kikotools.tools.kiko_purge_vram.node.should_purge")
-    def test_node_execute_with_threshold(
-        self, mock_should_purge, mock_stats, mock_purge, mock_format
-    ):
-        from kikotools.tools.kiko_purge_vram.node import KikoPurgeVRAM
+def _node():
+    from kikotools.tools.kiko_purge_vram.node import KikoPurgeVRAM
 
-        mock_should_purge.return_value = (
-            True,
-            "Memory usage (5000.0 MB) exceeds threshold (4000 MB)",
-        )
-        mock_stats.side_effect = [
-            {
-                "used_mb": 5000,
-                "free_mb": 3000,
-                "total_mb": 8000,
-                "used_percent": 62.5,
-                "cuda_available": True,
-            },
-            {
-                "used_mb": 2000,
-                "free_mb": 6000,
-                "total_mb": 8000,
-                "used_percent": 25,
-                "cuda_available": True,
-            },
+    return KikoPurgeVRAM
+
+
+def _set_memory(mm, frees_gib, total_gib=24):
+    mm.get_free_memory.side_effect = [int(f * GIB) for f in frees_gib]
+    mm.get_total_memory.return_value = total_gib * GIB
+
+
+class TestNodeDefinition:
+    def test_input_types(self):
+        types = _node().INPUT_TYPES()
+
+        assert list(types["required"]) == ["mode", "report_memory"]
+        assert types["required"]["mode"][0] == ["all", "models", "cache"]
+        assert types["required"]["mode"][1]["default"] == "all"
+        assert list(types["optional"]) == [
+            "anything",
+            "memory_threshold_mb",
+            "collect_garbage",
+            "every_run",
         ]
-        mock_purge.return_value = 3000
-        mock_format.return_value = "Memory Purge Report\n-------------------\nMode: soft\nMemory Freed: 3000.0 MB"
+        opts = types["optional"]["memory_threshold_mb"][1]
+        assert (opts["default"], opts["min"], opts["max"], opts["step"]) == (
+            0,
+            0,
+            262144,
+            100,
+        )
+        assert types["optional"]["collect_garbage"][1]["default"] is True
+        assert types["optional"]["every_run"][1]["default"] is True
 
-        node = KikoPurgeVRAM()
-        test_input = "test_data"
+    def test_properties(self):
+        node = _node()
 
-        result, report = node.purge_vram(
-            anything=test_input,
-            mode="soft",
-            report_memory=True,
-            memory_threshold_mb=4000,
+        assert node.FUNCTION == "purge_vram"
+        assert node.CATEGORY == "🫶 ComfyAssets/🛠️ Utils"
+        assert node.OUTPUT_NODE is True
+        assert len(node.RETURN_TYPES) == 2
+        assert node.RETURN_NAMES == ("passthrough", "memory_report")
+
+    def test_description_credits_pixaroma(self):
+        credit = (
+            "Behaviour based on Free VRAM Pixaroma from ComfyUI-Pixaroma "
+            "by Pixaroma."
+        )
+        assert credit in _node().DESCRIPTION
+
+    def test_validate_inputs(self):
+        node = _node()
+
+        assert node.VALIDATE_INPUTS("all") is True
+        assert node.VALIDATE_INPUTS("soft") is True
+        message = node.VALIDATE_INPUTS("turbo")
+        assert isinstance(message, str)
+        assert "all, models, cache" in message
+
+    def test_is_changed(self):
+        node = _node()
+
+        always = node.IS_CHANGED(every_run=True, mode="all")
+        assert always != always
+        default = node.IS_CHANGED(mode="all")
+        assert default != default
+
+        kwargs = dict(every_run=False, memory_threshold_mb=0, collect_garbage=True)
+        first = node.IS_CHANGED(mode="all", **kwargs)
+        assert first == node.IS_CHANGED(mode="all", **kwargs)
+        assert first != node.IS_CHANGED(mode="cache", **kwargs)
+
+
+class TestPurgeVram:
+    def test_unwired_does_nothing(self, fresh_mm):
+        result, report = _node()().purge_vram("all", True)
+
+        assert result is None
+        assert "Nothing wired in" in report
+        assert fresh_mm.mock_calls == []
+
+    def test_falsy_input_counts_as_wired(self, fresh_mm):
+        _set_memory(fresh_mm, [2, 10])
+
+        result, _ = _node()().purge_vram("all", True, anything=0)
+
+        assert result == 0
+        fresh_mm.unload_all_models.assert_called_once_with()
+
+    def test_all_mode_runs_and_reports(self, fresh_mm):
+        _set_memory(fresh_mm, [2, 10])
+
+        result, report = _node()().purge_vram("all", True, anything="x")
+
+        assert result == "x"
+        assert "Mode: all" in report
+        assert "Memory Freed: 8192.0 MB" in report
+        assert "Before: 2048.0 MB free of 24576.0 MB" in report
+        assert "After: 10240.0 MB free of 24576.0 MB" in report
+        assert "Time: " in report
+
+    def test_legacy_mode_is_mapped_and_named(self, fresh_mm):
+        _set_memory(fresh_mm, [2, 10])
+
+        _, report = _node()().purge_vram("soft", True, anything="x")
+
+        fresh_mm.unload_all_models.assert_called_once_with()
+        assert "Mode: all (from legacy 'soft')" in report
+
+    def test_threshold_skips_when_enough_free(self, fresh_mm):
+        _set_memory(fresh_mm, [9000 / 1024])
+
+        result, report = _node()().purge_vram(
+            "all", True, anything="x", memory_threshold_mb=4000
         )
 
-        assert result == test_input
-        assert "Memory Freed: 3000.0 MB" in report
-        mock_purge.assert_called_once_with(mode="soft", unload_models=False)
+        assert result == "x"
+        fresh_mm.unload_all_models.assert_not_called()
+        assert report.startswith("Memory purge skipped:")
+        assert "9000.0 MB free" in report
+        assert "4000 MB" in report
 
-    @patch("kikotools.tools.kiko_purge_vram.logic.get_memory_stats")
-    def test_node_skip_below_threshold(self, mock_stats):
-        from kikotools.tools.kiko_purge_vram.node import KikoPurgeVRAM
+    def test_threshold_runs_when_memory_unreadable(self, fresh_mm):
+        fresh_mm.get_torch_device.side_effect = RuntimeError("no device")
 
-        mock_stats.return_value = {
-            "used_mb": 2000,
-            "free_mb": 6000,
-            "total_mb": 8000,
-            "used_percent": 25,
-            "cuda_available": True,
-        }
+        _, report = _node()().purge_vram(
+            "all", True, anything="x", memory_threshold_mb=4000
+        )
 
-        node = KikoPurgeVRAM()
-        test_input = "test_data"
+        fresh_mm.unload_all_models.assert_called_once_with()
+        assert "Memory figures unavailable" in report
 
-        with patch("kikotools.tools.kiko_purge_vram.logic.purge_memory") as mock_purge:
-            result, report = node.purge_vram(
-                anything=test_input,
-                mode="soft",
-                report_memory=True,
-                memory_threshold_mb=3000,
-            )
+    def test_cache_mode_uses_driver_view(self, fresh_mm):
+        fresh_mm.get_free_memory.return_value = (8 * GIB, 2 * GIB)
+        fresh_mm.get_total_memory.return_value = 24 * GIB
 
-            assert result == test_input
-            assert "below threshold" in report.lower()
-            mock_purge.assert_not_called()
+        _, report = _node()().purge_vram(
+            "cache", True, anything="x", memory_threshold_mb=7000
+        )
 
-    def test_node_input_types(self):
-        from kikotools.tools.kiko_purge_vram.node import KikoPurgeVRAM
+        fresh_mm.soft_empty_cache.assert_called_once_with(True)
+        assert "Memory purge skipped" not in report
+        assert "Before: 6144.0 MB free" in report
 
-        input_types = KikoPurgeVRAM.INPUT_TYPES()
+    def test_step_error_is_reported_not_raised(self, fresh_mm):
+        _set_memory(fresh_mm, [2, 2])
+        fresh_mm.unload_all_models.side_effect = RuntimeError("boom")
 
-        assert "required" in input_types
-        assert "optional" in input_types
-        assert "anything" in input_types["required"]
-        assert "mode" in input_types["required"]
-        assert "report_memory" in input_types["required"]
-        assert "memory_threshold_mb" in input_types["optional"]
+        result, report = _node()().purge_vram("all", True, anything="x")
 
-    def test_node_properties(self):
-        from kikotools.tools.kiko_purge_vram.node import KikoPurgeVRAM
+        assert result == "x"
+        assert "Could not free memory: boom" in report
 
-        assert KikoPurgeVRAM.FUNCTION == "purge_vram"
-        assert KikoPurgeVRAM.CATEGORY == "🫶 ComfyAssets/🛠️ Utils"
-        assert KikoPurgeVRAM.OUTPUT_NODE is True
-        assert len(KikoPurgeVRAM.RETURN_TYPES) == 2
-        assert KikoPurgeVRAM.RETURN_NAMES == ("passthrough", "memory_report")
+    def test_report_off_returns_empty_string(self, fresh_mm):
+        _set_memory(fresh_mm, [2, 10])
 
+        result, report = _node()().purge_vram("all", False, anything="x")
 
-class TestPurgeIsChanged:
-    def test_is_changed_is_nan_so_cache_never_hits(self):
-        from kikotools.tools.kiko_purge_vram.node import KikoPurgeVRAM
+        assert (result, report) == ("x", "")
+        fresh_mm.unload_all_models.assert_called_once_with()
 
-        value = KikoPurgeVRAM.IS_CHANGED(anything=1, mode="soft", report_memory=True)
-        assert value != value  # NaN is never equal to itself
+    def test_collect_garbage_switch(self, fresh_mm):
+        _set_memory(fresh_mm, [2, 10])
+
+        with patch("gc.collect") as collect:
+            _node()().purge_vram("all", False, anything="x", collect_garbage=False)
+
+        collect.assert_not_called()
