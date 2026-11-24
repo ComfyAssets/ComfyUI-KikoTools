@@ -66,10 +66,54 @@ def should_skip(threshold_mb: int, free_mb: Optional[float]) -> bool:
     return threshold_mb > 0 and free_mb is not None and free_mb >= threshold_mb
 
 
+def _contains(entries: list, entry: object) -> bool:
+    """Identity membership; LoadedModel.__eq__ compares patchers, not entries."""
+    return any(item is entry for item in entries)
+
+
+def _remove(entries: list, entry: object) -> None:
+    for index, item in enumerate(entries):
+        if item is entry:
+            del entries[index]
+            return
+
+
+def unload_models_safely() -> None:
+    """Unload loaded models one at a time, tolerating the list shrinking.
+
+    ComfyUI's unload_all_models() indexes into the live list and can raise
+    IndexError when a finalizer removes entries mid-loop. Iterate a copy and
+    re-check each entry against the live list instead.
+    """
+    loaded = getattr(mm, "current_loaded_models", None)
+    if not isinstance(loaded, list):
+        mm.unload_all_models()
+        return
+    for entry in list(loaded):
+        if not _contains(loaded, entry):
+            continue
+        if entry.real_model is None or entry.model is None:
+            _remove(loaded, entry)
+            continue
+        entry.model_unload()
+        _remove(loaded, entry)
+
+
+def repair_loaded_models() -> int:
+    """Drop half-unloaded entries (real_model None); return how many."""
+    loaded = getattr(mm, "current_loaded_models", None)
+    if not isinstance(loaded, list):
+        return 0
+    broken = [entry for entry in loaded if entry.real_model is None]
+    for entry in broken:
+        _remove(loaded, entry)
+    return len(broken)
+
+
 def run_steps(steps: Dict[str, bool]) -> None:
     """Run the enabled steps in order: unload models, collect, empty cache."""
     if COMFY_AVAILABLE and steps.get("models"):
-        mm.unload_all_models()
+        unload_models_safely()
     if steps.get("gc"):
         gc.collect()
     if COMFY_AVAILABLE and steps.get("cache"):

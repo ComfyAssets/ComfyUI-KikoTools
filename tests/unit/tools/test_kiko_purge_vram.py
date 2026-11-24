@@ -15,9 +15,11 @@ from kikotools.tools.kiko_purge_vram.logic import (
     memory_view,
     plan_steps,
     read_memory_mb,
+    repair_loaded_models,
     resolve_mode,
     run_steps,
     should_skip,
+    unload_models_safely,
 )
 
 # Ensure mm is available in the logic module after import
@@ -70,6 +72,75 @@ class TestModes:
 
     def test_memory_view(self):
         assert [memory_view(m) for m in MODES] == ["comfy", "comfy", "driver"]
+
+
+class FakeLoaded:
+    def __init__(self, name, loaded=True, patcher=True, on_unload=None):
+        self.name = name
+        self.real_model = (lambda: object()) if loaded else None
+        self.model = object() if patcher else None
+        self.on_unload = on_unload
+        self.unload_calls = 0
+
+    def model_unload(self):
+        self.unload_calls += 1
+        self.real_model = None
+        if self.on_unload:
+            self.on_unload()
+
+
+class TestSafeUnload:
+    def test_unload_models_safely_unloads_and_removes_all(self, fresh_mm):
+        entries = [FakeLoaded(n) for n in "abc"]
+        fresh_mm.current_loaded_models = list(entries)
+
+        unload_models_safely()
+
+        assert [e.unload_calls for e in entries] == [1, 1, 1]
+        assert fresh_mm.current_loaded_models == []
+        fresh_mm.unload_all_models.assert_not_called()
+
+    def test_unload_survives_list_shrinking_mid_loop(self, fresh_mm):
+        loaded = []
+        a = FakeLoaded("a", on_unload=lambda: loaded.remove(c))
+        b = FakeLoaded("b")
+        c = FakeLoaded("c")
+        loaded.extend([a, b, c])
+        fresh_mm.current_loaded_models = loaded
+
+        unload_models_safely()
+
+        assert loaded == []
+        assert (a.unload_calls, b.unload_calls, c.unload_calls) == (1, 1, 0)
+
+    def test_unload_skips_entries_already_unloaded_or_dead(self, fresh_mm):
+        x = FakeLoaded("x", loaded=False)
+        y = FakeLoaded("y", patcher=False)
+        fresh_mm.current_loaded_models = [x, y]
+
+        unload_models_safely()
+
+        assert fresh_mm.current_loaded_models == []
+        assert (x.unload_calls, y.unload_calls) == (0, 0)
+
+    def test_unload_falls_back_without_a_list(self, fresh_mm):
+        unload_models_safely()
+
+        fresh_mm.unload_all_models.assert_called_once_with()
+
+    def test_repair_removes_half_unloaded_entries(self, fresh_mm):
+        first, half, last = (
+            FakeLoaded("a"),
+            FakeLoaded("h", loaded=False),
+            FakeLoaded("b"),
+        )
+        fresh_mm.current_loaded_models = [first, half, last]
+
+        assert repair_loaded_models() == 1
+        assert fresh_mm.current_loaded_models == [first, last]
+
+    def test_repair_without_a_list_returns_zero(self, fresh_mm):
+        assert repair_loaded_models() == 0
 
 
 class TestRunSteps:
