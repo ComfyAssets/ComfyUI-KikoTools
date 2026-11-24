@@ -14,6 +14,7 @@ from .logic import (
     memory_view,
     plan_steps,
     read_memory_mb,
+    repair_loaded_models,
     resolve_mode,
     run_steps,
     should_skip,
@@ -144,19 +145,23 @@ class KikoPurgeVRAM(BaseNode):
             return anything, report if report_memory else ""
 
         start = time.perf_counter()
-        error: Optional[str] = None
         try:
             run_steps(plan_steps(resolved, collect_garbage))
         except Exception as exc:
-            error = f"Could not free memory: {exc}"
-            logger.warning("Kiko Purge VRAM: %s", error)
+            removed = repair_loaded_models()
+            logger.exception("Kiko Purge VRAM: purge failed")
+            raise RuntimeError(
+                f"Kiko Purge VRAM could not free memory: {exc}. "
+                f"ComfyUI's loaded-model list was repaired ({removed} "
+                "half-unloaded entries removed) so later jobs keep working."
+            ) from exc
         elapsed_ms = (time.perf_counter() - start) * 1000
         after = read_memory_mb(view)
 
         if not report_memory:
-            return anything, error or ""
+            return anything, ""
         return anything, self._report(
-            resolved, legacy, memory_threshold_mb, before, after, elapsed_ms, error
+            resolved, legacy, memory_threshold_mb, before, after, elapsed_ms
         )
 
     @staticmethod
@@ -167,11 +172,8 @@ class KikoPurgeVRAM(BaseNode):
         before: Optional[Tuple[float, float]],
         after: Optional[Tuple[float, float]],
         elapsed_ms: float,
-        error: Optional[str],
     ) -> str:
         lines: List[str] = []
-        if error:
-            lines.append(error)
         if threshold_mb > 0:
             lines.append(f"Threshold: {threshold_mb} MB")
         label = f"Mode: {mode}" + (f" (from legacy '{legacy}')" if legacy else "")

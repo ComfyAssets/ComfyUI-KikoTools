@@ -19,8 +19,13 @@
   step.
 - New `every_run` switch (on by default). Turn it off to let ComfyUI cache the
   node so nodes after it do not re-run.
-- A failing step is logged and shown in the report, even with `report_memory`
-  off, and the input still passes through.
+- A failing step now stops the run with an error, after the node repairs
+  ComfyUI's loaded-model list so later jobs keep working. The traceback is
+  logged.
+- The `models` step unloads loaded models one at a time instead of calling
+  ComfyUI's `unload_all_models()`, which can fail when one unload frees another
+  model mid-loop and leave ComfyUI unable to start the next job. This differs
+  deliberately from Free VRAM Pixaroma.
 - Behaviour based on Free VRAM Pixaroma from
   [ComfyUI-Pixaroma](https://github.com/pixaroma/ComfyUI-Pixaroma) by Pixaroma.
 

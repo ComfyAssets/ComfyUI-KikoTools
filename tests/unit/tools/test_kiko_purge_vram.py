@@ -420,15 +420,6 @@ class TestPurgeVram:
         assert "Memory purge skipped" not in report
         assert "Before: 6144.0 MB free" in report
 
-    def test_step_error_is_reported_not_raised(self, fresh_mm):
-        _set_memory(fresh_mm, [2, 2])
-        fresh_mm.unload_all_models.side_effect = RuntimeError("boom")
-
-        result, report = _node()().purge_vram("all", True, anything="x")
-
-        assert result == "x"
-        assert "Could not free memory: boom" in report
-
     def test_report_off_returns_empty_string(self, fresh_mm):
         _set_memory(fresh_mm, [2, 10])
 
@@ -445,19 +436,49 @@ class TestPurgeVram:
 
         collect.assert_not_called()
 
-    def test_step_error_reported_with_report_off(self, fresh_mm, caplog):
+    @staticmethod
+    def _failing_models(fresh_mm):
+        def boom():
+            raise RuntimeError("boom")
+
+        failing = FakeLoaded("a", on_unload=boom)
+        fresh_mm.current_loaded_models = [failing, FakeLoaded("b")]
         _set_memory(fresh_mm, [2, 2])
-        fresh_mm.unload_all_models.side_effect = RuntimeError("boom")
 
-        with caplog.at_level(logging.WARNING):
-            result, report = _node()().purge_vram("all", False, anything="x")
+    def test_step_error_repairs_and_raises(self, fresh_mm):
+        self._failing_models(fresh_mm)
 
-        assert result == "x"
-        assert "Could not free memory" in report
-        assert any(
-            r.levelno == logging.WARNING and "boom" in r.getMessage()
+        with pytest.raises(RuntimeError) as caught:
+            _node()().purge_vram("all", True, anything=1)
+
+        message = str(caught.value)
+        assert "Kiko Purge VRAM could not free memory" in message
+        assert "boom" in message
+        assert "repaired" in message
+        assert all(e.real_model is not None for e in fresh_mm.current_loaded_models)
+        assert isinstance(caught.value.__cause__, RuntimeError)
+        assert str(caught.value.__cause__) == "boom"
+
+    def test_step_error_logs_traceback(self, fresh_mm, caplog):
+        self._failing_models(fresh_mm)
+
+        with caplog.at_level(logging.ERROR):
+            with pytest.raises(RuntimeError):
+                _node()().purge_vram("all", True, anything=1)
+
+        records = [
+            r
             for r in caplog.records
-        )
+            if r.name == "kikotools.tools.kiko_purge_vram.node"
+        ]
+        assert len(records) == 1
+        assert records[0].exc_info
+
+    def test_step_error_raises_with_report_off(self, fresh_mm):
+        self._failing_models(fresh_mm)
+
+        with pytest.raises(RuntimeError, match="could not free memory"):
+            _node()().purge_vram("all", False, anything=1)
 
     def test_skip_with_report_off_returns_empty_and_keeps_models(self, fresh_mm):
         _set_memory(fresh_mm, [9000 / 1024])

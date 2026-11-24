@@ -731,11 +731,12 @@ Behaviour based on Free VRAM Pixaroma from [ComfyUI-Pixaroma](https://github.com
   - `models`: unload models and collect garbage (when `collect_garbage` is on), leaving the cache alone
   - `cache`: empty the GPU cache, collecting garbage first when `collect_garbage` is on
 - **Fixed Step Order**: models unload first, garbage is collected next (when `collect_garbage` is on), and the cache is emptied last
+- **One-at-a-Time Unload**: the `models` step unloads loaded models one at a time instead of calling ComfyUI's `unload_all_models()`, because that call can fail when one unload frees another model mid-loop and leave ComfyUI unable to start the next job. This is a deliberate difference from Free VRAM Pixaroma
 - **Nothing Wired, Nothing Done**: with nothing connected to `anything`, the node does nothing and says so in the report
 - **Free-Memory Threshold**: with `memory_threshold_mb` above 0, the purge is skipped when at least that many MB are already free. `0` always runs. The threshold never skips when memory can't be read
 - **Every Run or Cached**: with `every_run` on (default), the node runs on each queue. Turn it off to let ComfyUI cache the node, so nodes after it do not re-run
 - **Passthrough Design**: `passthrough` returns the input unchanged, so the node works as a checkpoint without disrupting data flow
-- **Failures Do Not Stop the Workflow**: if a step fails, the error is logged, shown in the report (even with `report_memory` off), and the input still passes through
+- **Failures Stop the Run**: if a step fails, the node repairs ComfyUI's loaded-model list so later jobs keep working, logs the traceback, and stops the run with an error
 - **Detailed Reporting**: `memory_report` shows the mode, memory freed, before and after figures, and timing
 
 **Use Cases:**
