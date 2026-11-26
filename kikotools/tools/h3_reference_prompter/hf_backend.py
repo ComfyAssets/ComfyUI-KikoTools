@@ -40,17 +40,30 @@ def _load(transformers, entry: ModelEntry) -> Tuple[Any, Any, torch.device]:
     return _loaded[1]
 
 
+def _template_uses_thinking(processor) -> bool:
+    """True when the chat template text mentions enable_thinking.
+
+    transformers hands an extra keyword to the template only when the template
+    uses it; otherwise the keyword goes to the processor with a warning.
+    """
+    template = getattr(processor, "chat_template", None)
+    if isinstance(template, dict):
+        texts = template.values()
+    else:
+        texts = [template]
+    return any(isinstance(text, str) and "enable_thinking" in text for text in texts)
+
+
 def _tokenize(processor, messages: List[Dict[str, Any]]):
-    options = dict(
+    options: Dict[str, Any] = dict(
         tokenize=True,
         return_dict=True,
         return_tensors="pt",
         add_generation_prompt=True,
     )
-    try:
-        return processor.apply_chat_template(messages, enable_thinking=False, **options)
-    except TypeError:
-        return processor.apply_chat_template(messages, **options)
+    if _template_uses_thinking(processor):
+        options["enable_thinking"] = False
+    return processor.apply_chat_template(messages, **options)
 
 
 def generate_hf(
@@ -77,7 +90,7 @@ def generate_hf(
     ]
 
     processor, model, device = _load(transformers, entry)
-    inputs = _tokenize(processor, messages).to(device)
+    inputs = _tokenize(processor, messages).to(device=device, dtype=model.dtype)
 
     masked_seed = seed & SEED_MASK
     torch.manual_seed(masked_seed)

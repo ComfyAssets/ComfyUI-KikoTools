@@ -19,14 +19,16 @@ NEW_IDS = [7, 8]
 class FakeBatch(dict):
     """Stands in for transformers' BatchFeature."""
 
-    def to(self, device):
+    def to(self, *, device, dtype):
         self.device = device
+        self.dtype = dtype
         return self
 
 
 class FakeProcessor:
     instances = []
-    reject_thinking = False
+    raises = None
+    chat_template = "{% if enable_thinking %}x{% endif %}"
 
     def __init__(self, path, kwargs):
         self.path = path
@@ -41,8 +43,8 @@ class FakeProcessor:
 
     def apply_chat_template(self, messages, **kwargs):
         self.template_calls.append((messages, kwargs))
-        if FakeProcessor.reject_thinking and "enable_thinking" in kwargs:
-            raise TypeError("unexpected keyword enable_thinking")
+        if FakeProcessor.raises is not None:
+            raise FakeProcessor.raises
         return FakeBatch(
             input_ids=torch.tensor(PROMPT_IDS), pixel_values=torch.zeros(1)
         )
@@ -59,6 +61,7 @@ class FakeModel:
         self.path = path
         self.kwargs = kwargs
         self.device = torch.device("cpu")
+        self.dtype = kwargs["dtype"]
         self.moved_to = None
         self.generate_calls = []
         self.seeds = []
@@ -81,7 +84,8 @@ class FakeModel:
 @pytest.fixture(autouse=True)
 def fake_transformers(monkeypatch):
     FakeProcessor.instances = []
-    FakeProcessor.reject_thinking = False
+    FakeProcessor.chat_template = "{% if enable_thinking %}x{% endif %}"
+    FakeProcessor.raises = None
     FakeModel.instances = []
     module = types.ModuleType("transformers")
     module.AutoProcessor = FakeProcessor
@@ -158,12 +162,43 @@ def test_chat_template_gets_thinking_off_and_generation_prompt():
     }
 
 
-def test_template_rejecting_thinking_keyword_is_retried_without_it():
-    FakeProcessor.reject_thinking = True
-    assert run() == "A tidy prompt."
-    calls = FakeProcessor.instances[0].template_calls
-    assert len(calls) == 2
-    assert "enable_thinking" not in calls[1][1]
+@pytest.mark.parametrize(
+    "template, expected",
+    [
+        ("{{ enable_thinking }}", True),
+        ("plain template", False),
+        ({"default": "plain", "alt": "{% if enable_thinking %}"}, True),
+        ({"default": "plain"}, False),
+        (None, False),
+    ],
+)
+def test_enable_thinking_only_for_templates_that_use_it(template, expected):
+    FakeProcessor.chat_template = template
+    run()
+    kwargs = FakeProcessor.instances[0].template_calls[0][1]
+    assert ("enable_thinking" in kwargs) is expected
+    if expected:
+        assert kwargs["enable_thinking"] is False
+
+
+def test_type_error_from_template_propagates():
+    FakeProcessor.raises = TypeError("bad image")
+    with pytest.raises(TypeError, match="bad image"):
+        run()
+    assert len(FakeProcessor.instances[0].template_calls) == 1
+
+
+def test_inputs_are_cast_to_the_model_dtype(monkeypatch):
+    seen = []
+    original = FakeBatch.to
+
+    def spy(self, **kwargs):
+        seen.append(kwargs)
+        return original(self, **kwargs)
+
+    monkeypatch.setattr(FakeBatch, "to", spy)
+    run()
+    assert seen == [{"device": torch.device("cpu"), "dtype": torch.float32}]
 
 
 def test_image_becomes_pil_part_before_text():
