@@ -160,6 +160,22 @@ def test_retry_user_omits_empty_side():
     assert "extra" not in text.lower()
 
 
+def test_retry_user_blank_asks_for_the_whole_prompt():
+    text = retry_user(([], []), blank=True)
+    assert "empty" in text.lower()
+    assert "<Picture" not in text
+    assert text.endswith("give only the prompt.")
+
+
+def test_retry_user_blank_and_tags_together():
+    text = retry_user(([], [4]), blank=True)
+    assert "empty" in text.lower() and "<Picture 4>" in text
+
+
+def test_retry_user_without_blank_does_not_say_empty():
+    assert "empty" not in retry_user(([2], [])).lower()
+
+
 def test_writer_system_has_fallbacks():
     text = writer_system().lower()
     assert "no style sentence, skip" in text

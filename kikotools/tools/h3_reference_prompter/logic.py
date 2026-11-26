@@ -110,6 +110,25 @@ def drop_repeats(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip("\n")
 
 
+def drop_echoes(written: str, reference: str) -> str:
+    """Drop sentences of ``written`` that repeat a reference sentence.
+
+    Matching ignores case and spacing; lines left empty are removed.
+    """
+    echoes = {_squash(s) for s in _SENTENCE_BREAK.split(reference)} - {""}
+    if not echoes:
+        return written
+    lines: List[str] = []
+    for line in written.split("\n"):
+        sentences = _SENTENCE_BREAK.split(line)
+        kept = [s for s in sentences if _squash(s) not in echoes]
+        if len(kept) == len(sentences):
+            lines.append(line)
+        elif kept:
+            lines.append(" ".join(kept))
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+
+
 def clean_result(text: str) -> str:
     bare = split_thinking(text)
     bare = _PREAMBLE_LINE.sub("", bare, count=1)

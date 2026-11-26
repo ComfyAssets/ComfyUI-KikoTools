@@ -191,10 +191,17 @@ def writer_user(
     return "\n\n".join(blocks)
 
 
-def retry_user(problems: Tuple[List[int], List[int]]) -> str:
-    """Short correction naming the missing and extra tags."""
+def retry_user(problems: Tuple[List[int], List[int]], blank: bool = False) -> str:
+    """Short correction for an empty reply and for missing and extra tags."""
     missing, extra = problems
-    parts = ["Your last prompt had a problem with the picture tags."]
+    parts = []
+    if blank:
+        parts.append(
+            "Your last reply was empty or stopped before the prompt began. "
+            "Do not think aloud; start the prompt at once."
+        )
+    if missing or extra:
+        parts.append("Your last prompt had a problem with the picture tags.")
     if missing:
         names = ", ".join(f"<Picture {n}>" for n in missing)
         parts.append(f"These tags are missing and must appear exactly: {names}.")

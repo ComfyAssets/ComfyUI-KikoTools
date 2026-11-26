@@ -330,12 +330,111 @@ def test_output_starts_with_the_drafts_reference_sentences_verbatim(monkeypatch)
     assert "already written; do not repeat" in sent
 
 
-def test_model_output_repeating_a_tag_sentence_is_accepted(monkeypatch):
+def test_model_output_echoing_a_tag_sentence_drops_the_echo(monkeypatch):
     repeat = "<Picture 1> wears <Picture 2> in <Picture 3>. More text."
     h = Harness(monkeypatch, writes=[repeat])
     out = run()
-    assert out["result"][0] == [DRAFT + "\n\n" + repeat]
+    assert out["result"][0] == [DRAFT + "\n\nMore text."]
     assert len(h.writers) == 1
+
+
+def test_echo_is_matched_ignoring_case_and_spacing(monkeypatch):
+    echo = "<Picture 1>  WEARS <Picture 2> in  <Picture 3>.\nShe stands."
+    Harness(monkeypatch, writes=[echo])
+    out = run()
+    assert out["result"][0] == [DRAFT + "\n\nShe stands."]
+
+
+def test_blank_written_part_is_retried_once(monkeypatch):
+    h = Harness(monkeypatch, writes=["<think>still thinking", BODY])
+    out = run()
+    assert out["result"][0] == [FULL]
+    assert len(h.writers) == 2
+    retry = h.writers[1]["prompt"]
+    assert retry.endswith(retry_user(([], []), blank=True))
+    assert "Your previous prompt:" not in retry
+
+
+def test_echo_only_reply_counts_as_blank(monkeypatch):
+    h = Harness(monkeypatch, writes=[DRAFT, BODY])
+    out = run()
+    assert out["result"][0] == [FULL]
+    assert len(h.writers) == 2
+
+
+def test_still_blank_after_retry_raises_naming_model_and_write_tokens(monkeypatch):
+    h = Harness(monkeypatch, writes=["   "])
+    with pytest.raises(ValueError) as caught:
+        run(prompt=["a woman standing"])
+    message = str(caught.value)
+    assert "hf: demo" in message and "write_tokens" in message
+    assert len(h.writers) == 2
+    assert "repair" in h.events
+
+
+@pytest.mark.parametrize("kind", ["gguf", "native"])
+def test_blank_reply_is_retried_on_the_loop_path(monkeypatch, kind):
+    h = Harness(monkeypatch, kind=kind, writes=["", BODY])
+    h.entry = entry(kind, f"{kind}: m")
+    out = run(model=[f"{kind}: m"])
+    assert out["result"][0] == [FULL]
+    assert len(h.writers) == 2
+
+
+def test_hf_batch_retries_a_blank_item(monkeypatch):
+    h = Harness(monkeypatch)
+    out = three_poses(h, writes=[BODY, "<think>cut", BODY, BODY])
+    assert h.batches == [("describe", 5), ("write", 3), ("write", 1)]
+    assert out["result"][0] == [FULL] * 3
+
+
+def test_hf_batch_still_blank_raises(monkeypatch):
+    h = Harness(monkeypatch)
+    with pytest.raises(ValueError, match="write_tokens"):
+        three_poses(h, writes=[BODY, "", BODY, ""])
+
+
+def test_combined_prompt_has_no_trailing_whitespace(monkeypatch):
+    Harness(monkeypatch, writes=["End line.  \nEnd line."])
+    out = run(prompt=["a woman standing"])
+    assert out["result"][0] == ["End line."]
+
+
+def test_blank_drafts_without_pictures_raise_before_unload(monkeypatch):
+    h = Harness(monkeypatch)
+    with pytest.raises(ValueError) as caught:
+        run(prompt=["  ", ""])
+    assert str(caught.value) == (
+        "nothing to write from: the draft is empty and no picture is connected"
+    )
+    assert h.events == [] and h.calls == []
+
+
+def test_blank_draft_with_a_picture_still_runs(monkeypatch):
+    h = Harness(monkeypatch, writes=["She stands."])
+    out = run(prompt=[" "], images={"image_1": [img(1)]})
+    assert out["result"][0] == ["She stands."]
+    assert len(h.describes) == 1
+
+
+def test_notes_are_cleaned_like_results(monkeypatch):
+    h = Harness(monkeypatch)
+    raw = "<think>hmm</think>\nHere is the description:\nDark hair. Dark hair."
+    monkeypatch.setattr(h, "generate", lambda *a: raw if a[4] is not None else BODY)
+    monkeypatch.setattr(node_module, "_generate", h.generate)
+    out = run(images={"image_1": [img(1)]})
+    assert out["result"][1] == ["<Picture 1> (character): Dark hair."]
+
+
+def test_unfinished_thinking_note_raises(monkeypatch):
+    h = Harness(monkeypatch)
+    monkeypatch.setattr(
+        h, "generate", lambda *a: "<think>no end" if a[4] is not None else BODY
+    )
+    monkeypatch.setattr(node_module, "_generate", h.generate)
+    with pytest.raises(ValueError, match="no description for image_1"):
+        run(images={"image_1": [img(1)]})
+    assert node_module._NOTES_CACHE == {}
 
 
 def test_notes_are_deduplicated(monkeypatch):

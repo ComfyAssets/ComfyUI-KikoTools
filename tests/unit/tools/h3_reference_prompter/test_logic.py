@@ -6,6 +6,7 @@ from kikotools.tools.h3_reference_prompter.logic import (
     ROLES,
     SLOTS,
     clean_result,
+    drop_echoes,
     drop_repeats,
     find_tags,
     image_key,
@@ -190,3 +191,22 @@ def test_split_reference_sentences_question_and_bang_end_sentences():
     reference, rest = split_reference_sentences("Who? <Picture 2> wins! Done")
     assert reference == "<Picture 2> wins!"
     assert rest == "Who? Done"
+
+
+def test_drop_echoes_removes_sentences_equal_to_a_reference_sentence():
+    reference = "<Picture 1> is her. <Picture 2> is the coat."
+    written = "<picture 1>  IS her. She stands.\n\n<Picture 2> is the coat.\nEnd."
+    assert drop_echoes(written, reference) == "She stands.\n\nEnd."
+
+
+def test_drop_echoes_without_reference_keeps_text():
+    assert drop_echoes("She stands. She sits.", "") == "She stands. She sits."
+
+
+def test_drop_echoes_only_echo_gives_blank():
+    assert drop_echoes("<Picture 1> is her.", "<Picture 1> is her.") == ""
+
+
+def test_drop_echoes_keeps_partial_matches():
+    text = "<Picture 1> is her, smiling."
+    assert drop_echoes(text, "<Picture 1> is her.") == text

@@ -22,7 +22,7 @@ from .logic import (
     ROLES,
     SLOTS,
     clean_result,
-    drop_repeats,
+    drop_echoes,
     image_key,
     item_seed,
     pair_items,
@@ -96,6 +96,19 @@ def _check_batches(items: List[Dict[str, Any]]) -> None:
                 )
 
 
+def _check_something_to_write(
+    prompts: List[str], images: Dict[str, Optional[List[Any]]]
+) -> None:
+    has_draft = any(text and text.strip() for text in prompts)
+    has_image = any(
+        image is not None for column in images.values() for image in column or []
+    )
+    if not has_draft and not has_image:
+        raise ValueError(
+            "nothing to write from: the draft is empty and no picture is connected"
+        )
+
+
 class _Run:
     """One execution: backend dispatch with a lazily loaded native clip.
 
@@ -145,6 +158,7 @@ class _Run:
 
 
 Pending = Tuple[int, str, Any, str]  # (slot, role, image, draft)
+Note = Tuple[int, str, Optional[str]]  # (slot, role, notes or None)
 
 
 def _pending_pictures(items, roles, model: str) -> Dict[str, Pending]:
@@ -173,7 +187,7 @@ def _describe_all(run: _Run, items, roles, model, seed, tokens) -> None:
     else:
         texts = [run.generate(*request, seed, tokens) for request in requests]
     for (key, (slot, role, _, _)), raw in zip(pending.items(), texts):
-        text = drop_repeats(raw.strip())
+        text = clean_result(raw)
         if not text:
             raise ValueError(
                 f"{model} returned no description for image_{slot} ({role}); "
@@ -199,14 +213,31 @@ def _notes_text(notes: List[Tuple[int, str, Optional[str]]]) -> str:
     )
 
 
+# (missing tags, extra tags, blank written part) for one written prompt
+Problems = Tuple[List[int], List[int], bool]
+
+
 def _combine(reference: str, raw: str) -> Tuple[str, str]:
     """(written, combined): the cleaned model text, and the full prompt."""
-    written = clean_result(raw)
-    return written, f"{reference}\n\n{written}" if reference else written
+    written = drop_echoes(clean_result(raw), reference)
+    parts = [part for part in (reference, written) if part]
+    return written, "\n\n".join(parts).rstrip()
 
 
-def _retry_message(message: str, written: str, problems) -> str:
-    return f"{message}\n\nYour previous prompt:\n{written}\n\n{retry_user(problems)}"
+def _problems(draft: str, written: str, combined: str) -> Problems:
+    missing, extra = tag_problems(draft, combined)
+    return missing, extra, not written
+
+
+def _has_problem(problems: Problems) -> bool:
+    missing, extra, blank = problems
+    return bool(missing or extra or blank)
+
+
+def _retry_message(message: str, written: str, problems: Problems) -> str:
+    missing, extra, blank = problems
+    previous = f"\n\nYour previous prompt:\n{written}" if written else ""
+    return f"{message}{previous}\n\n{retry_user((missing, extra), blank=blank)}"
 
 
 def _tag_error(missing: List[int], extra: List[int]) -> ValueError:
@@ -221,7 +252,19 @@ def _tag_error(missing: List[int], extra: List[int]) -> ValueError:
     )
 
 
-def _write_one(run: _Run, draft: str, notes, seed: int, tokens: int) -> str:
+def _raise_if_failed(problems: Problems, model: str) -> None:
+    missing, extra, blank = problems
+    if blank:
+        raise ValueError(
+            f"{model} wrote no prompt text after a retry (the reply was empty, "
+            "or cut off inside its thinking). Raise write_tokens or pick "
+            "another model."
+        )
+    if missing or extra:
+        raise _tag_error(missing, extra)
+
+
+def _write_one(run: _Run, draft: str, notes: List[Note], seed: int, tokens: int) -> str:
     reference, rest = split_reference_sentences(draft)
     message = writer_user(reference, rest, notes)
 
@@ -231,18 +274,16 @@ def _write_one(run: _Run, draft: str, notes, seed: int, tokens: int) -> str:
         )
 
     written, combined = attempt(message)
-    problems = tag_problems(draft, combined)
-    if not any(problems):
+    problems = _problems(draft, written, combined)
+    if not _has_problem(problems):
         return combined
-    _, combined = attempt(_retry_message(message, written, problems))
-    missing, extra = tag_problems(draft, combined)
-    if missing or extra:
-        raise _tag_error(missing, extra)
+    written, combined = attempt(_retry_message(message, written, problems))
+    _raise_if_failed(_problems(draft, written, combined), run.entry.name)
     return combined
 
 
 def _write_batch(
-    run: _Run, drafts: List[str], notes, seed: int, tokens: int
+    run: _Run, drafts: List[str], notes: List[List[Note]], seed: int, tokens: int
 ) -> List[str]:
     """Write every draft in one batch, then retry the failing ones in one more."""
     references = [split_reference_sentences(draft) for draft in drafts]
@@ -254,19 +295,19 @@ def _write_batch(
         )
         return [_combine(references[i][0], raw) for i, raw in zip(indices, raws)]
 
+    def problems_of(index: int, result: Tuple[str, str]) -> Problems:
+        return _problems(drafts[index], *result)
+
     results = attempt(list(range(len(drafts))), messages)
-    problems = [tag_problems(d, combined) for d, (_, combined) in zip(drafts, results)]
-    failing = [i for i, found in enumerate(problems) if any(found)]
+    problems = [problems_of(i, result) for i, result in enumerate(results)]
+    failing = [i for i, found in enumerate(problems) if _has_problem(found)]
     if not failing:
         return [combined for _, combined in results]
     retries = [_retry_message(messages[i], results[i][0], problems[i]) for i in failing]
     redone = dict(zip(failing, attempt(failing, retries)))
-    final = [redone.get(i, result)[1] for i, result in enumerate(results)]
     for index in failing:
-        missing, extra = tag_problems(drafts[index], final[index])
-        if missing or extra:
-            raise _tag_error(missing, extra)
-    return final
+        _raise_if_failed(problems_of(index, redone[index]), run.entry.name)
+    return [redone.get(i, result)[1] for i, result in enumerate(results)]
 
 
 def _write_all(run: _Run, items, notes, base_seed: int, tokens: int) -> List[str]:
@@ -403,6 +444,8 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
     ) -> Dict[str, Any]:
         if not prompt:
             raise ValueError("no prompt: connect or type a draft prompt")
+        images = {"image_1": image_1, "image_2": image_2, "image_3": image_3}
+        _check_something_to_write(prompt, images)
         model_name = model[0]
         keep = bool(keep_loaded[0]) if keep_loaded else False
         settings = (
@@ -411,7 +454,6 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
             describe_tokens[0] if describe_tokens else 512,
             write_tokens[0] if write_tokens else 1536,
         )
-        images = {"image_1": image_1, "image_2": image_2, "image_3": image_3}
         items = pair_items(prompt=prompt, **{k: v or [] for k, v in images.items()})
         entry = _resolve_model(model_name)
         _check_batches(items)
