@@ -2159,9 +2159,13 @@ test('prompt enhancer menu copies the system prompt and reports the result', asy
     expect(posted).toEqual(Array(3).fill(['POST', { base_model: 'Flux' }]));
 });
 
-test('H3 Reference Prompter panel shows prompts, steps, copies and toggles notes', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+test('H3 Reference Prompter panel shows prompts, steps, copies and toggles notes', async ({ page }) => {
     await openHost(page);
+    // Only Chromium can grant clipboard permissions; a stub records the copy in every browser.
+    await page.evaluate(() => {
+        window.copiedPrompts = [];
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => window.copiedPrompts.push(text) } });
+    });
     const id = await createNode(page, 'KikoH3ReferencePrompter');
     const panel = page.locator('.ca-h3-prompter');
     await expect(panel).toContainText('Run the workflow to see the written prompt.');
@@ -2176,7 +2180,7 @@ test('H3 Reference Prompter panel shows prompts, steps, copies and toggles notes
     await expect(panel.getByRole('button', { name: 'Next prompt' })).toBeDisabled();
     await panel.getByRole('button', { name: 'Copy prompt' }).click();
     await expect(panel.locator('.ca-h3-status')).toHaveText('Copied');
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Second prompt has five words.');
+    expect(await page.evaluate(() => window.copiedPrompts)).toEqual(['Second prompt has five words.']);
     const notes = panel.locator('.ca-h3-notes');
     await expect(notes).not.toHaveAttribute('open', '');
     await notes.locator('summary').click();
