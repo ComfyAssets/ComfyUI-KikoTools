@@ -325,3 +325,82 @@ def test_real_dispatch_routes_by_kind(monkeypatch):
     assert node_module._generate(entry("native"), *args) == "n"
     assert seen[1][1][-2:] == (False, True)
     assert seen[2][1][0] == "c" and seen[2][1][-1] is False
+
+
+def test_empty_describe_result_raises_naming_slot_and_model_and_is_not_cached(
+    monkeypatch,
+):
+    h = Harness(monkeypatch)
+    monkeypatch.setattr(h, "generate", lambda *a: "   ")
+    monkeypatch.setattr(node_module, "_generate", h.generate)
+    with pytest.raises(ValueError) as caught:
+        run(images={"image_2": [img(2)]})
+    assert "image_2" in str(caught.value) and "hf: demo" in str(caught.value)
+    assert node_module._NOTES_CACHE == {}
+    assert "repair" in h.events
+
+
+def test_empty_prompt_list_raises_no_prompt(monkeypatch):
+    h = Harness(monkeypatch)
+    with pytest.raises(ValueError, match="no prompt"):
+        H3ReferencePrompterNode().write(
+            prompt=[],
+            model=["hf: demo"],
+            role_1=["character"],
+            role_2=["outfit"],
+            role_3=["pose"],
+            seed=[1],
+        )
+    assert h.events == [] and h.calls == []
+
+
+def test_repair_failure_is_logged_and_original_error_is_raised(monkeypatch, caplog):
+    h = Harness(monkeypatch, writes=["nope", "nope"])
+
+    def broken_repair():
+        raise OSError("repair broke")
+
+    monkeypatch.setattr(node_module, "repair_loaded_models", broken_repair)
+    with caplog.at_level("ERROR"):
+        with pytest.raises(ValueError, match="did not keep the picture tags"):
+            run()
+    assert "repair broke" in caplog.text
+    assert "free_hf" in h.events
+
+
+def test_native_run_unloads_again_at_the_end_unless_kept(monkeypatch):
+    h = Harness(monkeypatch, kind="native")
+    h.entry = entry("native", "native: clip")
+    run(model=["native: clip"], images={"image_1": [img(1)]})
+    assert h.events.count("unload") == 2
+    assert h.events[-1] == "unload"
+    h.events.clear()
+    run(model=["native: clip"], images={"image_1": [img(1)]}, keep_loaded=[True])
+    assert h.events.count("unload") == 1
+
+
+def test_non_native_run_unloads_once(monkeypatch):
+    h = Harness(monkeypatch)
+    run()
+    assert h.events.count("unload") == 1
+
+
+def test_native_failure_does_not_unload_again_after_repair(monkeypatch):
+    h = Harness(monkeypatch, kind="native", writes=["nope", "nope"])
+    h.entry = entry("native", "native: clip")
+    with pytest.raises(ValueError):
+        run(model=["native: clip"])
+    assert h.events.count("unload") == 1
+    assert h.events[-1] != "unload"
+
+
+def test_failed_unload_does_not_trigger_repair(monkeypatch):
+    h = Harness(monkeypatch)
+
+    def broken_unload():
+        raise RuntimeError("unload broke")
+
+    monkeypatch.setattr(node_module, "unload_models_safely", broken_unload)
+    with pytest.raises(RuntimeError, match="unload broke"):
+        run()
+    assert "repair" not in h.events

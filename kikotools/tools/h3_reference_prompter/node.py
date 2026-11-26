@@ -1,6 +1,7 @@
 """H3 Reference Prompter node: two local passes turn a short draft plus up to
 three reference pictures into one long MiniMax H3 Image prompt."""
 
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from ...base.base_node import ComfyAssetsBaseNode
@@ -33,6 +34,8 @@ from .models import (
 )
 
 _SEED_MAX = 0xFFFFFFFFFFFFFFFF
+
+logger = logging.getLogger(__name__)
 
 # Pass-1 notes keyed by image_key; lives for the ComfyUI session.
 _NOTES_CACHE: Dict[str, str] = {}
@@ -121,13 +124,19 @@ def _describe(run: _Run, item, role, slot, model, seed, tokens) -> Optional[str]
         return None
     key = image_key(image, role, model)
     if key not in _NOTES_CACHE:
-        _NOTES_CACHE[key] = run.generate(
+        text = run.generate(
             describe_system(role),
             describe_user(role, item["prompt"]),
             image,
             seed,
             tokens,
         ).strip()
+        if not text:
+            raise ValueError(
+                f"{model} returned no description for image_{slot} ({role}); "
+                "try again or pick another model"
+            )
+        _NOTES_CACHE[key] = text
     return _NOTES_CACHE[key]
 
 
@@ -151,6 +160,60 @@ def _write_one(run: _Run, draft: str, notes, seed: int, tokens: int) -> str:
             + "; ".join(parts)
         )
     return result
+
+
+def _run_item(run, item, index, roles, settings) -> Tuple[str, str]:
+    """Describe the item's pictures, then write its prompt: (prompt, notes)."""
+    model_name, base_seed, describe_max, write_max = settings
+    notes: List[Tuple[int, str, Optional[str]]] = []
+    for slot, role in enumerate(roles, start=1):
+        text = _describe(run, item, role, slot, model_name, base_seed, describe_max)
+        notes.append((slot, role, text))
+    written = _write_one(
+        run, item["prompt"], notes, item_seed(base_seed, index), write_max
+    )
+    notes_text = "\n\n".join(
+        f"<Picture {slot}> ({role}): {text}"
+        for slot, role, text in notes
+        if text is not None
+    )
+    return written, notes_text
+
+
+def _result(pairs: List[Tuple[str, str]]) -> Dict[str, Any]:
+    prompts = [written for written, _ in pairs]
+    notes_out = [notes_text for _, notes_text in pairs]
+    return {
+        "ui": {"h3_prompts": prompts, "h3_notes": notes_out},
+        "result": (prompts, notes_out),
+    }
+
+
+def _execute(run, items, roles, settings, keep: bool) -> List[Tuple[str, str]]:
+    unloaded = False
+    try:
+        unload_models_safely()
+        unloaded = True
+        return [
+            _run_item(run, item, index, roles, settings)
+            for index, item in enumerate(items)
+        ]
+    except Exception:
+        if unloaded:
+            _repair_quietly()
+        raise
+    finally:
+        if not keep:
+            free_hf()
+            free_gguf()
+            run.clip = None
+
+
+def _repair_quietly() -> None:
+    try:
+        repair_loaded_models()
+    except Exception:
+        logger.exception("repair_loaded_models failed after a prompter error")
 
 
 class H3ReferencePrompterNode(ComfyAssetsBaseNode):
@@ -233,60 +296,24 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
         write_tokens: Optional[List[int]] = None,
         keep_loaded: Optional[List[bool]] = None,
     ) -> Dict[str, Any]:
+        if not prompt:
+            raise ValueError("no prompt: connect or type a draft prompt")
         model_name = model[0]
-        roles = (role_1[0], role_2[0], role_3[0])
-        base_seed = seed[0]
         keep = bool(keep_loaded[0]) if keep_loaded else False
-        describe_max = describe_tokens[0] if describe_tokens else 512
-        write_max = write_tokens[0] if write_tokens else 1536
-        items = pair_items(
-            prompt=prompt,
-            image_1=image_1 or [],
-            image_2=image_2 or [],
-            image_3=image_3 or [],
+        settings = (
+            model_name,
+            seed[0],
+            describe_tokens[0] if describe_tokens else 512,
+            write_tokens[0] if write_tokens else 1536,
         )
+        images = {"image_1": image_1, "image_2": image_2, "image_3": image_3}
+        items = pair_items(prompt=prompt, **{k: v or [] for k, v in images.items()})
         entry = _resolve_model(model_name)
         _check_batches(items)
         run = _Run(entry, temperature[0] if temperature else 0.7)
-        unloaded = False
-        try:
+        roles = (role_1[0], role_2[0], role_3[0])
+        pairs = _execute(run, items, roles, settings, keep)
+        if entry.kind == "native" and not keep:
+            # ComfyUI manages the native clip; dropping our reference frees nothing.
             unload_models_safely()
-            unloaded = True
-            prompts: List[str] = []
-            notes_out: List[str] = []
-            for index, item in enumerate(items):
-                notes: List[Tuple[int, str, Optional[str]]] = []
-                for slot, role in enumerate(roles, start=1):
-                    text = _describe(
-                        run, item, role, slot, model_name, base_seed, describe_max
-                    )
-                    notes.append((slot, role, text))
-                prompts.append(
-                    _write_one(
-                        run,
-                        item["prompt"],
-                        notes,
-                        item_seed(base_seed, index),
-                        write_max,
-                    )
-                )
-                notes_out.append(
-                    "\n\n".join(
-                        f"<Picture {slot}> ({role}): {text}"
-                        for slot, role, text in notes
-                        if text is not None
-                    )
-                )
-        except Exception:
-            if unloaded:
-                repair_loaded_models()
-            raise
-        finally:
-            if not keep:
-                free_hf()
-                free_gguf()
-                run.clip = None
-        return {
-            "ui": {"h3_prompts": prompts, "h3_notes": notes_out},
-            "result": (prompts, notes_out),
-        }
+        return _result(pairs)
