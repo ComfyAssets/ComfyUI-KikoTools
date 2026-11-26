@@ -36,6 +36,15 @@
 - A panel on the node shows each prompt with its word count, previous and next
   buttons, a copy button and collapsible notes.
 - Example workflow: `h3_reference_prompter_charsheet_test.json`.
+- Roles default to `auto`, which reads the draft's `<Picture N> is the
+  character/outfit/pose.` sentences and falls back to character, outfit, pose;
+  a role picked by hand wins. A KikoCharSheet Nude run no longer describes the
+  pose mannequin as an outfit.
+- Nude mode: a draft that says nude or naked with no outfit picture gets a
+  plain, non-sexual description of the unclothed adult body. The run is
+  refused unless the character picture's estimated age is 20 or older and no
+  youth word appears in the notes, the draft or the written part. Never use
+  pictures of real people.
 
 ### Kiko Purge VRAM
 

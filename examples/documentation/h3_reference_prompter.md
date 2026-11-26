@@ -16,7 +16,7 @@ The whole draft is written at the start of the prompt, word for word, one line p
 |-------|-------|
 | `prompt` | The draft. Tags `<Picture 1>` to `<Picture 3>` are kept exactly |
 | `model` | The vision model, see [Models](#models) |
-| `role_1`, `role_2`, `role_3` | What each picture shows: `character`, `outfit`, `pose` or `other`. Defaults: character, outfit, pose |
+| `role_1`, `role_2`, `role_3` | What each picture shows: `auto` (default), `character`, `outfit`, `pose` or `other`. See [Roles](#roles) |
 | `seed` | Base seed |
 | `image_1` to `image_3` | Optional pictures. `image_N` is always `<Picture N>`; slots are never renumbered |
 | `temperature` | Advanced, default 0.7 |
@@ -25,6 +25,14 @@ The whole draft is written at the start of the prompt, word for word, one line p
 | `keep_loaded` | Advanced, default off. Keep the prompt model in memory after the run. A kept `hf:` model sits outside ComfyUI's memory management |
 
 A picture slot must hold one image. A batch of more than one image in a slot stops with an error naming the slot.
+
+## Roles
+
+`auto` reads each slot's role from the draft's sentences `<Picture N> is the character.`, `<Picture N> is the outfit.` and `<Picture N> is the pose.` (in any case; KikoCharSheet's Chinese sentences, such as `<Picture 2>是姿势。`, are read too). A slot the draft does not name falls back to its old default: `image_1` character, `image_2` outfit, `image_3` pose. A role you pick by hand always wins over `auto`.
+
+Roles are read per item, so each draft of a one-per-pose run gets its own. The notes and the notes cache use the role that was read.
+
+KikoCharSheet numbers only the pictures that are present, in the order character, outfit, pose. Without an outfit picture (the Nude costume) the pose is `<Picture 2>`, and `auto` describes it as a pose. A workflow saved with fixed roles keeps them; set the roles to `auto` to follow the draft.
 
 ## Outputs
 
@@ -48,6 +56,30 @@ If the model writes nothing after the draft (an empty reply, or one cut off insi
 With a transformers (`hf:`) model both passes run in batches. All the pictures of a run that are not cached yet are described in one batch, and all the prompts are written in another. Only prompts with wrong tags or no text are retried, together in one more batch. Batches hold at most four requests. Batching needs transformers 5 or newer, and only Qwen3-VL and Qwen3.5 folders run batched; with an older transformers or another architecture, such as Gemma 4, the same requests run one at a time, in the same order. GGUF and native models run one call at a time.
 
 The pose description never describes the mannequin's own look (surface, colour, build, face), only the pose.
+
+## Nude mode
+
+KikoCharSheet's 18+ mode has a costume with no picture, Nude. It writes "The character's outfit: completely nude, wearing no clothing and no footwear." into the draft and sends no outfit picture.
+
+**Detection.** An item is in nude mode when its draft contains the word `nude` or `naked` (whole word, any case) and no connected picture has the outfit role. Any draft that uses one of these words without an outfit picture is treated this way, including "nude lipstick".
+
+**Body section.** In nude mode the writer gets one more instruction block. In place of the outfit part, it describes the unclothed adult body plainly: build, proportions, skin tone and skin texture following the character notes, and natural adult anatomy, in the register of a figure-drawing or photography reference. It writes no sexual acts, no sexual poses and no arousal or explicit-focus language, and adds no clothing, footwear or accessories unless the draft names them. The person is called an adult woman aged N to M (or "in her twenties" when the range lies there), or an adult man when the character notes describe a man. All other writer rules still apply.
+
+**Age check.** The character describer always ends its notes with `Estimated age: N to M years.` In nude mode the node checks every item after the pictures are described and before anything is written. It stops the run with an error when:
+
+- no character picture is connected;
+- the estimate is missing or cannot be read;
+- the lower bound is under 20, so a picture whose estimate could be under 20 is refused;
+- the character notes use a youth word: teen, teenage, teenager, adolescent, schoolgirl, child, childlike, kid, minor, underage or loli (whole words, any case, plurals included, so "late teens" counts);
+- the draft uses one of those words or "girl".
+
+The error says that nude prompts need an adult character picture whose estimated age is 20 or older, and gives the estimate it found. Nothing is written for any item; like other errors, ComfyUI's model list is repaired and the prompt model is freed.
+
+**Output check.** After writing, the model's part (not the draft) must not contain a youth word, "girl" or "girls". A hit is retried once, together with any tag problem, with a message naming the word. If the word is still there, the run stops with an error. Outside nude mode, "girl" is not checked.
+
+The age estimate comes from the vision model and can be wrong. The check refuses doubtful pictures; it does not prove anyone's age.
+
+**Real people.** Never use pictures of real people for nude prompts. KikoCharSheet does not allow Nude with an uploaded portrait: its gallery portraits are AI-generated, while an upload may show a real person.
 
 ## One prompt per pose
 
