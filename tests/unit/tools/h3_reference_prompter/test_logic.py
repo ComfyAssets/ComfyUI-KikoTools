@@ -12,6 +12,7 @@ from kikotools.tools.h3_reference_prompter.logic import (
     check_adult,
     clean_result,
     draft_lead,
+    cap_negatives,
     drop_echoes,
     says_nude,
     drop_repeats,
@@ -479,3 +480,30 @@ def test_is_placeholder_rejects_an_image_with_one_dark_pixel():
     image = torch.ones((1, 64, 64, 3))
     image[0, 10, 10, 0] = 0.2
     assert is_placeholder(image) is False
+
+
+def test_cap_negatives_cuts_a_long_comma_run_to_six():
+    items = ", ".join(f"no thing {n}" for n in range(1, 41))
+    text = f"She sits on the floor, against a grey wall, {items}, no end."
+    got = cap_negatives(text)
+    assert got == (
+        "She sits on the floor, against a grey wall, no thing 1, no thing 2, "
+        "no thing 3, no thing 4, no thing 5, no thing 6."
+    )
+
+
+def test_cap_negatives_keeps_a_short_list_and_line_lists():
+    short = "Soft light.\n\nNo extra fingers or limbs.\nNo other people.\nNo text."
+    assert cap_negatives(short) == short
+    lines = "\n".join(f"No problem {n}." for n in range(1, 10))
+    assert cap_negatives(lines) == "\n".join(f"No problem {n}." for n in range(1, 7))
+
+
+def test_clean_result_caps_negatives():
+    long = "A woman. " + " ".join(f"No item {n}." for n in range(1, 12))
+    assert clean_result(long).count("No item") == 6
+
+
+def test_cap_negatives_drops_blank_lines_after_the_cut():
+    text = "\n\n".join(f"No problem {n}." for n in range(1, 10))
+    assert cap_negatives(text) == "\n\n".join(f"No problem {n}." for n in range(1, 7))

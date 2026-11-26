@@ -242,10 +242,50 @@ def drop_echoes(written: str, lead: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
 
 
+MAX_NEGATIVES = 6
+_ITEM = re.compile(r"[^,.;\n]+[,.;]?[ \t]*\n?|\n")
+_NEGATIVE = re.compile(r"\s*no\b", re.IGNORECASE)
+
+
+def _close(item: str) -> str:
+    """End an item with a full stop, keeping its trailing whitespace."""
+    body = item.rstrip()
+    tail = item[len(body) :]
+    body = body.rstrip(",;")
+    return body + ("" if body.endswith((".", "!", "?")) else ".") + tail
+
+
+def cap_negatives(text: str, limit: int = MAX_NEGATIVES) -> str:
+    """Keep at most ``limit`` "no ..." items in a row; the run ends with a stop.
+
+    Small models sometimes let the closing list of what must not appear run on
+    for dozens of comma-separated items. Line breaks do not end a run.
+    """
+    kept: List[str] = []
+    run = 0
+    for match in _ITEM.finditer(text):
+        item = match.group(0)
+        if item == "\n":
+            if run <= limit:
+                kept.append(item)
+            continue
+        if not _NEGATIVE.match(item):
+            run = 0
+            kept.append(item)
+            continue
+        run += 1
+        if run <= limit:
+            kept.append(item)
+        elif run == limit + 1:
+            last = max(i for i, part in enumerate(kept) if part.strip())
+            kept[last] = _close(kept[last])
+    return "".join(kept).rstrip()
+
+
 def clean_result(text: str) -> str:
     bare = split_thinking(text)
     bare = _PREAMBLE_LINE.sub("", bare, count=1)
-    return drop_repeats(clean_output(bare))
+    return cap_negatives(drop_repeats(clean_output(bare)))
 
 
 def says_nude(draft: Optional[str]) -> bool:

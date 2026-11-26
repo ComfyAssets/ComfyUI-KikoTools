@@ -42,6 +42,8 @@
   character/outfit/pose.` sentences and falls back to character, outfit, pose;
   a role picked by hand wins. A KikoCharSheet Nude run no longer describes the
   pose mannequin as an outfit.
+- A closing list of what must not appear is cut to six items in a row, so a
+  run-on list cannot swell the prompt.
 - Nude mode: a draft that says nude, naked or 裸 always gets the adult age
   check, whatever the roles; with no outfit picture it also gets a plain,
   non-sexual description of the unclothed adult body. The run is
