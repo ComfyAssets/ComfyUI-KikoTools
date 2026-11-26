@@ -20,7 +20,7 @@ _PREAMBLE_LINE = re.compile(
     re.IGNORECASE,
 )
 _SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+")
-# A single capitalised word of up to three letters (Dr., Mr., Mrs., St.).
+# Titles that do not end a sentence (Dr., Mr., Mrs., St., Prof. ...).
 _TITLE_END = re.compile(r"(?:^|\s)(?:Dr|Mr|Mrs|Ms|Mx|St|Jr|Sr|Prof)\.$")
 _SEED_MODULUS = 2**64
 
@@ -130,20 +130,27 @@ def drop_repeats(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip("\n")
 
 
+def _echo_key(sentence: str) -> str:
+    return _squash(sentence).rstrip(".!?,;: ")
+
+
 def drop_echoes(written: str, lead: str) -> str:
     """Drop sentences of ``written`` that repeat any sentence of ``lead``.
 
-    Matching ignores case and spacing; lines left empty are removed.
+    Matching ignores case, spacing and end punctuation; lines left empty are
+    removed.
     """
     echoes = {
-        _squash(sentence) for line in lead.split("\n") for sentence in _sentences(line)
+        _echo_key(sentence)
+        for line in lead.split("\n")
+        for sentence in _sentences(line)
     } - {""}
     if not echoes:
         return written
     lines: List[str] = []
     for line in written.split("\n"):
         sentences = _sentences(line)
-        kept = [s for s in sentences if _squash(s) not in echoes]
+        kept = [s for s in sentences if _echo_key(s) not in echoes]
         if len(kept) == len(sentences):
             lines.append(line)
         elif kept:

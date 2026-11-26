@@ -232,3 +232,9 @@ def test_drop_echoes_drops_any_repeated_draft_sentence():
     lead = "Side view, sitting. Photorealistic photograph."
     written = "Side view, sitting. She waves. Photorealistic  photograph."
     assert drop_echoes(written, lead) == "She waves."
+
+
+def test_drop_echoes_ignores_end_punctuation():
+    lead = "Side view\nAnime style, full body"
+    written = "Side view. The girl stands. Anime style, full body"
+    assert drop_echoes(written, lead) == "The girl stands."

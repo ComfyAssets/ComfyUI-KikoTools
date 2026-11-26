@@ -34,7 +34,7 @@ The panel on the node shows each prompt with its word count, previous and next b
 
 ## Picture tags
 
-The prompt must contain exactly the tags the draft has. If the model drops or adds a tag, the node retries once. If the tags are still wrong, it stops with an error naming the missing and unexpected tags. A draft with no tags at all works too, and the prompt then has none.
+The prompt must contain exactly the tags the draft has. The draft itself opens the prompt, so its tags are always there; if the model adds a tag the draft does not have, the node retries once, then stops with an error naming the unexpected tags. A draft with no tags at all works too, and the prompt then has none.
 
 The draft's sentences end at `.`, `!`, `?` and at line breaks; a short title such as `Dr.` or `Mrs.` does not end a sentence. The draft keeps its lines. Fragments with no letter or digit, such as a stray lone period, are left out.
 
@@ -72,7 +72,7 @@ A workflow saved with a model this machine does not have still loads. It stops w
 
 ## Memory
 
-Before the model loads, the node frees ComfyUI's loaded models with the same safe unload as Kiko Purge VRAM. A prompt model kept from an earlier run on another backend (for example an `hf:` model when this run uses a GGUF) is freed too, even with `keep_loaded` on. Afterwards the node unloads the prompt model, unless `keep_loaded` is on. A kept `hf:` model sits outside ComfyUI's memory management: ComfyUI cannot free it when it needs room, so turn `keep_loaded` off or run Kiko Purge VRAM when you need that memory back.
+Before the model loads, the node frees ComfyUI's loaded models with the same safe unload as Kiko Purge VRAM. A prompt model kept from an earlier run on another backend (for example an `hf:` model when this run uses a GGUF) is freed too, even with `keep_loaded` on. Afterwards the node unloads the prompt model, unless `keep_loaded` is on. A kept `hf:` model sits outside ComfyUI's memory management: ComfyUI cannot free it when it needs room, and Kiko Purge VRAM does not free it either. To get that memory back, turn `keep_loaded` off and run the prompter again.
 
 ## Example
 
