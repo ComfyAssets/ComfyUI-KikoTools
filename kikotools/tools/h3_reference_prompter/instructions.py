@@ -121,7 +121,12 @@ draft's style, such as soft even studio light or a plain light-grey backdrop.
 - A note that says there is no picture means: use the draft's own words for \
 that part.
 - For the subject, the outfit and the pose, use only what the draft and the \
-notes say and invent nothing. Do not invent names, brands or extra people.\
+notes say and invent nothing. Do not invent names, brands or extra people.
+- Notes for a picture with the role other are extra material: use them where \
+they fit, as setting or prop detail. Never describe a person from them unless \
+the draft says so.
+- When two pictures have the same role, cover both inside that role's part, \
+in slot order: the lower picture number first.\
 """
 
 

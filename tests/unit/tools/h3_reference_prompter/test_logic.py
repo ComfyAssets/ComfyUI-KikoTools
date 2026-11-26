@@ -211,3 +211,49 @@ def test_drop_echoes_only_echo_gives_blank():
 def test_drop_echoes_keeps_partial_matches():
     text = "<Picture 1> is her, smiling."
     assert drop_echoes(text, "<Picture 1> is her.") == text
+
+
+def test_split_reference_sentences_splits_at_line_breaks():
+    reference, rest = split_reference_sentences("<Picture 1> is her\nSoft light")
+    assert (reference, rest) == ("<Picture 1> is her", "Soft light")
+
+
+def test_split_reference_sentences_keeps_the_drafts_line_breaks():
+    draft = (
+        "<Picture 1> is her. <Picture 2> is the coat.\n"
+        "Photorealistic.\n\n"
+        "<Picture 3> is the pose. Full body."
+    )
+    reference, rest = split_reference_sentences(draft)
+    assert reference == (
+        "<Picture 1> is her. <Picture 2> is the coat.\n<Picture 3> is the pose."
+    )
+    assert rest == "Photorealistic.\nFull body."
+
+
+@pytest.mark.parametrize("title", ["Dr.", "Mr.", "Mrs.", "St."])
+def test_split_reference_sentences_keeps_short_titles_inside_a_sentence(title):
+    draft = f"{title} Kim wears <Picture 1>. Soft light."
+    reference, rest = split_reference_sentences(draft)
+    assert reference == f"{title} Kim wears <Picture 1>."
+    assert rest == "Soft light."
+
+
+def test_split_reference_sentences_still_splits_after_longer_or_lowercase_words():
+    reference, rest = split_reference_sentences(
+        "It is red. <Picture 1> is Bold. Next one."
+    )
+    assert reference == "<Picture 1> is Bold."
+    assert rest == "It is red. Next one."
+
+
+def test_drop_echoes_reads_multi_line_references():
+    reference = "<Picture 1> is her.\nDr. Kim wears <Picture 2>."
+    written = "Dr. Kim wears <Picture 2>. She stands."
+    assert drop_echoes(written, reference) == "She stands."
+
+
+def test_drop_echoes_does_not_split_a_title_off_the_written_part():
+    assert drop_echoes("Dr. Lee waves.", "Dr. Kim wears <Picture 2>.") == (
+        "Dr. Lee waves."
+    )

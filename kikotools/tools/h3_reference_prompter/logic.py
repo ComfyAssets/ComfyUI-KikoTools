@@ -20,6 +20,8 @@ _PREAMBLE_LINE = re.compile(
     re.IGNORECASE,
 )
 _SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+")
+# A single capitalised word of up to three letters (Dr., Mr., Mrs., St.).
+_TITLE_END = re.compile(r"(?:^|\s)[A-Z][a-z]{0,2}\.$")
 _SEED_MODULUS = 2**64
 
 
@@ -33,20 +35,42 @@ def tag_problems(draft: str, result: str) -> Tuple[List[int], List[int]]:
     return sorted(wanted - produced), sorted(produced - wanted)
 
 
+def _sentences(line: str) -> List[str]:
+    """Split one line at sentence ends, never right after a short title."""
+    pieces: List[str] = []
+    start = 0
+    for match in _SENTENCE_BREAK.finditer(line):
+        head = line[start : match.start()]
+        if _TITLE_END.search(head):
+            continue
+        pieces.append(head)
+        start = match.end()
+    pieces.append(line[start:])
+    return pieces
+
+
 def split_reference_sentences(draft: str) -> Tuple[str, str]:
     """Split a draft into (sentences naming a picture, all other sentences).
 
-    Sentences keep their exact words and order; fragments with no letter or
-    digit (a stray lone period) are dropped.
+    Sentences end at ., ! or ? and at line breaks. Sentences keep their exact
+    words and order; those that shared a line are joined by a space and lines
+    by a line break. Fragments with no letter or digit (a stray lone period)
+    and empty lines are dropped.
     """
     reference: List[str] = []
     rest: List[str] = []
-    for sentence in _SENTENCE_BREAK.split(draft.strip()):
-        sentence = sentence.strip()
-        if not re.search(r"\w", sentence):
-            continue
-        (reference if find_tags(sentence) else rest).append(sentence)
-    return " ".join(reference), " ".join(rest)
+    for line in draft.strip().split("\n"):
+        line_reference: List[str] = []
+        line_rest: List[str] = []
+        for sentence in _sentences(line.strip()):
+            sentence = sentence.strip()
+            if not re.search(r"\w", sentence):
+                continue
+            (line_reference if find_tags(sentence) else line_rest).append(sentence)
+        for kept, part in ((line_reference, reference), (line_rest, rest)):
+            if kept:
+                part.append(" ".join(kept))
+    return "\n".join(reference), "\n".join(rest)
 
 
 def pair_items(**columns: List[Any]) -> List[Dict[str, Any]]:
@@ -116,12 +140,16 @@ def drop_echoes(written: str, reference: str) -> str:
 
     Matching ignores case and spacing; lines left empty are removed.
     """
-    echoes = {_squash(s) for s in _SENTENCE_BREAK.split(reference)} - {""}
+    echoes = {
+        _squash(sentence)
+        for line in reference.split("\n")
+        for sentence in _sentences(line)
+    } - {""}
     if not echoes:
         return written
     lines: List[str] = []
     for line in written.split("\n"):
-        sentences = _SENTENCE_BREAK.split(line)
+        sentences = _sentences(line)
         kept = [s for s in sentences if _squash(s) not in echoes]
         if len(kept) == len(sentences):
             lines.append(line)

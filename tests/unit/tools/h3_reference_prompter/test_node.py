@@ -712,3 +712,12 @@ def test_native_errors_pass_through_unwrapped_and_repair(monkeypatch):
     with pytest.raises(RuntimeError, match="clip broke"):
         run(model=["native: clip"], images={"image_1": [img(1)]})
     assert "repair" in h.events
+
+
+def test_multi_line_draft_keeps_its_reference_lines(monkeypatch):
+    draft = "<Picture 1> is her.\nSoft light.\n<Picture 2> is the coat."
+    Harness(monkeypatch, writes=["<Picture 2> is the coat. She stands."])
+    out = run(prompt=[draft])
+    assert out["result"][0] == [
+        "<Picture 1> is her.\n<Picture 2> is the coat.\n\nShe stands."
+    ]

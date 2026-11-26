@@ -289,3 +289,16 @@ def test_outfit_describer_says_length_and_where_items_are_worn():
     assert "socks at the ankle, mid-calf or knee" in text
     assert "a hat worn on the head" in text
     assert "is still worn in its usual place" in text
+
+
+def test_writer_uses_other_notes_as_setting_or_prop_detail():
+    text = " ".join(writer_system().split())
+    assert "role other" in text
+    assert "setting or prop detail" in text
+    assert "Never describe a person from them unless the draft says so." in text
+
+
+def test_writer_covers_same_role_pictures_in_slot_order():
+    text = " ".join(writer_system().split())
+    assert "same role" in text
+    assert "slot order" in text
