@@ -8,7 +8,7 @@ Writes one long prompt for MiniMax H3 Image from a short draft and up to three r
 
 You write a short draft that names the pictures with tags, such as `<Picture 1> is the character. <Picture 2> is the outfit. <Picture 3> is the pose.` The node looks at each picture, then writes a detailed prompt that describes the subject, outfit, pose, camera, lighting and background.
 
-The draft's sentences that carry a `<Picture N>` tag are written at the start of the prompt unchanged. The model writes everything after them. Draft instructions win over what the pictures show, for example "leave out the shoes" or a style sentence.
+The whole draft is written at the start of the prompt, word for word, one line per draft line. The model adds the detail after it: subject, outfit, pose, camera, lighting and background. If the model repeats a draft sentence, the repeat is dropped. Draft instructions win over what the pictures show, for example "leave out the shoes" or a style sentence.
 
 ## Inputs
 
@@ -36,9 +36,9 @@ The panel on the node shows each prompt with its word count, previous and next b
 
 The prompt must contain exactly the tags the draft has. If the model drops or adds a tag, the node retries once. If the tags are still wrong, it stops with an error naming the missing and unexpected tags. A draft with no tags at all works too, and the prompt then has none.
 
-The draft's sentences end at `.`, `!`, `?` and at line breaks; a short title such as `Dr.` or `Mrs.` does not end a sentence. The reference sentences keep the draft's lines. If the model repeats one of them, the repeat is dropped.
+The draft's sentences end at `.`, `!`, `?` and at line breaks; a short title such as `Dr.` or `Mrs.` does not end a sentence. The draft keeps its lines. Fragments with no letter or digit, such as a stray lone period, are left out.
 
-If the model writes nothing after the reference sentences (an empty reply, or one cut off inside its thinking), the node retries once, together with any tag problem. If it is still empty, it stops with an error naming the model; raise `write_tokens` or pick another model. A run with an empty draft and no picture stops at once with an error.
+If the model writes nothing after the draft (an empty reply, or one cut off inside its thinking), the node retries once, together with any tag problem. If it is still empty, it stops with an error naming the model; raise `write_tokens` or pick another model. A run with an empty draft and no picture stops at once with an error.
 
 ## Two passes
 
@@ -86,21 +86,23 @@ outfit from <Picture 2>. Photorealistic studio photograph, soft even lighting.
 
 The prompt it writes (shape, with a short excerpt) has these parts, in order:
 
-1. The draft's reference sentences, unchanged.
+1. The whole draft, written word for word by the node.
+
+Then the model's part:
+
 2. The subject, from head to hands.
 3. The outfit, garment by garment.
-4. The pose, with each hand and foot.
+4. The pose, in the view and position the draft names, with each hand and foot.
 5. The camera: height, side, distance, direction and framing.
 6. A lighting sentence: source, hardness and what it touches.
 7. The background.
-8. The draft's style sentence.
-9. A short closing list of what must not appear, one problem per line.
+8. A short closing list of what must not appear, one problem per line.
 
 Excerpt:
 
 > She wears a cream-colored off-the-shoulder ribbed knit top with a ruffled neckline edged in delicate eyelet lace, a fitted silhouette; over it, a beige trench coat made of smooth fabric with a loose double-breasted cut ... Shot from a medium distance at eye level, camera positioned directly in front and pointing straight ahead, framing her from head to toe without cropping any extremities. Soft even studio lighting illuminates her evenly from the front, casting minimal shadows ... No extra fingers or limbs. No other people.
 
-The target length is 250 to 450 words, in English.
+The target length for the model's part is 250 to 450 words, in English.
 
 ## Example workflow
 
