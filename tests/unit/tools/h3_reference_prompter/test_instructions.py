@@ -427,6 +427,29 @@ def test_writer_user_puts_the_hint_after_the_notes():
     assert text.endswith("Write the final prompt now.")
 
 
+def test_writer_user_tells_the_writer_to_drop_traits_the_hint_negates():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("Draft.", notes, hint=HINT)
+    assert "no tattoos, no freckles, no bangs, no glasses or no facial hair" in text
+    assert "leave that trait out of the prompt" in text
+    assert "say plainly that the person has none" in text
+
+
+def test_writer_user_lets_the_hint_pose_win_for_head_and_eyes_only():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("Draft.", notes, hint=HINT)
+    assert '"Pose:" part in the hint sets the head angle' in text
+    assert "wins over the pose notes for the head and eyes only" in text
+    assert "rest of the pose still comes from the draft and the pose notes" in text
+
+
+def test_writer_user_without_a_hint_has_no_hint_rules():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("Draft.", notes)
+    assert "no tattoos" not in text
+    assert '"Pose:"' not in text
+
+
 @pytest.mark.parametrize("blank", ["", "   ", "\n"])
 def test_writer_user_treats_a_blank_hint_as_no_hint(blank):
     notes = [(1, "character", "Dark hair.")]

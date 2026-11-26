@@ -6,7 +6,8 @@
 
 - Character Hint (Female) and Character Hint (Male) nodes in 🫶 ComfyAssets/🧠
   Prompts. They build a plain-text character description from dropdowns (age,
-  heritage, body, face, makeup, hair, skin, tattoo, expression and free text).
+  heritage, body, face, makeup, eyewear, hair, skin, tattoo, expression, head
+  angle, gaze and free text).
   Every option was tested against MiniMax H3 Image.
 - Character Hint: you can add, change or remove dropdown options in
   `user/kikotools/character_hint.json`, which survives pack updates.

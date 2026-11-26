@@ -8,7 +8,7 @@ Two nodes that build a short text description of a character from dropdowns: **C
 
 Every field starts at `-`, which means unset. Only the fields you set are written. The node has one output, `hint` (STRING).
 
-The hint is written in a fixed order: who the character is, then Body, Face, Makeup, Hair, Skin, Tattoos, Expression, Unclothed detail and Extra. The lead sentence is always there. It names the age and, if you set one, the heritage.
+The hint is written in a fixed order: who the character is, then Body, Face, Makeup, Eyewear, Hair, Skin, Tattoos, Expression, Pose, Unclothed detail and Extra. The lead sentence is always there. It names the age and, if you set one, the heritage.
 
 ## How to wire it
 
@@ -33,13 +33,15 @@ The female and male nodes share most fields. Fields that only one of them has ar
 
 | Field | Notes |
 |-------|-------|
-| `face_shape` | Round or Oblong |
+| `face_shape` | Round, Oblong, Square or Heart-shaped |
+| `facial_structure` | Angular jawline, Soft jawline, High cheekbones, Cleft chin. Written after the face shape |
 | `eye_color` | 12 colors, from Dark brown to Violet, Silver and Pink |
 | `eye_shape` | Monolid, Hooded, Deep-set |
 | `eye_detail` | Defined eyelashes, Fine lines, Gold flecks, Heterochromia, Bloodshot |
-| `nose` | Small, Button, Very large |
+| `eyebrows` | High arch or Thick |
+| `nose` | Small, Button, Upturned, Very large |
 | `lip_shape` | Female: Thin, Full, Wide, Cupid's bow. Male: Thin, Full |
-| `facial_hair` | Male only. 8 choices, such as Stubble, Goatee, Full beard |
+| `facial_hair` | Male only. 8 choices, such as Clean shaven, Stubble, Goatee, Full beard. Clean shaven asks for no beard, mustache or stubble |
 | `dimples` | Subtle or Deep |
 
 ### Makeup
@@ -51,14 +53,23 @@ Female only.
 | `makeup` | 40 styles, such as No makeup, Natural, Soft glam, Gothic, 1950s pin-up, Soft Korean, Gyaru, Smokey eye, Cat eye, Glitter, Classic red lip. Each style has its own look and lips |
 | `lip_color` | 13 colors, such as Natural, Coral, Berry, Red, Burgundy, Black. With a makeup style, the color replaces that style's lips. Without one, "<color> lips" goes in the Face part |
 
+### Eyewear
+
+Both nodes. Written as its own "Eyewear:" part, after Makeup and before Hair.
+
+| Field | Notes |
+|-------|-------|
+| `eyewear` | Thin wire frames, Thick acetate frames, Round glasses, Sunglasses, No glasses |
+
 ### Hair
 
 | Field | Notes |
 |-------|-------|
 | `hair_color` | 28 choices, such as Black, Chestnut, Auburn, Copper, Strawberry blonde |
+| `hair_texture` | Pin-straight, Loosely wavy, Curly, Tightly coiled. Written after the hair color |
 | `hair_length` | Female only. Buzzed, Chin length, Shoulder length, Long |
-| `hair_style` | Different lists. Female has 34, such as Bob, Pixie cut, Shag cut. Male has 19, such as Buzz cut, High fade, Pompadour |
-| `bangs` | Female only. Curtain, Side-swept, Wispy, Blunt |
+| `hair_style` | Different lists. Female has 35, such as Bob, Pixie cut, Shag cut, Three-strand braid. Male has 19, such as Buzz cut, High fade, Pompadour |
+| `bangs` | Female only. Curtain, Side-swept, Wispy, Blunt, No bangs |
 
 ### Skin
 
@@ -66,7 +77,7 @@ Female only.
 |-------|-------|
 | `skin_tone` | 12 choices, from Porcelain to deeper tones, including Olive |
 | `tan` | Light tan or Deep tan |
-| `freckles` | A few or Prominent |
+| `freckles` | A few, Prominent or No freckles |
 | `acne` | A few blemishes, Some acne, Pronounced acne |
 | `beauty_mark` | Left cheek or Right cheek |
 
@@ -74,10 +85,20 @@ Female only.
 
 | Field | Notes |
 |-------|-------|
-| `tattoo` | Small, Sleeve, Neck or Hand tattoo |
-| `expression` | 30 choices, such as Neutral, Smiling, Amused, Playful |
+| `tattoo` | Small, Sleeve, Neck or Hand tattoo, or No tattoos |
+| `expression` | 33 choices, such as Neutral, Smiling, Amused, Playful, Sad, Tired, Relieved |
+| `head_angle` | Facing forward, Three-quarter left or right, Full profile left or right, Chin raised, Chin lowered, Tilted left or right. Written in the "Pose:" part, see [Pose](#pose) |
+| `gaze` | Into the lens, Up, Down, Off-camera left or right. Written in the "Pose:" part |
 | `nipples`, `areola` | Female only. Written as "Unclothed detail:", see [Unclothed detail](#unclothed-detail) |
 | `extra` | Free text. It is trimmed and a full stop is added unless it already ends with `.`, `!` or `?`. Text with no letter or digit adds nothing |
+
+## Pose
+
+`head_angle` and `gaze` are written as one "Pose:" part, after Expression, for example "Pose: head in three-quarter view, with the nose pointing toward the left edge of the image, eyes looking downward." Left and right are as seen in the image. With the prompter, Pose options override the pose picture for the head and eyes only. The rest of the pose still comes from the draft and the pose notes.
+
+## The "No ..." options
+
+`No tattoos`, `No freckles`, `No bangs`, `No glasses` and the Clean shaven option of `facial_hair` ask the prompt to drop a trait the reference picture has. With the prompter, the writer leaves the trait out and says plainly that the person has none. The image model may still copy the trait from the reference picture, so the picture is not guaranteed to follow.
 
 ## Example output
 
@@ -156,6 +177,6 @@ The shipped options were tested against MiniMax H3 Image. Your own additions wer
 
 ## Tested options
 
-Every option was tested against MiniMax H3 Image, and only options the model draws are in the lists. Some choices were left out on purpose because the model ignores them: height, waist, breast shape, face shapes other than round and oblong, and pupils.
+Every option was tested against MiniMax H3 Image, and only options the model draws are in the lists. Some choices were left out on purpose because the model ignores them: height, waist, breast shape, face shapes other than round, oblong, square and heart-shaped, and pupils.
 
 Code: `kikotools/tools/character_hint/`.

@@ -17,15 +17,19 @@ _FIELD_TABLES = {
     "breast_size": ("breast_size", None),
     "butt_size": ("butt_size", None),
     "face_shape": ("face_shape", "face_shape"),
+    "facial_structure": ("facial_structure", "facial_structure"),
     "eye_color": ("eye_color", "eye_color"),
     "eye_shape": ("eye_shape", "eye_shape"),
     "eye_detail": ("eye_detail", "eye_detail"),
+    "eyebrows": ("eyebrows", "eyebrows"),
     "nose": ("nose", "nose"),
     "lip_shape": ("female_lip_shape", "male_lip_shape"),
     "lip_color": ("lip_color", None),
     "makeup": ("makeup", None),
+    "eyewear": ("eyewear", "eyewear"),
     "facial_hair": (None, "facial_hair"),
     "hair_color": ("hair_color", "hair_color"),
+    "hair_texture": ("hair_texture", "hair_texture"),
     "hair_length": ("hair_length", None),
     "hair_style": ("female_hair_style", "male_hair_style"),
     "bangs": ("bangs", None),
@@ -37,15 +41,26 @@ _FIELD_TABLES = {
     "dimples": ("dimples", "dimples"),
     "tattoo": ("tattoo", "tattoo"),
     "expression": ("expression", "expression"),
+    "head_angle": ("head_angle", "head_angle"),
+    "gaze": ("gaze", "gaze"),
     "nipples": ("nipples", None),
     "areola": ("areola", None),
 }
 
 # Part label -> fields it holds, in order. Lip colour and makeup are special.
 _BODY = ("body_type", "breast_size", "butt_size")
-_FACE_BEFORE_LIPS = ("face_shape", "eye_color", "eye_shape", "eye_detail", "nose")
+_FACE_BEFORE_LIPS = (
+    "face_shape",
+    "facial_structure",
+    "eye_color",
+    "eye_shape",
+    "eye_detail",
+    "eyebrows",
+    "nose",
+)
 _FACE_AFTER_LIPS = ("facial_hair", "dimples")
-_HAIR = ("hair_color", "hair_length", "hair_style", "bangs")
+_HAIR = ("hair_color", "hair_texture", "hair_length", "hair_style", "bangs")
+_POSE = ("head_angle", "gaze")
 _SKIN = ("skin_tone", "tan", "freckles", "acne", "beauty_mark")
 _UNCLOTHED = ("nipples", "areola")
 
@@ -168,10 +183,12 @@ def build_hint(
     )
     parts.append(_part("Face", face))
     parts.append(_part("Makeup", _makeup_phrases(gender, tbl, values)))
+    parts.append(_part("Eyewear", phrases("eyewear")))
     parts.append(_part("Hair", phrases(*_HAIR)))
     parts.append(_part("Skin", phrases(*_SKIN)))
     parts.append(_part("Tattoos", phrases("tattoo")))
     parts.append(_part("Expression", phrases("expression")))
+    parts.append(_part("Pose", phrases(*_POSE)))
     parts.append(_part("Unclothed detail", phrases(*_UNCLOTHED)))
     parts.append(_extra_part(extra))
     return " ".join(part for part in parts if part)

@@ -183,7 +183,14 @@ def hint_block(hint: str) -> str:
         "Character hint. These traits come from the user. Where they "
         "disagree with the character notes, the hint wins. Work each trait "
         "into the subject sentences in your own words, never as a list, and "
-        'do not copy labels such as "Body:".\n' + hint
+        'do not copy labels such as "Body:". '
+        "When the hint says the person has no tattoos, no freckles, no bangs, "
+        "no glasses or no facial hair, leave that trait out of the prompt "
+        "even if the picture notes mention it, and say plainly that the "
+        'person has none. A "Pose:" part in the hint sets the head angle '
+        "and where the eyes look. It wins over the pose notes for the head "
+        "and eyes only. The rest of the pose still comes from the draft and "
+        "the pose notes.\n" + hint
     )
 
 

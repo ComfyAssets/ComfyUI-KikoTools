@@ -643,7 +643,7 @@ Example workflow: [h3_reference_prompter_charsheet_test.json](examples/workflows
 #### 🫶 Character Hint (Female / Male)
 Two nodes that build a short character description from dropdowns. The output is plain text. Connect it to the H3 Reference Prompter's `character_hint` input to set traits a picture cannot show or to change ones it does. Full guide: [character_hint.md](examples/documentation/character_hint.md).
 
-- **Fields**: age (slider, 18 and up), heritage, body, face, eyes, makeup (female, 40 styles), hair, skin, tattoo, expression and a free `extra` text. Every dropdown starts at `-` (unset) and only set fields are written
+- **Fields**: age (slider, 18 and up), heritage, body, face (including jaw, cheekbones and eyebrows), eyes, makeup (female, 40 styles), eyewear, hair (including texture), skin, tattoo, expression, pose (`head_angle` and `gaze`) and a free `extra` text. The "No ..." options (no tattoos, freckles, bangs or glasses, clean shaven) ask the prompt to drop a trait the picture has; the image model may still copy it. Pose options override the pose picture for the head and eyes only. Every dropdown starts at `-` (unset) and only set fields are written
 - **Output**: `hint`, a STRING. It also works with a text preview node, or you can type a hint by hand
 - **With the prompter**: traits in the hint win over the character picture's notes; the picture fills in the rest. See [Character hint](examples/documentation/h3_reference_prompter.md#character-hint)
 - **Age**: with no character picture, the hint's age is what a nude draft is checked against. With a character picture, the picture's estimate still decides and the hint cannot override it

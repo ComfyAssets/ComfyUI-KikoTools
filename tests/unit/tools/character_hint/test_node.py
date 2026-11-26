@@ -46,6 +46,30 @@ def test_gender_specific_inputs():
 
 
 @pytest.mark.parametrize("node_class", NODES)
+@pytest.mark.parametrize(
+    "name",
+    [
+        "facial_structure",
+        "eyebrows",
+        "eyewear",
+        "hair_texture",
+        "head_angle",
+        "gaze",
+    ],
+)
+def test_new_fields_are_dropdowns(node_class, name):
+    choices = node_class.INPUT_TYPES()["required"][name][0]
+    assert choices[0] == UNSET and len(choices) > 2
+
+
+@pytest.mark.parametrize("node_class", NODES)
+def test_pose_fields_follow_expression(node_class):
+    names = list(node_class.INPUT_TYPES()["required"])
+    start = names.index("expression")
+    assert names[start : start + 3] == ["expression", "head_angle", "gaze"]
+
+
+@pytest.mark.parametrize("node_class", NODES)
 def test_return_shape(node_class):
     assert node_class.RETURN_TYPES == ("STRING",)
     assert node_class.RETURN_NAMES == ("hint",)

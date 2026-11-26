@@ -256,3 +256,49 @@ def test_deleted_file_goes_back_to_shipped(write_user_file):
     assert "Hawk" in options.tables()["nose"]
     path.unlink()
     assert options.tables() == options.load_shipped()
+
+
+NEW_TABLES = (
+    "facial_structure",
+    "eyebrows",
+    "eyewear",
+    "hair_texture",
+    "head_angle",
+    "gaze",
+)
+
+
+def test_new_tables_are_shipped_and_listed():
+    assert len(options.TABLE_NAMES) == 36
+    for name in NEW_TABLES:
+        assert name in options.TABLE_NAMES
+        assert options.load_shipped()[name]
+
+
+def test_new_table_sizes():
+    shipped = options.load_shipped()
+    sizes = {name: len(shipped[name]) for name in NEW_TABLES}
+    assert sizes == {
+        "facial_structure": 4,
+        "eyebrows": 2,
+        "eyewear": 5,
+        "hair_texture": 4,
+        "head_angle": 9,
+        "gaze": 5,
+    }
+
+
+def test_added_options_and_changed_phrase():
+    shipped = options.load_shipped()
+    assert shipped["facial_hair"]["Clean shaven"] == (
+        "a clean-shaven upper lip, cheeks, jaw and chin, "
+        "with no beard, mustache or stubble"
+    )
+    assert shipped["tattoo"]["No tattoos"] == "no tattoos"
+    assert list(shipped["freckles"])[-1] == "No freckles"
+    assert list(shipped["bangs"])[-1] == "No bangs"
+    labels = list(shipped["female_hair_style"])
+    assert labels[labels.index("Single braid") + 1] == "Three-strand braid"
+    assert list(shipped["face_shape"])[-2:] == ["Square", "Heart-shaped"]
+    assert list(shipped["nose"])[-1] == "Upturned"
+    assert list(shipped["expression"])[-3:] == ["Sad", "Tired", "Relieved"]

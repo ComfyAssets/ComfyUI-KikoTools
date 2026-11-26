@@ -94,7 +94,15 @@
   },
   "face_shape": {
     "Round": "a round face",
-    "Oblong": "an oblong face"
+    "Oblong": "an oblong face",
+    "Square": "a square face with a broad, defined jaw",
+    "Heart-shaped": "a heart-shaped face with a wider forehead and a narrow chin"
+  },
+  "facial_structure": {
+    "Angular jawline": "an angular, sharply defined jawline",
+    "Soft jawline": "a softly curved jawline",
+    "High cheekbones": "high, prominent cheekbones",
+    "Cleft chin": "a chin with a central cleft"
   },
   "eye_color": {
     "Dark brown": "dark brown eyes",
@@ -122,10 +130,15 @@
     "Heterochromia": "heterochromia, one blue eye and one brown eye",
     "Bloodshot": "slightly reddened, bloodshot eyes"
   },
+  "eyebrows": {
+    "High arch": "eyebrows with a high, defined arch",
+    "Thick": "thick, full eyebrows"
+  },
   "nose": {
     "Small": "a very small nose",
     "Button": "a button nose",
-    "Very large": "a very large nose"
+    "Very large": "a very large nose",
+    "Upturned": "a nose with a slightly upturned tip"
   },
   "female_lip_shape": {
     "Thin": "thin lips",
@@ -314,8 +327,15 @@
       "lips": "high-shine clear lip gloss"
     }
   },
+  "eyewear": {
+    "Thin wire frames": "glasses with thin wire frames and clear lenses",
+    "Thick acetate frames": "glasses with thick acetate frames and clear lenses",
+    "Round glasses": "round glasses with clear lenses",
+    "Sunglasses": "sunglasses with dark tinted lenses",
+    "No glasses": "no glasses"
+  },
   "facial_hair": {
-    "Clean shaven": "a clean-shaven face",
+    "Clean shaven": "a clean-shaven upper lip, cheeks, jaw and chin, with no beard, mustache or stubble",
     "Stubble": "stubble",
     "Goatee": "a goatee",
     "Van Dyke": "a Van Dyke beard",
@@ -354,7 +374,28 @@
     "Frustrated": "a frustrated expression",
     "Disgusted": "a disgusted expression",
     "Contemptuous": "a contemptuous expression",
-    "Fierce": "a fierce expression"
+    "Fierce": "a fierce expression",
+    "Sad": "a sad expression, with raised inner brows and downturned mouth corners",
+    "Tired": "a tired expression, with heavy eyelids and relaxed cheeks",
+    "Relieved": "a relieved expression, with relaxed brows and a small, easy smile"
+  },
+  "head_angle": {
+    "Facing forward": "face turned squarely toward the camera",
+    "Three-quarter left": "head in three-quarter view, with the nose pointing toward the left edge of the image",
+    "Three-quarter right": "head in three-quarter view, with the nose pointing toward the right edge of the image",
+    "Full profile left": "head in full profile, with the nose pointing toward the left edge of the image",
+    "Full profile right": "head in full profile, with the nose pointing toward the right edge of the image",
+    "Chin raised": "head tipped slightly back, with the chin raised",
+    "Chin lowered": "head tipped slightly forward, with the chin lowered",
+    "Tilted left": "head tilted sideways, with the crown leaning toward the left edge of the image",
+    "Tilted right": "head tilted sideways, with the crown leaning toward the right edge of the image"
+  },
+  "gaze": {
+    "Into the lens": "eyes looking directly into the camera lens",
+    "Up": "eyes looking upward",
+    "Down": "eyes looking downward",
+    "Off-camera left": "eyes looking off-camera toward the left edge of the image",
+    "Off-camera right": "eyes looking off-camera toward the right edge of the image"
   },
   "hair_color": {
     "Black": "black hair",
@@ -386,6 +427,12 @@
     "Balayage": "balayage hair",
     "Highlights": "highlighted hair"
   },
+  "hair_texture": {
+    "Pin-straight": "pin-straight hair",
+    "Loosely wavy": "hair with loose, gentle waves",
+    "Curly": "hair with defined spiral curls",
+    "Tightly coiled": "hair with tight, springy coils"
+  },
   "hair_length": {
     "Buzzed": "buzzed hair",
     "Chin length": "chin length hair",
@@ -409,6 +456,7 @@
     "Bantu knots": "bantu knots",
     "Halo braid": "a halo braid",
     "Single braid": "a fishtail braid",
+    "Three-strand braid": "a single classic three-strand braid",
     "Space buns": "her hair in space buns",
     "Top knot": "her hair in a top knot",
     "Messy bun": "her hair in a messy bun",
@@ -453,7 +501,8 @@
     "Curtain bangs": "curtain bangs",
     "Side-swept bangs": "side-swept bangs",
     "Wispy bangs": "wispy bangs",
-    "Blunt bangs": "blunt bangs"
+    "Blunt bangs": "blunt bangs",
+    "No bangs": "hair swept clear of the forehead, with no bangs"
   },
   "skin_tone": {
     "Porcelain": "very fair porcelain skin",
@@ -475,7 +524,8 @@
   },
   "freckles": {
     "A few": "a few freckles",
-    "Prominent": "prominent freckles"
+    "Prominent": "prominent freckles",
+    "No freckles": "freckle-free skin"
   },
   "acne": {
     "A few blemishes": "a few blemishes",
@@ -494,7 +544,8 @@
     "Small tattoo": "a small tattoo",
     "Sleeve tattoo": "a sleeve tattoo",
     "Neck tattoo": "a neck tattoo",
-    "Hand tattoo": "a hand tattoo"
+    "Hand tattoo": "a hand tattoo",
+    "No tattoos": "no tattoos"
   },
   "nipples": {
     "Large": "large prominent nipples",

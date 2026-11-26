@@ -5,6 +5,15 @@ import pytest
 from kikotools.tools.character_hint import logic, options
 from kikotools.tools.character_hint.options import UNSET
 
+NEW_FIELDS = (
+    "facial_structure",
+    "eyebrows",
+    "eyewear",
+    "hair_texture",
+    "head_angle",
+    "gaze",
+)
+
 FEMALE_VALUES = {
     "heritage": "Japanese",
     "body_type": "Curvy",
@@ -60,6 +69,112 @@ def test_golden_male_hint():
         "The character is an adult man aged 40. "
         "Body: a dad bod. Face: a goatee. Hair: a man bun."
     )
+
+
+FEMALE_TESTED_VALUES = {
+    "face_shape": "Square",
+    "facial_structure": "Cleft chin",
+    "eyebrows": "Thick",
+    "eyewear": "Round glasses",
+    "hair_color": "Black",
+    "hair_texture": "Curly",
+    "tattoo": "No tattoos",
+    "expression": "Sad",
+    "head_angle": "Three-quarter left",
+    "gaze": "Down",
+}
+
+
+def test_golden_female_tested_options_hint():
+    assert logic.build_hint("woman", 30, FEMALE_TESTED_VALUES) == (
+        "The character is an adult woman aged 30. "
+        "Face: a square face with a broad, defined jaw, "
+        "a chin with a central cleft, thick, full eyebrows. "
+        "Eyewear: round glasses with clear lenses. "
+        "Hair: black hair, hair with defined spiral curls. "
+        "Tattoos: no tattoos. "
+        "Expression: a sad expression, with raised inner brows and "
+        "downturned mouth corners. "
+        "Pose: head in three-quarter view, with the nose pointing toward "
+        "the left edge of the image, eyes looking downward."
+    )
+
+
+def test_golden_male_tested_options_hint():
+    values = {
+        "facial_hair": "Clean shaven",
+        "eyewear": "No glasses",
+        "gaze": "Into the lens",
+    }
+    assert logic.build_hint("man", 35, values) == (
+        "The character is an adult man aged 35. "
+        "Face: a clean-shaven upper lip, cheeks, jaw and chin, with no beard, "
+        "mustache or stubble. Eyewear: no glasses. "
+        "Pose: eyes looking directly into the camera lens."
+    )
+
+
+@pytest.mark.parametrize("gender", ["woman", "man"])
+def test_new_fields_exist_for_both_genders(gender):
+    available = logic.fields(gender)
+    for name in NEW_FIELDS:
+        assert name in available, name
+
+
+def test_face_part_order_with_every_face_field():
+    values = {
+        "face_shape": "Round",
+        "facial_structure": "Cleft chin",
+        "eye_color": "Green",
+        "eye_shape": "Hooded",
+        "eye_detail": "Gold flecks",
+        "eyebrows": "Thick",
+        "nose": "Upturned",
+        "lip_shape": "Full",
+        "lip_color": "Berry",
+        "dimples": "Subtle",
+    }
+    text = logic.build_hint("woman", 30, values)
+    phrases = [
+        "round face",
+        "central cleft",
+        "green eyes",
+        "hooded eyes",
+        "flecks of gold",
+        "thick, full eyebrows",
+        "upturned tip",
+        "full lips",
+        "berry lips",
+        "dimples",
+    ]
+    positions = [text.index(phrase) for phrase in phrases]
+    assert positions == sorted(positions)
+
+
+def test_hair_texture_sits_between_colour_and_length():
+    values = {"hair_color": "Black", "hair_texture": "Curly", "hair_length": "Long"}
+    text = logic.build_hint("woman", 30, values)
+    assert text.index("black hair") < text.index("spiral curls") < text.index("long")
+
+
+def test_eyewear_and_pose_parts_sit_in_order():
+    values = {
+        "makeup": "Soft glam",
+        "eyewear": "Sunglasses",
+        "hair_color": "Black",
+        "expression": "Sad",
+        "gaze": "Up",
+        "nipples": "Pierced",
+    }
+    text = logic.build_hint("woman", 30, values)
+    markers = ["Makeup:", "Eyewear:", "Hair:", "Expression:", "Pose:", "Unclothed"]
+    positions = [text.index(marker) for marker in markers]
+    assert positions == sorted(positions)
+
+
+def test_pose_with_one_field_has_no_stray_comma():
+    text = logic.build_hint("woman", 30, {"head_angle": "Chin raised"})
+    assert text.endswith("Pose: head tipped slightly back, with the chin raised.")
 
 
 def test_explicit_tables_are_used():
@@ -199,8 +314,10 @@ def test_part_order():
         "body_type": "Curvy",
         "face_shape": "Round",
         "makeup": "Soft glam",
+        "eyewear": "Sunglasses",
         "hair_color": "Copper",
         "skin_tone": "Olive",
+        "head_angle": "Chin raised",
         "tattoo": next(iter(logic.fields("woman")["tattoo"])),
         "expression": next(iter(logic.fields("woman")["expression"])),
         "nipples": "Pierced",
@@ -211,10 +328,12 @@ def test_part_order():
         "Body:",
         "Face:",
         "Makeup:",
+        "Eyewear:",
         "Hair:",
         "Skin:",
         "Tattoos:",
         "Expression:",
+        "Pose:",
         "Unclothed detail:",
         "Extra:",
     ]
