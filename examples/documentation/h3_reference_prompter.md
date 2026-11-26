@@ -22,7 +22,7 @@ The draft's sentences that carry a `<Picture N>` tag are written at the start of
 | `temperature` | Advanced, default 0.7 |
 | `describe_tokens` | Advanced, default 512. Length limit for each picture description |
 | `write_tokens` | Advanced, default 1536. Length limit for the written prompt |
-| `keep_loaded` | Advanced, default off. Keep the prompt model in memory after the run |
+| `keep_loaded` | Advanced, default off. Keep the prompt model in memory after the run. A kept `hf:` model sits outside ComfyUI's memory management |
 
 A picture slot must hold one image. A batch of more than one image in a slot stops with an error naming the slot.
 
@@ -36,12 +36,16 @@ The panel on the node shows each prompt with its word count, previous and next b
 
 The prompt must contain exactly the tags the draft has. If the model drops or adds a tag, the node retries once. If the tags are still wrong, it stops with an error naming the missing and unexpected tags. A draft with no tags at all works too, and the prompt then has none.
 
+The draft's sentences end at `.`, `!`, `?` and at line breaks; a short title such as `Dr.` or `Mrs.` does not end a sentence. The reference sentences keep the draft's lines. If the model repeats one of them, the repeat is dropped.
+
+If the model writes nothing after the reference sentences (an empty reply, or one cut off inside its thinking), the node retries once, together with any tag problem. If it is still empty, it stops with an error naming the model; raise `write_tokens` or pick another model. A run with an empty draft and no picture stops at once with an error.
+
 ## Two passes
 
-1. Each picture is described once, according to its role. The description is cached for the ComfyUI session, so the same picture, role and model are not described again.
+1. Each picture is described once, according to its role. Pictures are scaled down to about 1 MP (1,048,576 pixels) for this; smaller ones keep their size. The description is cached for the ComfyUI session, so the same picture, role, model and `describe_tokens` are not described again.
 2. The prompt is written from the draft and the descriptions.
 
-With a transformers (`hf:`) model both passes run in batches. All the pictures of a run that are not cached yet are described in one batch, and all the prompts are written in another. Only prompts with wrong tags are retried, together in one more batch. Batches hold at most four requests. GGUF and native models run one call at a time.
+With a transformers (`hf:`) model both passes run in batches. All the pictures of a run that are not cached yet are described in one batch, and all the prompts are written in another. Only prompts with wrong tags or no text are retried, together in one more batch. Batches hold at most four requests. Batching needs transformers 5 or newer, and only Qwen3-VL and Qwen3.5 folders run batched; with an older transformers or another architecture, such as Gemma 4, the same requests run one at a time, in the same order. GGUF and native models run one call at a time.
 
 The pose description never describes the mannequin's own look (surface, colour, build, face), only the pose.
 
@@ -60,15 +64,15 @@ The picker lists three kinds of model:
   - `ComfyUI/models/LLM/Qwen-VL/Qwen3.5-4B-Unredacted-MAX/` from https://huggingface.co/prithivMLmods/Qwen3.5-4B-Unredacted-MAX
   - a Gemma 4 E4B folder from https://huggingface.co/collections/huihui-ai/gemma-4-abliterated
 - `native: <file>`: the vision text encoders that the Kiko Prompt Enhancer lists.
-- `gguf: <file>`: GGUF models that have an `mmproj` file. If a GGUF model fails to load, the node tells you to use a transformers folder instead.
+- `gguf: <file>`: GGUF models that have an `mmproj` file. A GGUF model loads twice per run: with its `mmproj` to describe the pictures and without it to write the prompts. If a GGUF model fails to load, the node tells you to use a transformers folder instead.
 
 The picker defaults to a name containing `Huihui-Qwen3-VL-8B-Instruct-abliterated`, then any name containing `Qwen3-VL-8B`, then the first `hf:` entry, then the first entry.
 
-A workflow saved with a model this machine does not have still loads. It stops when it runs, with a message naming the model and the folders searched.
+A workflow saved with a model this machine does not have still loads. It stops when it runs, with a message naming the model and the folders searched, and reminding you that the model must be a vision model and that a GGUF needs its `mmproj`.
 
 ## Memory
 
-Before the model loads, the node frees ComfyUI's loaded models with the same safe unload as Kiko Purge VRAM. Afterwards it unloads the prompt model, unless `keep_loaded` is on.
+Before the model loads, the node frees ComfyUI's loaded models with the same safe unload as Kiko Purge VRAM. A prompt model kept from an earlier run on another backend (for example an `hf:` model when this run uses a GGUF) is freed too, even with `keep_loaded` on. Afterwards the node unloads the prompt model, unless `keep_loaded` is on. A kept `hf:` model sits outside ComfyUI's memory management: ComfyUI cannot free it when it needs room, so turn `keep_loaded` off or run Kiko Purge VRAM when you need that memory back.
 
 ## Example
 
