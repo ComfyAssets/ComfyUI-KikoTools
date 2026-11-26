@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### H3 Reference Prompter
+
+- New node in 🫶 ComfyAssets/🧠 Prompts. It writes one long MiniMax H3 Image
+  prompt from a short draft and up to three reference pictures (character,
+  outfit, pose or other), using a local vision model.
+- The draft's sentences with a `<Picture N>` tag come first, unchanged. The
+  prompt keeps exactly the draft's tags; after one retry the node stops with an
+  error naming the tags.
+- Two passes: each picture is described once and cached for the session, then
+  the prompt is written.
+- One-per-pose runs give one prompt and one set of notes per item, with the
+  base seed plus the item index.
+- Models: transformers folders under `models/LLM` (Qwen3.5, Qwen3-VL, Gemma 4),
+  the Prompt Enhancer's vision text encoders, and GGUF models with an `mmproj`.
+- ComfyUI's loaded models are freed first with the safe unload from Kiko Purge
+  VRAM; the prompt model is unloaded afterwards unless `keep_loaded` is on.
+- A panel on the node shows each prompt with its word count, previous and next
+  buttons, a copy button and collapsible notes.
+- Example workflow: `h3_reference_prompter_charsheet_test.json`.
+
 ### Kiko Purge VRAM
 
 - Reworked to free memory the way Free VRAM Pixaroma does. Three modes now:
