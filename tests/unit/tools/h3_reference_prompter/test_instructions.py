@@ -302,3 +302,23 @@ def test_writer_covers_same_role_pictures_in_slot_order():
     text = " ".join(writer_system().split())
     assert "same role" in text
     assert "slot order" in text
+
+
+def test_pose_describer_starts_with_overall_position_and_facing():
+    text = describe_system("pose")
+    assert "Start with one sentence that names the overall position" in text
+    assert "which way the body faces the camera (front, side or back)" in text
+
+
+def test_outfit_describer_never_lets_items_float():
+    assert "never say an item floats, hovers or is suspended" in describe_system(
+        "outfit"
+    )
+
+
+def test_writer_keeps_the_draft_pose_name_and_puts_accessories_in_place():
+    text = writer_system()
+    assert "Begin it with the draft's view and pose name, word for word" in text
+    assert "The draft's view and position win over the notes." in text
+    assert "a hat is on the head" in text
+    assert "Never write that an item floats or hovers" in text

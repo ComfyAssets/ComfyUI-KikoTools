@@ -37,13 +37,17 @@ _DESCRIBE_ROLE = {
         "the accessories (bags, belts, jewellery, hats) and the footwear, "
         "and say where each one is worn or carried: a hat worn on the head, "
         "a bag held in one hand or over the shoulder. An item shown floating "
-        "above or beside the clothes is still worn in its usual place. Do "
+        "above or beside the clothes is still worn in its usual place: "
+        "never say an item floats, hovers or is suspended. Do "
         "not describe the person's face, hair or body, and do not describe "
         "the background."
     ),
     "pose": (
-        "This picture shows a pose. Describe the body position limb by "
-        "limb: the head and where the gaze goes, the shoulders, the torso, "
+        "This picture shows a pose. Start with one sentence that names the "
+        "overall position (standing, sitting on the floor, sitting on a "
+        "seat, kneeling, crouching or lying) and which way the body faces "
+        "the camera (front, side or back). Then describe the body position "
+        "limb by limb: the head and where the gaze goes, the shoulders, the torso, "
         "the subject's left arm and right arm, the subject's left hand and "
         "right hand (what each one does), the hips, the subject's left leg "
         "and right leg, the subject's left foot and right foot, and where "
@@ -90,8 +94,10 @@ about something else; never write a separate summary such as \
 "Same description:".
 2. The outfit, garment by garment, with the colour, the specific material \
 and the surface detail of each one (weave, sheen, stitching, wear).
-3. The pose, with what each hand does and what each foot does, and where the \
-weight rests.
+3. The pose. Begin it with the draft's view and pose name, word for word \
+(for example "Side view, one hand supporting, legs extended diagonally \
+forward, sitting"), then add what each hand does, what each foot does, and \
+where the weight rests. The draft's view and position win over the notes.
 4. The camera: the height, the side, the distance, the direction it points, \
 and how the frame is cropped.
 5. The lighting, in its own sentence: where the light comes from, how hard or \
@@ -115,6 +121,9 @@ the draft and use the notes to add detail to it.
 - A mannequin or model in a pose picture is only a position guide. Never \
 describe its look: no surface, no colour, no build, no face. The character \
 picture decides how the person looks.
+- Every accessory is worn or carried in its usual place: a hat is on the \
+head, a bag is held or worn on the shoulder. Never write that an item \
+floats or hovers, even if the notes say so.
 - Take the lighting and the background from the draft first, then from the \
 notes. If neither has them, write one plain, neutral choice that fits the \
 draft's style, such as soft even studio light or a plain light-grey backdrop.
