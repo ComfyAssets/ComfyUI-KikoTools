@@ -37,9 +37,11 @@ _DESCRIBE_ROLE = {
     "pose": (
         "This picture shows a pose. Describe the body position limb by "
         "limb: the head and where the gaze goes, the shoulders, the torso, "
-        "the left arm and the right arm, the left hand and the right hand "
-        "(what each one does), the hips, the left leg and the right leg, "
-        "the left foot and the right foot, and where the weight rests. Then "
+        "the subject's left arm and right arm, the subject's left hand and "
+        "right hand (what each one does), the hips, the subject's left leg "
+        "and right leg, the subject's left foot and right foot, and where "
+        "the weight rests. Always mean the subject's own left and right, "
+        "not the left and right of the picture. Then "
         "describe the camera in four parts: the height (low, eye level or "
         "high), the side it sits on (front, left, right or behind), the "
         "distance (close, medium or far) and the direction it points. "
@@ -64,7 +66,8 @@ greeting, no title, no explanation, no quotes.
 
 Write these parts in this order:
 1. The reference sentences: copy the draft's sentences that name the \
-pictures first, exactly as written.
+pictures first, exactly as written. If the draft names no pictures, skip \
+this part.
 2. The subject, first, from the head down to the hands: age and build, face, \
 hair, clothing in one line, expression, then each hand. Say the key traits \
 two times, in different words.
@@ -77,7 +80,8 @@ and how the frame is cropped.
 6. The lighting, in its own sentence: where the light comes from, how hard or \
 soft it is, and what it touches.
 7. The background, with its colour and material.
-8. The style sentence from the draft, kept as the user wrote it.
+8. The style sentence from the draft, kept as the user wrote it. If the \
+draft has no style sentence, skip this part and do not make one up.
 9. A short closing list of what must not appear, one problem per line, each a \
 short sentence such as "No extra fingers or limbs." and "No other people."
 
@@ -91,10 +95,13 @@ the draft and use the notes to add detail to it.
 - A mannequin or model in a pose picture is only a position guide. Never \
 describe its look: no surface, no colour, no build, no face. The character \
 picture decides how the person looks.
+- Take the lighting and the background from the draft first, then from the \
+notes. If neither has them, write one plain, neutral choice that fits the \
+draft's style, such as soft even studio light or a plain light-grey backdrop.
 - A note that says there is no picture means: use the draft's own words for \
-that part and invent nothing.
-- Use only what the draft and the notes say. Do not invent names, brands or \
-extra people.\
+that part.
+- For the subject, the outfit and the pose, use only what the draft and the \
+notes say and invent nothing. Do not invent names, brands or extra people.\
 """
 
 
@@ -114,7 +121,8 @@ def describe_user(role: str, draft: str) -> str:
     _check_role(role)
     return (
         f"Write notes about this picture only. Its role is: {role}. "
-        "Use short full sentences.\n\n"
+        "Use short full sentences. Do not write any <Picture N> tags in "
+        "your notes.\n\n"
         "The user's draft, for context only. Do not describe anything from "
         "the draft that you cannot see in this picture:\n"
         f"{draft}"
@@ -132,6 +140,8 @@ def writer_user(draft: str, notes: List[Tuple[int, str, Optional[str]]]) -> str:
     lines = []
     for slot, role, text in sorted(notes, key=lambda note: note[0]):
         label = f"<Picture {slot}> ({role})"
+        if text is None and slot not in in_draft:
+            continue
         if text is None:
             lines.append(
                 f"Notes for {label}: no picture is connected; use the "
@@ -145,7 +155,7 @@ def writer_user(draft: str, notes: List[Tuple[int, str, Optional[str]]]) -> str:
                 "The draft does not use this tag, so do not write its tag."
             )
     notes_block = "\n".join(lines) if lines else "No notes."
-    return f"Draft:\n{draft}\n\n{notes_block}\n\n" "Write the final prompt now."
+    return f"Draft:\n{draft}\n\n{notes_block}\n\nWrite the final prompt now."
 
 
 def retry_user(problems: Tuple[List[int], List[int]]) -> str:

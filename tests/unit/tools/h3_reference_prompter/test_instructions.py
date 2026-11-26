@@ -1,5 +1,7 @@
 """Tests for the H3 Reference Prompter instruction text."""
 
+import re
+
 import pytest
 
 from kikotools.tools.h3_reference_prompter.instructions import (
@@ -62,14 +64,11 @@ def test_describe_system_covers_pose_fields():
             "right foot",
             "weight",
             "height",
-            "side",
+            "the side it sits on",
             "distance",
             "direction",
-            "mannequin",
-            "surface",
-            "colour",
-            "build",
-            "face",
+            "do not mention its surface, colour, build or face",
+            "subject's left",
         ],
     )
     assert "never describe the mannequin" in text.lower()
@@ -99,8 +98,10 @@ def test_describe_user_rejects_unknown_role():
 
 def test_writer_system_lists_sections_in_order():
     text = writer_system().lower()
-    positions = [text.index(name) for name in SECTIONS]
-    assert positions == sorted(positions)
+    items = re.findall(r"^([1-9])\. (.*)$", text, re.MULTILINE)
+    assert [number for number, _ in items] == list("123456789")
+    for (_, line), name in zip(items, SECTIONS):
+        assert name in line
     assert "250" in text and "450" in text
     assert "full sentences" in text
     assert "<picture n>" in text
@@ -153,3 +154,27 @@ def test_retry_user_omits_empty_side():
     text = retry_user(([2], []))
     assert "<Picture 2>" in text
     assert "extra" not in text.lower()
+
+
+def test_writer_system_has_fallbacks():
+    text = writer_system().lower()
+    assert "names no pictures, skip" in text
+    assert "no style sentence, skip" in text
+    assert "lighting and the background from the draft first" in text
+    assert "plain, neutral choice" in text
+    assert "invent nothing" in text
+
+
+def test_describe_user_forbids_tags():
+    assert "do not write any <picture n> tags" in describe_user("pose", DRAFT).lower()
+
+
+def test_writer_user_skips_empty_slot_not_in_draft():
+    text = writer_user("Only <Picture 1> here.", [(3, "pose", None)])
+    assert "<Picture 3>" not in text
+    assert "No notes." in text
+
+
+def test_writer_user_keeps_empty_slot_in_draft():
+    text = writer_user(DRAFT, [(3, "pose", None)])
+    assert "Notes for <Picture 3> (pose): no picture" in text
