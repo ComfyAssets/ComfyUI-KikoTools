@@ -17,6 +17,7 @@ from .tools.display_text import DisplayTextNode
 from .tools.embedding_autocomplete import KikoEmbeddingAutocomplete
 from .tools.empty_latent_batch import EmptyLatentBatchNode
 from .tools.gemini_prompt import GeminiPromptNode
+from .tools.h3_reference_prompter import H3ReferencePrompterNode
 from .tools.image_scale_down_by import ImageScaleDownByNode
 from .tools.image_to_multiple_of import ImageToMultipleOfNode
 from .tools.kiko_film_grain import KikoFilmGrainNode
@@ -59,6 +60,7 @@ NODE_CLASS_MAPPINGS = {
     "EmptyLatentBatch": EmptyLatentBatchNode,
     "ModelResolutionPicker": ModelResolutionPickerNode,
     "KikoPromptEnhancer": PromptEnhancerNode,
+    "KikoH3ReferencePrompter": H3ReferencePrompterNode,
     "KikoSaveImage": KikoSaveImageNode,
     "ImageToMultipleOf": ImageToMultipleOfNode,
     "ImageScaleDownBy": ImageScaleDownByNode,
@@ -100,6 +102,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "EmptyLatentBatch": "Empty Latent Batch",
     "ModelResolutionPicker": "Model Resolution Picker",
     "KikoPromptEnhancer": "Kiko Prompt Enhancer",
+    "KikoH3ReferencePrompter": "H3 Reference Prompter",
     "KikoSaveImage": "Kiko Save Image",
     "ImageToMultipleOf": "Image to Multiple of",
     "ImageScaleDownBy": "Image Scale Down By",
