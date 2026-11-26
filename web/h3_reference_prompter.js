@@ -179,10 +179,12 @@ function mountPanel(node) {
     scope.listen(view.copy, 'click', copyPrompt);
     scope.listen(view.notes, 'toggle', () => fitNodeHeight());
 
-    node.addDOMWidget('h3_prompt_panel', 'div', view.element, {
+    const panelWidget = node.addDOMWidget('h3_prompt_panel', 'div', view.element, {
         // No max height: when the user makes the node taller the panel takes the room.
         serialize: false, hideOnZoom: false, getMinHeight: () => panelHeight,
     });
+    // The options flag is not enough: without this the panel adds a value to widgets_values.
+    if (panelWidget) panelWidget.serialize = false;
     node.setSize([NODE_WIDTH, node.computeSize?.()?.[1] ?? node.size[1]]);
     if (typeof ResizeObserver === 'function') {
         let refitScheduled = false;
