@@ -6,7 +6,14 @@ long MiniMax H3 Image prompt from the user's draft and those notes.
 
 from typing import List, Optional, Tuple
 
-from .logic import ROLES, YOUTH_WORDS, find_tags, is_nude
+from .logic import (
+    ROLES,
+    YOUTH_WORDS,
+    body_is_nude,
+    find_tags,
+    hint_lead,
+    strip_unclothed,
+)
 
 AgeRange = Tuple[int, int]
 
@@ -171,12 +178,42 @@ def writer_system() -> str:
     return _WRITER_SYSTEM
 
 
+def _years(age: AgeRange) -> str:
+    """ "25" for a single age, "22 to 28" for a range."""
+    low, high = age
+    return str(low) if low == high else f"{low} to {high}"
+
+
+def hint_block(hint: str) -> str:
+    """Writer instructions for the traits of a character hint."""
+    return (
+        "Character hint. These traits come from the user. Where they "
+        "disagree with the character notes, the hint wins. Work each trait "
+        "into the subject sentences in your own words, never as a list, and "
+        'do not copy labels such as "Body:". '
+        "When the hint says the person has no tattoos, no freckles, no bangs, "
+        "no glasses or no facial hair, leave that trait out of the prompt "
+        "even if the picture notes mention it, and say plainly that the "
+        'person has none. A "Pose:" part in the hint sets the head angle '
+        "and where the eyes look. It wins over the pose notes for the head "
+        "and eyes only. The rest of the pose still comes from the draft and "
+        "the pose notes.\n" + hint
+    )
+
+
+HINT_WRITTEN = (
+    "The character details above are already written word for word after "
+    "the draft. Do not repeat them as a list. Never contradict them: where "
+    "the picture notes disagree, the details win."
+)
+
+
 def nude_block(age: AgeRange) -> str:
     """Extra writer instructions for a nude item whose character passed the
     adult check with the (low, high) estimated age."""
-    low, high = age
-    wording = f'"an adult woman aged {low} to {high}"'
-    if high < 30:
+    years = _years(age)
+    wording = f'"an adult woman aged {years}"'
+    if age[1] < 30 and age[0] != age[1]:
         wording += ' or "an adult woman in her twenties"'
     banned = ", ".join(f'"{word}"' for word in YOUTH_WORDS)
     return (
@@ -188,8 +225,9 @@ def nude_block(age: AgeRange) -> str:
         "reference: calm, factual and neutral. No sexual acts, no sexual "
         "poses, and no language about arousal or with an explicit focus on "
         "any part of the body; describe the pose only as a body position. "
-        f"Call the person {wording}. If the character notes say the person "
-        f'is a man, write "an adult man aged {low} to {high}" instead. Never '
+        f"Call the person {wording}. If the character notes or the character "
+        f'hint say the person is a man, write "an adult man aged {years}" '
+        f"instead. Never "
         f"use these words: {banned}. No clothing, no footwear and no "
         "accessories, unless the draft names them."
     )
@@ -198,12 +236,12 @@ def nude_block(age: AgeRange) -> str:
 def adult_block(age: AgeRange) -> str:
     """Writer instructions for a draft that says nude while an outfit picture
     is connected: the outfit stays, the person is named as an adult."""
-    low, high = age
     banned = ", ".join(f'"{word}"' for word in YOUTH_WORDS)
     return (
         "The draft mentions nudity. The person is an adult: call them "
-        f'"an adult woman aged {low} to {high}", or "an adult man" if the '
-        f"character notes say so. Never use these words: {banned}."
+        f'"an adult woman aged {_years(age)}", or "an adult man" if the '
+        f"character notes or the character hint say so. Never use these "
+        f"words: {banned}."
     )
 
 
@@ -211,11 +249,15 @@ def writer_user(
     lead: str,
     notes: List[Tuple[int, str, Optional[str]]],
     adult: Optional[AgeRange] = None,
+    hint: str = "",
 ) -> str:
     """User message: the written lead (whole draft) and per-picture notes.
 
     ``adult`` is the checked age range of a nude item; it adds nude_block.
+    ``hint`` is character hint text; blank adds nothing. Its "Unclothed
+    detail:" sentence stays only when the item is in nude mode.
     """
+    body = body_is_nude(lead, notes, hint)
     in_draft = find_tags(lead)
     lines = []
     for slot, role, text in sorted(notes, key=lambda note: note[0]):
@@ -243,9 +285,13 @@ def writer_user(
             "detail that follows it:\n" + lead
         )
     blocks.append(notes_block)
+    shown = (hint or "").strip()
+    shown = shown if body else strip_unclothed(shown)
+    if shown:
+        blocks.append(hint_block(shown))
+    if hint_lead(shown, True):
+        blocks.append(HINT_WRITTEN)
     if adult is not None:
-        connected = [role for _, role, text in notes if text is not None]
-        body = is_nude(lead, connected)
         blocks.append(nude_block(adult) if body else adult_block(adult))
     blocks.append("Write the final prompt now.")
     return "\n\n".join(blocks)

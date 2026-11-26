@@ -17,6 +17,7 @@ The whole draft is written at the start of the prompt, word for word, one line p
 | `prompt` | The draft, as an input socket: connect a text node, such as the KikoCharSheet prompt. Tags `<Picture 1>` to `<Picture 3>` are kept exactly |
 | `model` | The vision model, see [Models](#models) |
 | `role_1`, `role_2`, `role_3` | What each picture shows: `auto` (default), `character`, `outfit`, `pose` or `other`. See [Roles](#roles) |
+| `character_hint` | Optional text, such as the output of a [Character Hint](character_hint.md) node. See [Character hint](#character-hint) |
 | `seed` | Base seed |
 | `image_1` to `image_3` | Optional pictures. `image_N` is always `<Picture N>`; slots are never renumbered |
 | `temperature` | Advanced, default 0.7 |
@@ -25,6 +26,16 @@ The whole draft is written at the start of the prompt, word for word, one line p
 | `keep_loaded` | Advanced, default off. Keep the prompt model in memory after the run. A kept `hf:` model sits outside ComfyUI's memory management |
 
 A picture slot must hold one image. A batch of more than one image in a slot stops with an error naming the slot.
+
+## Character hint
+
+`character_hint` is an optional text input. Connect the `hint` output of a [Character Hint (Female / Male)](character_hint.md) node, or type a hint by hand.
+
+The traits in the hint win over the character picture's notes. The picture fills in what the hint leaves unset. The writer works the traits into the subject sentences instead of copying the list. The hint is a list like the other inputs, so each item of a one-per-pose run can have its own.
+
+The hint is written into the final prompt word for word after the draft (picture tags removed), then the writer's detail follows. So every selected trait reaches the image model, and the writer adds detail around it without repeating it. The "No ..." options (no tattoos, no freckles, no bangs, no glasses, clean shaven) drop a trait the picture has, and a "Pose:" part wins over the pose notes for the head and eyes only.
+
+The "Unclothed detail:" sentence of the hint is removed unless the item is in nude mode (the draft or the hint says nude or naked and no outfit picture is connected). See [Age check](#nude-mode) for how the hint's age is used.
 
 ## Roles
 
@@ -65,20 +76,21 @@ A blank placeholder picture (a small, uniformly white image, such as KikoCharShe
 
 **Detection.** Two checks look at each item's draft:
 
-- **Age check and word check:** they run whenever the draft contains `nude` or `naked` (whole word, any case) or the Chinese `裸`, whatever the roles and pictures are. The draft is copied into the prompt, so its nude wording reaches the image model either way. A workflow with fixed roles, or a draft such as "nude lipstick" with an outfit picture, is checked too.
+- **Age check and word check:** they run whenever the draft or the character hint contains `nude` or `naked` (whole word, any case) or the Chinese `裸`, whatever the roles and pictures are. Both are copied into the prompt, so their nude wording reaches the image model either way. A workflow with fixed roles, or a draft such as "nude lipstick" with an outfit picture, is checked too.
 - **Body section:** it is written only when, in addition, no connected picture has the outfit role. With an outfit picture, the outfit is described as usual and the writer is only told the person is an adult.
 
-**Body section.** In nude mode the writer gets one more instruction block. In place of the outfit part, it describes the unclothed adult body plainly: build, proportions, skin tone and skin texture following the character notes, and natural adult anatomy, in the register of a figure-drawing or photography reference. It writes no sexual acts, no sexual poses and no arousal or explicit-focus language, and adds no clothing, footwear or accessories unless the draft names them. The person is called an adult woman aged N to M (or "in her twenties" when the range lies there), or an adult man when the character notes describe a man. All other writer rules still apply.
+**Body section.** In nude mode the writer gets one more instruction block. In place of the outfit part, it describes the unclothed adult body plainly: build, proportions, skin tone and skin texture following the character notes, and natural adult anatomy, in the register of a figure-drawing or photography reference. It writes no sexual acts, no sexual poses and no arousal or explicit-focus language, and adds no clothing, footwear or accessories unless the draft names them. The person is called an adult woman aged N to M (one age, such as "aged 25", when the hint gives it) (or "in her twenties" when the range lies there), or an adult man when the character notes describe a man. All other writer rules still apply.
 
 **Age check.** The character describer always ends its notes with `Estimated age: N to M years.` In nude mode the node checks every item after the pictures are described and before anything is written. It stops the run with an error when:
 
-- no character picture is connected;
+- no character picture is connected and the [character hint](#character-hint) gives no age of 18 or more (with a hint age of 18 or more and no character picture, the item passes and the prompt uses that age);
 - the estimate is missing or cannot be read;
 - the lower bound is under 20, so a picture whose estimate could be under 20 is refused;
 - the character notes use a youth word: teen, teenage, teenager, adolescent, schoolgirl, child, childlike, kid, minor, underage or loli (whole words, any case, plurals included, so "late teens" counts);
-- the draft uses one of those words.
+- the draft or the character hint uses one of those words;
+- the draft or the character hint states an age under 18, such as "12 years old" or "aged 15". A hand-typed hint must start with a sentence like "The character is an adult woman aged 25." for its age to count.
 
-The error says that nude prompts need an adult character picture whose estimated age is 20 or older, and gives the estimate it found. Nothing is written for any item; like other errors, ComfyUI's model list is repaired and the prompt model is freed.
+The hint cannot override a character picture: when one is connected, its estimate must still pass, and when it does the prompt uses the hint's age. The error says that nude prompts need an adult character picture whose estimated age is 20 or older, and gives the estimate it found. Nothing is written for any item; like other errors, ComfyUI's model list is repaired and the prompt model is freed.
 
 **Output check.** After writing, the model's part (not the draft) must not contain a youth word. A hit is retried once, together with any tag problem, with a message naming the word. If the word is still there, the run stops with an error. Outside nude mode, nothing is checked. The word "girl" is never checked.
 

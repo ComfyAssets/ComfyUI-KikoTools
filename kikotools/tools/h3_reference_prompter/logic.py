@@ -26,6 +26,8 @@ _ZH_ROLES = {"人物": "character", "服装": "outfit", "姿势": "pose"}
 
 # Nude mode: the draft says nude or naked and no outfit picture is connected.
 NUDE_MIN_AGE = 20
+# A character hint without a character picture must state at least this age.
+HINT_MIN_AGE = 18
 YOUTH_WORDS: Tuple[str, ...] = (
     "teen",
     "teenage",
@@ -42,6 +44,21 @@ YOUTH_WORDS: Tuple[str, ...] = (
 _NUDE = re.compile(r"\b(?:nude|naked)\b|裸", re.IGNORECASE)
 _AGE_LINE = re.compile(
     r"estimated\s+age\s*:\s*(\d+)\s*(?:to|-|–)\s*(\d+)\s*years?", re.IGNORECASE
+)
+_HINT_AGE = re.compile(r"\baged (\d{1,3})\b", re.IGNORECASE)
+_ADULT = re.compile(r"\badult\b", re.IGNORECASE)
+_FIRST_SENTENCE = re.compile(r"[^.!?\n]*")
+# The label, then text up to and including the first sentence end, or up to a
+# line break, or to the end of the text.
+_UNCLOTHED = re.compile(
+    r"\s*Unclothed detail:(?:[^\n.!?]|[.!?](?!\s|$))*(?:[.!?](?=\s|$))?",
+    re.IGNORECASE,
+)
+_STATED_AGE = re.compile(
+    r"\b(\d{1,2})[\s-]*(?:years?|yrs?)[\s-]*old\b"
+    r"|\b(\d{1,2})\s*yo\b"
+    r"|\bage(?:d| of)?\s+(\d{1,2})\b",
+    re.IGNORECASE,
 )
 
 
@@ -340,16 +357,84 @@ def _check_character(slot: int, notes: str) -> Tuple[int, int]:
     return estimate
 
 
-def check_adult(characters: List[Tuple[int, str]], draft: str) -> Tuple[int, int]:
-    """Refuse a nude item unless every character picture reads as an adult.
+def parse_hint_age(hint: Optional[str]) -> Optional[int]:
+    """The first "aged N" in the hint's first sentence, which must say "adult"."""
+    first = _FIRST_SENTENCE.match((hint or "").lstrip()).group(0)
+    if not _ADULT.search(first):
+        return None
+    match = _HINT_AGE.search(first)
+    return int(match.group(1)) if match else None
+
+
+def strip_unclothed(hint: str) -> str:
+    """The hint without any "Unclothed detail:" part."""
+    return _UNCLOTHED.sub("", hint).strip()
+
+
+def hint_lead(hint: Optional[str], nude: bool) -> str:
+    """The character hint as one line to write word for word after the draft.
+
+    "Unclothed detail:" stays only in nude mode; picture tags are removed.
+    """
+    text = (hint or "").strip()
+    text = text if nude else strip_unclothed(text)
+    return " ".join(_TAG.sub(" ", text).split())
+
+
+def body_is_nude(
+    lead: str, notes: Iterable[Tuple[int, str, Optional[str]]], hint: str = ""
+) -> bool:
+    """Body mode of an item: the draft or the character hint says nude and no
+    connected picture (one with notes) is the outfit."""
+    roles = [role for _, role, text in notes if text is not None]
+    return is_nude(lead, roles) or is_nude(hint, roles)
+
+
+def find_minor_age(text: Optional[str]) -> Optional[int]:
+    """The first stated age under HINT_MIN_AGE in ``text``, or None."""
+    for match in _STATED_AGE.finditer(text or ""):
+        age = int(next(group for group in match.groups() if group))
+        if age < HINT_MIN_AGE:
+            return age
+    return None
+
+
+def _hint_age(hint: str) -> Optional[int]:
+    age = parse_hint_age(hint)
+    return age if age is not None and age >= HINT_MIN_AGE else None
+
+
+def check_adult(
+    characters: List[Tuple[int, str]], draft: str, hint: str = ""
+) -> Tuple[int, int]:
+    """Refuse a nude item unless it reads as an adult.
 
     ``characters`` holds (slot, notes) for each connected character picture.
-    Returns the (low, high) estimate spanning all of them.
+    With pictures, each estimate must pass and the result is the (low, high)
+    estimate spanning them, or the hint's age when it states an adult one.
+    Without pictures, the hint must state an adult age.
     """
     word = find_youth_word(draft)
     if word is not None:
         raise ValueError(f"{_REFUSAL} The draft uses the word '{word}'.")
+    age = find_minor_age(draft)
+    if age is not None:
+        raise ValueError(f"{_REFUSAL} The draft states an age of {age}.")
+    word = find_youth_word(hint)
+    if word is not None:
+        raise ValueError(f"{_REFUSAL} The character hint uses the word '{word}'.")
+    age = find_minor_age(hint)
+    if age is not None:
+        raise ValueError(f"{_REFUSAL} The character hint states an age of {age}.")
+    hint_age = _hint_age(hint)
     if not characters:
-        raise ValueError(f"{_REFUSAL} No character picture is connected.")
+        if hint_age is None:
+            raise ValueError(
+                f"{_REFUSAL} No character picture is connected and the "
+                "character hint gives no adult age."
+            )
+        return hint_age, hint_age
     estimates = [_check_character(slot, notes) for slot, notes in characters]
+    if hint_age is not None:
+        return hint_age, hint_age
     return min(low for low, _ in estimates), max(high for _, high in estimates)

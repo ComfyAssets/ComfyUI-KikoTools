@@ -411,3 +411,90 @@ def test_retry_user_names_a_banned_word():
 
 def test_retry_user_without_banned_word_is_unchanged():
     assert "Remove the word" not in retry_user(([], [4]))
+
+
+HINT = (
+    "The character is an adult woman aged 25. Body: a curvy body. "
+    "Unclothed detail: pierced nipples. Extra: has a scar."
+)
+
+
+def test_writer_user_puts_the_hint_after_the_notes():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("Draft.", notes, hint=HINT)
+    assert text.index("Dark hair.") < text.index(HINT.split(" Unclothed")[0])
+    assert "the hint wins" in text or "hint wins" in text
+    assert text.endswith("Write the final prompt now.")
+
+
+def test_writer_user_tells_the_writer_to_drop_traits_the_hint_negates():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("Draft.", notes, hint=HINT)
+    assert "no tattoos, no freckles, no bangs, no glasses or no facial hair" in text
+    assert "leave that trait out of the prompt" in text
+    assert "say plainly that the person has none" in text
+
+
+def test_writer_user_lets_the_hint_pose_win_for_head_and_eyes_only():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("Draft.", notes, hint=HINT)
+    assert '"Pose:" part in the hint sets the head angle' in text
+    assert "wins over the pose notes for the head and eyes only" in text
+    assert "rest of the pose still comes from the draft and the pose notes" in text
+
+
+def test_writer_user_without_a_hint_has_no_hint_rules():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("Draft.", notes)
+    assert "no tattoos" not in text
+    assert '"Pose:"' not in text
+
+
+@pytest.mark.parametrize("blank", ["", "   ", "\n"])
+def test_writer_user_treats_a_blank_hint_as_no_hint(blank):
+    notes = [(1, "character", "Dark hair.")]
+    assert writer_user("Draft.", notes, hint=blank) == writer_user("Draft.", notes)
+
+
+def test_writer_user_drops_unclothed_detail_for_a_clothed_item():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("Draft.", notes, hint=HINT)
+    assert "Unclothed detail" not in text
+    assert "Extra: has a scar." in text
+
+
+def test_writer_user_keeps_unclothed_detail_for_a_nude_item():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("The woman is nude.", notes, adult=(25, 25), hint=HINT)
+    assert "Unclothed detail: pierced nipples." in text
+    assert text.index("Unclothed detail") < text.index("Nude mode")
+
+
+def test_writer_user_drops_unclothed_detail_when_an_outfit_is_connected():
+    notes = [(1, "character", "Dark hair."), (2, "outfit", "A red coat.")]
+    text = writer_user("The woman is nude.", notes, adult=(25, 25), hint=HINT)
+    assert "Unclothed detail" not in text
+
+
+def test_nude_block_with_one_age_says_aged_n_only():
+    text = nude_block((25, 25))
+    assert "aged 25" in text
+    assert "25 to 25" not in text
+    assert "twenties" not in text
+    assert "character notes or the character hint say" in text
+
+
+def test_adult_block_with_one_age_says_aged_n_only():
+    assert "25 to 25" not in adult_block((25, 25))
+    assert "aged 25" in adult_block((25, 25))
+
+
+def test_writer_user_says_the_hint_is_already_written_after_the_draft():
+    text = writer_user("Draft.", [], hint="Eyewear: round glasses.")
+    assert "already written word for word after the draft" in text
+    assert "the details win" in text
+
+
+def test_writer_user_without_hint_lead_has_no_written_hint_block():
+    assert "the details win" not in writer_user("Draft.", [])
+    assert "the details win" not in writer_user("Draft.", [], hint="<Picture 1>")

@@ -2196,6 +2196,19 @@ test('H3 Reference Prompter panel shows prompts, steps, copies and toggles notes
     await page.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('denied')) }, configurable: true }); });
     await panel.getByRole('button', { name: 'Copy prompt' }).click();
     await expect(panel.locator('.ca-h3-status')).toHaveText('Copy failed; select the text and copy it by hand');
+    // A workflow saved with the old draft box has one value too many; the draft is dropped.
+    const loaded = await page.evaluate(id => {
+        const node = kikoHost.nodes.get(String(id));
+        node.widgets.push({ name: 'model', value: '' }, { name: 'seed', value: 0 });
+        const count = node.widgets.filter(widget => widget.serialize !== false).length;
+        const current = Array.from({ length: count }, (_, index) => `value ${index}`);
+        const seen = [];
+        node.onConfigure = info => seen.push(info.widgets_values);
+        node.configure({ widgets_values: ['old draft', ...current] });
+        node.configure({ widgets_values: current });
+        return { seen, current };
+    }, id);
+    expect(loaded.seen).toEqual([loaded.current, loaded.current]);
     await run({});
     await expect(panel).toContainText('Run the workflow to see the written prompt.');
 });

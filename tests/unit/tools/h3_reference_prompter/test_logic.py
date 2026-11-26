@@ -9,15 +9,20 @@ from kikotools.tools.h3_reference_prompter.logic import (
     ROLES,
     SLOTS,
     YOUTH_WORDS,
+    HINT_MIN_AGE,
     check_adult,
     clean_result,
     draft_lead,
     cap_negatives,
     drop_echoes,
+    hint_lead,
     says_nude,
     drop_repeats,
     find_tags,
+    find_minor_age,
     find_youth_word,
+    parse_hint_age,
+    strip_unclothed,
     image_key,
     is_nude,
     is_placeholder,
@@ -507,3 +512,194 @@ def test_clean_result_caps_negatives():
 def test_cap_negatives_drops_blank_lines_after_the_cut():
     text = "\n\n".join(f"No problem {n}." for n in range(1, 10))
     assert cap_negatives(text) == "\n\n".join(f"No problem {n}." for n in range(1, 7))
+
+
+HINT_25 = "The character is an adult woman aged 25."
+CHILD_NOTES = "A girl.\nEstimated age: 15 to 19 years."
+OLDER_NOTES = "A woman.\nEstimated age: 30 to 45 years."
+
+
+def test_hint_min_age_is_eighteen():
+    assert HINT_MIN_AGE == 18
+
+
+@pytest.mark.parametrize(
+    "hint, expected",
+    [
+        ("The character is an adult woman aged 25.", 25),
+        ("Adult, aged 30", 30),
+        ("ages well", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_parse_hint_age(hint, expected):
+    assert parse_hint_age(hint) == expected
+
+
+def test_strip_unclothed_removes_the_sentence():
+    text = "A. Unclothed detail: x, y. Extra: z."
+    assert strip_unclothed(text) == "A. Extra: z."
+
+
+def test_strip_unclothed_leaves_other_text_alone():
+    assert strip_unclothed("A. Extra: z.") == "A. Extra: z."
+
+
+def test_check_adult_without_pictures_uses_the_hint_age():
+    assert check_adult([], "nude", HINT_25) == (25, 25)
+
+
+@pytest.mark.parametrize("hint", ["A woman with green eyes.", "A woman aged 25.", ""])
+def test_check_adult_without_pictures_refuses_a_missing_or_young_hint_age(hint):
+    with pytest.raises(ValueError, match="character hint gives no adult age"):
+        check_adult([], "nude", hint)
+
+
+def test_check_adult_refuses_a_youth_word_in_the_hint():
+    with pytest.raises(ValueError, match="character hint uses the word 'teen'"):
+        check_adult([], "nude", "A teen aged 25.")
+
+
+def test_check_adult_keeps_refusing_a_young_picture_whatever_the_hint_says():
+    with pytest.raises(ValueError):
+        check_adult([(1, CHILD_NOTES)], "nude", "The character is aged 30.")
+
+
+def test_check_adult_uses_the_hint_age_when_the_picture_passes():
+    assert check_adult([(1, OLDER_NOTES)], "nude", HINT_25) == (25, 25)
+    assert check_adult([(1, OLDER_NOTES)], "nude") == (30, 45)
+
+
+def test_check_adult_ignores_a_hint_age_without_adult_with_a_picture():
+    assert check_adult([(1, OLDER_NOTES)], "nude", "A woman aged 25.") == (30, 45)
+
+
+@pytest.mark.parametrize(
+    "hint, expected",
+    [
+        ("The character is an adult woman aged 25.", 25),
+        ("The character is an adult Japanese man aged 40. Extra: x", 40),
+        ("An adult woman aged 30", 30),
+        ("The character is 12 years old. Extra: her mother aged 40.", None),
+        ("The character is a woman. Extra: her friend is aged 25.", None),
+        ("A woman aged 25.", None),
+        ("caged 25", None),
+        ("an adult aged 5 ... aged 30", 5),
+        ("An adult woman.\nShe is aged 30.", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_parse_hint_age_reads_only_the_first_sentence_with_adult(hint, expected):
+    assert parse_hint_age(hint) == expected
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("A. Unclothed detail: pierced nipples", "A."),
+        ("A. unclothed detail: pierced nipples. Extra: z.", "A. Extra: z."),
+        ("A. UNCLOTHED DETAIL: nipples. Extra: z.", "A. Extra: z."),
+        ("A. Unclothed detail: x. B. Unclothed detail: y.", "A. B."),
+        ("A. Unclothed detail: x, y. Extra: z.", "A. Extra: z."),
+        ("A. Extra: z.", "A. Extra: z."),
+    ],
+)
+def test_strip_unclothed_handles_hand_typed_hints(text, expected):
+    out = strip_unclothed(text)
+    assert out == expected
+    assert "unclothed" not in out.lower()
+
+
+def test_strip_unclothed_stops_at_a_line_break():
+    out = strip_unclothed("A.\nUnclothed detail: pierced nipples\nExtra: z")
+    assert "A." in out and "Extra: z" in out
+    assert "nipples" not in out and "unclothed" not in out.lower()
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("a 15-year-old aged 30", 15),
+        ("A 12 year old, nude", 12),
+        ("she is 17 yo", 17),
+        ("aged 9", 9),
+        ("age 16", 16),
+        ("the age of 14", 14),
+        ("a 10 yr old", 10),
+        ("an adult woman aged 25", None),
+        ("25 years old", None),
+        ("a 1960s dress", None),
+        ("size 12 shoes", None),
+        (None, None),
+    ],
+)
+def test_find_minor_age(text, expected):
+    assert find_minor_age(text) == expected
+
+
+@pytest.mark.parametrize(
+    "draft, hint, match",
+    [
+        ("nude", "The character is 12 years old. Extra: her mother aged 40.", "hint"),
+        ("nude", "a 15-year-old aged 30", "hint"),
+        (
+            "A 12 year old, nude, standing.",
+            "The character is an adult woman aged 25.",
+            "draft",
+        ),
+        (
+            "nude",
+            "The character is a woman. Extra: her friend is aged 25.",
+            "adult age",
+        ),
+        ("nude", "The character is an adult woman aged 17.", "age of 17"),
+    ],
+)
+def test_check_adult_refuses_a_stated_minor_age(draft, hint, match):
+    with pytest.raises(ValueError, match=match):
+        check_adult([], draft, hint)
+
+
+def test_check_adult_refuses_a_stated_minor_age_with_a_picture():
+    with pytest.raises(ValueError, match="draft states an age of 16"):
+        check_adult([(1, OLDER_NOTES)], "a 16 year old, nude")
+
+
+def test_a_clothed_draft_with_a_stated_age_is_not_nude_mode():
+    assert not says_nude("a 12 year old in a coat")
+
+
+HINT_FULL = (
+    "The character is an adult woman aged 28. Eyewear: round glasses. "
+    "Unclothed detail: pierced nipples."
+)
+
+
+@pytest.mark.parametrize("blank", [None, "", "  \n "])
+def test_hint_lead_of_a_blank_hint_is_empty(blank):
+    assert hint_lead(blank, True) == "" and hint_lead(blank, False) == ""
+
+
+def test_hint_lead_strips_the_unclothed_detail_when_clothed():
+    out = hint_lead(HINT_FULL, False)
+    assert "Unclothed" not in out and "round glasses." in out
+
+
+def test_hint_lead_keeps_the_unclothed_detail_when_nude():
+    assert hint_lead(HINT_FULL, True) == HINT_FULL
+
+
+def test_hint_lead_removes_picture_tags():
+    out = hint_lead("Like <Picture 2> here. < Picture 3 > Extra: x.", True)
+    assert "Picture" not in out and "<" not in out
+
+
+def test_hint_lead_collapses_whitespace():
+    assert hint_lead("  A.\n\n  B.\t C.  ", True) == "A. B. C."
+
+
+def test_hint_lead_that_becomes_empty_is_empty():
+    assert hint_lead("<Picture 1>", True) == ""
+    assert hint_lead("Unclothed detail: x.", False) == ""

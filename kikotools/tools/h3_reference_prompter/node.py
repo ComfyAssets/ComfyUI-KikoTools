@@ -23,16 +23,18 @@ from .logic import (
     ROLE_CHOICES,
     SLOTS,
     check_adult,
+    body_is_nude,
     clean_result,
     draft_lead,
     drop_echoes,
     find_youth_word,
+    hint_lead,
     image_key,
-    says_nude,
     is_placeholder,
     item_seed,
     pair_items,
     resolve_roles,
+    says_nude,
     tag_problems,
 )
 from .models import (
@@ -241,29 +243,35 @@ def _notes_text(notes: List[Note]) -> str:
 
 
 def _adult_range(item: Item, notes: List[Note]) -> Optional[AgeRange]:
-    """The checked age range of an item whose draft says nude; else None.
+    """The checked age range of an item whose draft or character hint says
+    nude; else None.
 
+    The hint counts because it is written into the prompt word for word.
     Raises ValueError when such an item has no adult character picture. The
     check runs whatever the roles are, even with an outfit picture connected.
     """
-    if not says_nude(item["prompt"]):
+    if not (says_nude(item["prompt"]) or says_nude(item["hint"])):
         return None
     characters = [
         (slot, text)
         for slot, role, text in notes
         if role == "character" and text is not None
     ]
-    return check_adult(characters, item["prompt"] or "")
+    return check_adult(characters, item["prompt"] or "", item["hint"])
 
 
 # (missing tags, extra tags, blank written part, banned word) per written prompt
 Problems = Tuple[List[int], List[int], bool, Optional[str]]
 
 
-def _combine(lead: str, raw: str) -> Tuple[str, str]:
-    """(written, combined): the cleaned model text, and the full prompt."""
-    written = drop_echoes(clean_result(raw), lead)
-    parts = [part for part in (lead, written) if part]
+def _combine(lead: str, details: str, raw: str) -> Tuple[str, str]:
+    """(written, combined): the cleaned model text, and the full prompt.
+
+    The prompt is the draft lead, the hint lead and the model text, each
+    only when not empty.
+    """
+    written = drop_echoes(clean_result(raw), f"{lead}\n{details}")
+    parts = [part for part in (lead, details, written) if part]
     return written, "\n\n".join(parts).rstrip()
 
 
@@ -321,15 +329,18 @@ def _write_one(
     draft: str,
     notes: List[Note],
     adult: Optional[AgeRange],
+    hint: str,
     seed: int,
     tokens: int,
 ) -> str:
     lead = draft_lead(draft)
-    message = writer_user(lead, notes, adult)
+    details = hint_lead(hint, body_is_nude(lead, notes, hint))
+    message = writer_user(lead, notes, adult, hint)
     nude = adult is not None
 
     def attempt(text: str) -> Tuple[str, str]:
-        return _combine(lead, run.generate(writer_system(), text, None, seed, tokens))
+        raw = run.generate(writer_system(), text, None, seed, tokens)
+        return _combine(lead, details, raw)
 
     written, combined = attempt(message)
     problems = _problems(draft, written, combined, nude)
@@ -345,18 +356,23 @@ def _write_batch(
     drafts: List[str],
     notes: List[List[Note]],
     adults: List[Optional[AgeRange]],
+    hints: List[str],
     seed: int,
     tokens: int,
 ) -> List[str]:
     """Write every draft in one batch, then retry the failing ones in one more."""
     leads = [draft_lead(draft) for draft in drafts]
-    messages = [writer_user(*args) for args in zip(leads, notes, adults)]
+    details = [
+        hint_lead(hint, body_is_nude(lead, item_notes, hint))
+        for lead, item_notes, hint in zip(leads, notes, hints)
+    ]
+    messages = [writer_user(*args) for args in zip(leads, notes, adults, hints)]
 
     def attempt(indices: List[int], texts: List[str]) -> List[Tuple[str, str]]:
         raws = run.generate_batch(
             [(writer_system(), t, None) for t in texts], seed, tokens
         )
-        return [_combine(leads[i], raw) for i, raw in zip(indices, raws)]
+        return [_combine(leads[i], details[i], raw) for i, raw in zip(indices, raws)]
 
     def problems_of(index: int, result: Tuple[str, str]) -> Problems:
         return _problems(drafts[index], *result, adults[index] is not None)
@@ -382,11 +398,12 @@ def _write_all(
     tokens: int,
 ) -> List[str]:
     drafts = [item["prompt"] for item in items]
+    hints = [item["hint"] for item in items]
     if run.batched:
-        return _write_batch(run, drafts, notes, adults, base_seed, tokens)
+        return _write_batch(run, drafts, notes, adults, hints, base_seed, tokens)
     return [
         _write_one(run, *args, item_seed(base_seed, index), tokens)
-        for index, args in enumerate(zip(drafts, notes, adults))
+        for index, args in enumerate(zip(drafts, notes, adults, hints))
     ]
 
 
@@ -453,6 +470,14 @@ def _optional_inputs() -> Dict[str, Any]:
         f"image_{slot}": ("IMAGE", {"tooltip": f"Reference for <Picture {slot}>"})
         for slot in range(1, SLOTS + 1)
     }
+    optional["character_hint"] = (
+        "STRING",
+        {
+            "forceInput": True,
+            "tooltip": "Traits from a Character Hint node; they win over the "
+            "character picture",
+        },
+    )
     optional["temperature"] = (
         "FLOAT",
         {"default": 0.7, "min": 0.01, "max": 2.0, "step": 0.01, "advanced": True},
@@ -538,6 +563,7 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
         image_1: Optional[List[Any]] = None,
         image_2: Optional[List[Any]] = None,
         image_3: Optional[List[Any]] = None,
+        character_hint: Optional[List[str]] = None,
         temperature: Optional[List[float]] = None,
         describe_tokens: Optional[List[int]] = None,
         write_tokens: Optional[List[int]] = None,
@@ -562,7 +588,10 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
             describe_tokens[0] if describe_tokens else 512,
             write_tokens[0] if write_tokens else 1536,
         )
-        items = pair_items(prompt=prompt, **{k: v or [] for k, v in images.items()})
+        hints = [(text or "").strip() for text in character_hint or []] or [""]
+        items = pair_items(
+            prompt=prompt, hint=hints, **{k: v or [] for k, v in images.items()}
+        )
         entry = _resolve_model(model_name)
         _check_batches(items)
         run = _Run(entry, temperature[0] if temperature else 0.7)

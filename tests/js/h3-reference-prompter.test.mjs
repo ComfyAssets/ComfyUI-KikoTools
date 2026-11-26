@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { clampIndex, summary, wordCount } from '../../web/ui/h3-reference-prompter.js';
+import { clampIndex, summary, withoutLegacyDraft, wordCount } from '../../web/ui/h3-reference-prompter.js';
 
 test('summary counts prompts and words, singular for one', () => {
     assert.equal(summary(['one two three']), '1 prompt · 3 words');
@@ -25,4 +25,18 @@ test('wordCount splits on any whitespace and ignores edges', () => {
     assert.equal(wordCount('  a\tb\n\nc  '), 3);
     assert.equal(wordCount(''), 0);
     assert.equal(wordCount(null), 0);
+});
+
+test('withoutLegacyDraft drops the leading draft of a workflow saved with a draft box', () => {
+    const legacy = ['old draft', 'hf: m', 'auto', 'auto', 'auto', 42, 'fixed', 0.7, 512, 1536, false];
+    assert.deepEqual(withoutLegacyDraft(legacy, 10), legacy.slice(1));
+});
+
+test('withoutLegacyDraft leaves current and unknown shapes alone', () => {
+    const current = ['hf: m', 'auto', 'auto', 'auto', 42, 'fixed', 0.7, 512, 1536, false];
+    assert.equal(withoutLegacyDraft(current, 10), current);
+    assert.deepEqual(withoutLegacyDraft(['a', 'b', 'c'], 10), ['a', 'b', 'c']);
+    assert.equal(withoutLegacyDraft(undefined, 10), undefined);
+    assert.equal(withoutLegacyDraft(null, 10), null);
+    assert.deepEqual(withoutLegacyDraft([1], 0), [1]);
 });
