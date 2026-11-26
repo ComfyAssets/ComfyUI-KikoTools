@@ -42,6 +42,14 @@ class _CharacterHintNode(ComfyAssetsBaseNode):
             },
         }
 
+    @classmethod
+    def IS_CHANGED(cls, age: int, extra: str = "", **values: str) -> str:
+        """The hint text itself, so an edited options file reruns the node."""
+        try:
+            return logic.build_hint(cls.GENDER, age, values, extra, options.tables())
+        except ValueError as exc:
+            return f"error: {exc}"
+
     def build(self, age: int, extra: str = "", **values: str) -> Tuple[str]:
         return (logic.build_hint(self.GENDER, age, values, extra, options.tables()),)
 

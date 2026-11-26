@@ -118,3 +118,22 @@ def test_registered():
     assert maps["KikoCharacterHintMale"] is CharacterHintMaleNode
     assert names["KikoCharacterHintFemale"] == "Character Hint (Female)"
     assert names["KikoCharacterHintMale"] == "Character Hint (Male)"
+
+
+def test_is_changed_is_the_hint_text():
+    values = {"eye_color": "Green"}
+    stamp = CharacterHintFemaleNode.IS_CHANGED(30, extra="x", **values)
+    assert stamp == logic.build_hint(logic.FEMALE, 30, values, "x")
+
+
+def test_is_changed_follows_a_replaced_phrase(write_user_file):
+    before = CharacterHintFemaleNode.IS_CHANGED(30, eye_color="Green")
+    write_user_file({"eye_color": {"Green": "emerald eyes"}})
+    after = CharacterHintFemaleNode.IS_CHANGED(30, eye_color="Green")
+    assert before != after and "emerald eyes" in after
+
+
+def test_is_changed_survives_a_removed_option(write_user_file):
+    write_user_file({"eye_color": {"Green": None}})
+    stamp = CharacterHintFemaleNode.IS_CHANGED(30, eye_color="Green")
+    assert "eye_color" in stamp

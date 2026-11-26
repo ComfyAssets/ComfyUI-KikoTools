@@ -172,7 +172,7 @@ How it works:
 - `makeup` is different. Each style is an object with a `look` and `lips`, both required.
 - You cannot change `-`, the age limits, or empty a whole table.
 - A bad entry is skipped and a warning goes to the ComfyUI log. It starts with "Character Hint options" and names the file. The other entries still apply.
-- Refresh the browser page to see your edits in the dropdowns. You do not need to restart ComfyUI.
+- Refresh the browser page to see your edits in the dropdowns. You do not need to restart ComfyUI. A changed phrase is used on the next run, even when no dropdown changed.
 - If you remove an option, a saved workflow that used it fails with an error that names the field.
 
 The shipped options were tested against MiniMax H3 Image. Your own additions were not.
