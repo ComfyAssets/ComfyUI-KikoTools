@@ -96,7 +96,7 @@ labelled `<Picture 1>`, `<Picture 2>`, … in input order.
 
 - **Licence.** KikoTools is MIT. ComfyUI-MiniMax-H3-Promptor and ComfyUI-QwenVL
   are GPL-3.0. Write our own code and our own instruction text; copy nothing from
-  either. The README may credit the Promptor as inspiration.
+  either. No credit line for it in the README or the node (maintainer's decision).
 - **Runtime.** The maintainer's ComfyUI has transformers 5.19 (supports `qwen3_5`,
   `qwen3_vl`, `gemma4`, `gemma4_unified`) and llama-cpp-python 0.3.36 (Gemma 4
   vision through it is unverified). Use bf16 on CUDA; CPU only as a slow fallback.
