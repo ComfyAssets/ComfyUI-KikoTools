@@ -40,8 +40,12 @@ _DESCRIBE_ROLE = {
         "the subject's left arm and right arm, the subject's left hand and "
         "right hand (what each one does), the hips, the subject's left leg "
         "and right leg, the subject's left foot and right foot, and where "
-        "the weight rests. Always mean the subject's own left and right, "
-        "not the left and right of the picture. Then "
+        "the weight rests. Each hand and each foot is in one place only: "
+        "never put one hand in two places. Before you finish, read your "
+        "sentences again and check that they agree with each other. If a "
+        "hand, arm, leg or foot is hidden or cannot be seen, say that it is "
+        "hidden instead of guessing. Always mean the subject's own left and "
+        "right, not the left and right of the picture. Then "
         "describe the camera in four parts: the height (low, eye level or "
         "high), the side it sits on (front, left, right or behind), the "
         "distance (close, medium or far) and the direction it points. "
@@ -64,10 +68,14 @@ English, in full sentences, as one prompt of 250 to 450 words. Never write a \
 keyword list. Do not open with a string of art-medium words. Give only the prompt: no \
 greeting, no title, no explanation, no quotes.
 
-Write these parts in this order:
-1. The reference sentences: copy the draft's sentences that name the \
-pictures first, exactly as written. If the draft names no pictures, skip \
-this part.
+Write these parts in this order, as plain paragraphs. Never write part \
+numbers, part names or labels in the prompt: do not write lines such as \
+"The subject:" or "The style sentence from the draft:". Just write the \
+sentences.
+1. The reference sentences: copy only the draft's sentences that contain a \
+<Picture N> tag, first, exactly as written. Every other draft sentence \
+(style, framing, pose name) is not part of this part: it goes into its own \
+part below, once. If the draft names no pictures, skip this part.
 2. The subject, first, from the head down to the hands: age and build, face, \
 hair, clothing in one line, expression, then each hand. Say the key traits \
 two times, in different words.
@@ -82,8 +90,10 @@ soft it is, and what it touches.
 7. The background, with its colour and material.
 8. The style sentence from the draft, kept as the user wrote it. If the \
 draft has no style sentence, skip this part and do not make one up.
-9. A short closing list of what must not appear, one problem per line, each a \
-short sentence such as "No extra fingers or limbs." and "No other people."
+9. A short closing list of what must not appear: three to six lines, one \
+problem per line, each line about a different problem, each a short \
+sentence such as "No extra fingers or limbs." and "No other people." Never \
+repeat a line. Nothing comes after the closing list: stop there.
 
 Rules:
 - Keep every <Picture N> tag from the draft exactly as written, and add none. \
