@@ -12,7 +12,8 @@ from kikotools.tools.h3_reference_prompter.node import H3ReferencePrompterNode
 from kikotools.tools.prompt_enhancer.models import ModelEntry
 
 DRAFT = "<Picture 1> wears <Picture 2> in <Picture 3>."
-FULL = "<Picture 1> wears <Picture 2> in <Picture 3>. Long text."
+BODY = "A long prompt body."
+FULL = DRAFT + "\n\n" + BODY
 
 
 def entry(kind="hf", name="hf: demo"):
@@ -25,7 +26,7 @@ class Harness:
     def __init__(self, monkeypatch, writes=None, kind="hf"):
         self.calls = []
         self.events = []
-        self.writes = list(writes or [FULL])
+        self.writes = list(writes or [BODY])
         self.entry = entry(kind)
         self.clip_loads = 0
         node_module._NOTES_CACHE.clear()
@@ -174,30 +175,75 @@ def test_unconnected_images_give_empty_notes(monkeypatch):
 
 
 def test_tag_retry_then_error(monkeypatch):
-    bad = "<Picture 1> wears <Picture 3>."
+    bad = "A body with a stray <Picture 4> tag."
     h = Harness(monkeypatch, writes=[bad, bad])
-    with pytest.raises(ValueError, match=r"<Picture 2>"):
+    with pytest.raises(ValueError, match=r"unexpected <Picture 4>"):
         run(images={"image_1": [img(1)]}, seed=7)
     first, second = h.writers
     assert second["seed"] == first["seed"] == 7
     assert second["prompt"].startswith(first["prompt"])
     assert "Your previous prompt:\n" + bad in second["prompt"]
-    assert second["prompt"].endswith(retry_user(([2], [])))
+    assert second["prompt"].endswith(retry_user(([], [4])))
     assert "repair" in h.events
 
 
 def test_tag_retry_succeeds(monkeypatch):
-    h = Harness(monkeypatch, writes=["<Picture 1> only.", FULL])
+    h = Harness(monkeypatch, writes=["Body with <Picture 4>.", BODY])
     out = run()
     assert out["result"][0] == [FULL]
+    assert len(h.writers) == 2
     assert "repair" not in h.events
 
 
 def test_extra_tag_error_names_extra(monkeypatch):
-    h = Harness(monkeypatch, writes=["<Picture 1> <Picture 2>"] * 2)
+    h = Harness(monkeypatch, writes=["Body <Picture 2>"] * 2)
     with pytest.raises(ValueError, match=r"unexpected <Picture 2>"):
         run(prompt=["<Picture 1> alone"])
     assert len(h.writers) == 2
+
+
+def test_missing_tag_error_names_missing(monkeypatch):
+    # Only reachable if the program-written reference ever lost a tag.
+    monkeypatch.setattr(
+        node_module, "split_reference_sentences", lambda draft: ("", draft)
+    )
+    h = Harness(monkeypatch, writes=["Body only."] * 2)
+    with pytest.raises(ValueError, match=r"missing <Picture 1>"):
+        run(prompt=["<Picture 1> alone"])
+    assert len(h.writers) == 2
+
+
+def test_output_starts_with_the_drafts_reference_sentences_verbatim(monkeypatch):
+    draft = (
+        "<Picture 1> is the character. Draw her in <Picture 3>; keep it calm. "
+        "Photorealistic photograph. Full body."
+    )
+    h = Harness(monkeypatch, writes=["She stands."])
+    out = run(prompt=[draft])
+    reference = "<Picture 1> is the character. Draw her in <Picture 3>; keep it calm."
+    assert out["result"][0] == [reference + "\n\nShe stands."]
+    sent = h.writers[0]["prompt"]
+    assert "Photorealistic photograph. Full body." in sent
+    assert "already written; do not repeat" in sent
+
+
+def test_model_output_repeating_a_tag_sentence_is_accepted(monkeypatch):
+    repeat = "<Picture 1> wears <Picture 2> in <Picture 3>. More text."
+    h = Harness(monkeypatch, writes=[repeat])
+    out = run()
+    assert out["result"][0] == [DRAFT + "\n\n" + repeat]
+    assert len(h.writers) == 1
+
+
+def test_notes_are_deduplicated(monkeypatch):
+    h = Harness(monkeypatch)
+    twice = "Young and bright. Young and bright. Dark hair."
+    monkeypatch.setattr(h, "generate", lambda *a: twice if a[4] is not None else BODY)
+    monkeypatch.setattr(node_module, "_generate", h.generate)
+    out = run(images={"image_1": [img(1)]})
+    assert out["result"][1] == ["<Picture 1> (character): Young and bright. Dark hair."]
+    (cached,) = node_module._NOTES_CACHE.values()
+    assert cached == "Young and bright. Dark hair."
 
 
 def test_batch_tensor_in_a_slot_is_rejected(monkeypatch):
@@ -220,7 +266,7 @@ def test_missing_model_validates_then_fails_clearly(monkeypatch):
 
 def test_unmentioned_slot_is_context_only(monkeypatch):
     draft = "<Picture 1> wears <Picture 2>."
-    h = Harness(monkeypatch, writes=["<Picture 1> <Picture 2> <Picture 3>.", draft])
+    h = Harness(monkeypatch, writes=["Body <Picture 3>.", "Body."])
     run(
         prompt=[draft],
         images={"image_1": [img(1)], "image_2": [img(2)], "image_3": [img(3)]},
@@ -239,7 +285,7 @@ def test_backend_freed_unless_keep_loaded(monkeypatch):
 
 
 def test_backend_freed_after_failure(monkeypatch):
-    h = Harness(monkeypatch, writes=["nope", "nope"])
+    h = Harness(monkeypatch, writes=["nope <Picture 4>"] * 2)
     with pytest.raises(ValueError):
         run()
     assert h.events.index("repair") < h.events.index("free_hf")
@@ -295,6 +341,7 @@ def test_writer_message_uses_notes(monkeypatch):
     run(images={"image_1": [img(1)]})
     expected = writer_user(
         DRAFT,
+        "",
         [
             (
                 1,
@@ -355,7 +402,7 @@ def test_empty_prompt_list_raises_no_prompt(monkeypatch):
 
 
 def test_repair_failure_is_logged_and_original_error_is_raised(monkeypatch, caplog):
-    h = Harness(monkeypatch, writes=["nope", "nope"])
+    h = Harness(monkeypatch, writes=["nope <Picture 4>"] * 2)
 
     def broken_repair():
         raise OSError("repair broke")
@@ -386,7 +433,7 @@ def test_non_native_run_unloads_once(monkeypatch):
 
 
 def test_native_failure_does_not_unload_again_after_repair(monkeypatch):
-    h = Harness(monkeypatch, kind="native", writes=["nope", "nope"])
+    h = Harness(monkeypatch, kind="native", writes=["nope <Picture 4>"] * 2)
     h.entry = entry("native", "native: clip")
     with pytest.raises(ValueError):
         run(model=["native: clip"])

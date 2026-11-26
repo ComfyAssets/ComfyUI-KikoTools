@@ -68,37 +68,38 @@ English, in full sentences, as one prompt of 250 to 450 words. Never write a \
 keyword list. Do not open with a string of art-medium words. Give only the prompt: no \
 greeting, no title, no explanation, no quotes.
 
+The reference sentences (the draft's sentences that name a picture) are \
+already written by the program and put before your text. Never repeat or \
+rewrite them. Start directly with the subject.
+
 Write these parts in this order, as plain paragraphs. Never write part \
 numbers, part names or labels in the prompt: do not write lines such as \
 "The subject:" or "The style sentence from the draft:". Just write the \
 sentences.
-1. The reference sentences: copy only the draft's sentences that contain a \
-<Picture N> tag, first, exactly as written. Every other draft sentence \
-(style, framing, pose name) is not part of this part: it goes into its own \
-part below, once. If the draft names no pictures, skip this part.
-2. The subject, first, from the head down to the hands: age and build, face, \
+1. The subject, from the head down to the hands: age and build, face, \
 hair, clothing in one line, expression, then each hand. Say the key traits \
 two times, in different words.
-3. The outfit, garment by garment, with the colour, the specific material \
+2. The outfit, garment by garment, with the colour, the specific material \
 and the surface detail of each one (weave, sheen, stitching, wear).
-4. The pose, with what each hand does and what each foot does, and where the \
+3. The pose, with what each hand does and what each foot does, and where the \
 weight rests.
-5. The camera: the height, the side, the distance, the direction it points, \
+4. The camera: the height, the side, the distance, the direction it points, \
 and how the frame is cropped.
-6. The lighting, in its own sentence: where the light comes from, how hard or \
+5. The lighting, in its own sentence: where the light comes from, how hard or \
 soft it is, and what it touches.
-7. The background, with its colour and material.
-8. The style sentence from the draft, kept as the user wrote it. If the \
+6. The background, with its colour and material.
+7. The style sentence, taken from the draft's remaining sentences and kept as \
+the user wrote it. If the \
 draft has no style sentence, skip this part and do not make one up.
-9. A short closing list of what must not appear: three to six lines, one \
+8. A short closing list of what must not appear: three to six lines, one \
 problem per line, each line about a different problem, each a short \
 sentence such as "No extra fingers or limbs." and "No other people." Never \
 repeat a line. Nothing comes after the closing list: stop there.
 
 Rules:
-- Keep every <Picture N> tag from the draft exactly as written, and add none. \
-Do not write a tag that is not in the draft. If the draft has no tags, write \
-none.
+- Write no <Picture N> tag, unless you repeat one of the draft's tags to \
+point at a picture, exactly as written. Never write a tag that is not in the \
+draft. If the draft has no tags, write none.
 - The draft wins. If the draft and the notes disagree, follow the draft. If \
 the draft says to leave something out, leave it out. Keep the pose name from \
 the draft and use the notes to add detail to it.
@@ -144,9 +145,11 @@ def writer_system() -> str:
     return _WRITER_SYSTEM
 
 
-def writer_user(draft: str, notes: List[Tuple[int, str, Optional[str]]]) -> str:
-    """User message with the draft and the per-picture notes."""
-    in_draft = find_tags(draft)
+def writer_user(
+    reference: str, rest: str, notes: List[Tuple[int, str, Optional[str]]]
+) -> str:
+    """User message: reference sentences, remaining draft, per-picture notes."""
+    in_draft = find_tags(reference)
     lines = []
     for slot, role, text in sorted(notes, key=lambda note: note[0]):
         label = f"<Picture {slot}> ({role})"
@@ -165,7 +168,18 @@ def writer_user(draft: str, notes: List[Tuple[int, str, Optional[str]]]) -> str:
                 "The draft does not use this tag, so do not write its tag."
             )
     notes_block = "\n".join(lines) if lines else "No notes."
-    return f"Draft:\n{draft}\n\n{notes_block}\n\nWrite the final prompt now."
+    blocks = []
+    if reference:
+        blocks.append(
+            "Reference sentences (already written; do not repeat):\n" + reference
+        )
+    blocks.append(
+        "Remaining draft sentences (follow these; keep the style sentence):\n"
+        + (rest or "(none)")
+    )
+    blocks.append(notes_block)
+    blocks.append("Write the final prompt now.")
+    return "\n\n".join(blocks)
 
 
 def retry_user(problems: Tuple[List[int], List[int]]) -> str:

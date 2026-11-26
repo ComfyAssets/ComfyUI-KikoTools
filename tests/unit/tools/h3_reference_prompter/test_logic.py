@@ -11,6 +11,7 @@ from kikotools.tools.h3_reference_prompter.logic import (
     image_key,
     item_seed,
     pair_items,
+    split_reference_sentences,
     tag_problems,
 )
 
@@ -127,3 +128,65 @@ def test_drop_repeats_leaves_clean_text_untouched():
 def test_clean_result_drops_repeats_at_the_end():
     raw = "<think>x</think>\nShe stands.\n" + "No other people.\n" * 5
     assert clean_result(raw) == "She stands.\nNo other people."
+
+
+LIVE_DRAFT = (
+    "<Picture 1> is the character. <Picture 2> is the outfit. "
+    "<Picture 3> is the pose. Draw the character from <Picture 1> in the pose "
+    "and camera angle of <Picture 3>; the mannequin is only a pose guide, not "
+    "an appearance reference. Dress the character in the complete outfit from "
+    "<Picture 2>, copying every garment, colour and material exactly from "
+    "that picture. Include the footwear shown in the outfit picture, worn on "
+    "both feet. The pose: Front view, pose: Leaning-back sit, one knee raised "
+    "(Sitting). Photorealistic studio photograph, real person, natural skin "
+    "texture, soft even lighting. Full body from head to toe, plain light "
+    "grey studio background."
+)
+
+
+def test_split_reference_sentences_separates_tag_sentences_verbatim():
+    reference, rest = split_reference_sentences(LIVE_DRAFT)
+    assert reference == (
+        "<Picture 1> is the character. <Picture 2> is the outfit. "
+        "<Picture 3> is the pose. Draw the character from <Picture 1> in the "
+        "pose and camera angle of <Picture 3>; the mannequin is only a pose "
+        "guide, not an appearance reference. Dress the character in the "
+        "complete outfit from <Picture 2>, copying every garment, colour and "
+        "material exactly from that picture."
+    )
+    assert rest == (
+        "Include the footwear shown in the outfit picture, worn on both feet. "
+        "The pose: Front view, pose: Leaning-back sit, one knee raised "
+        "(Sitting). Photorealistic studio photograph, real person, natural "
+        "skin texture, soft even lighting. Full body from head to toe, plain "
+        "light grey studio background."
+    )
+
+
+def test_split_reference_sentences_semicolon_does_not_end_a_sentence():
+    reference, rest = split_reference_sentences("Use <Picture 1>; wear a hat. Smile")
+    assert reference == "Use <Picture 1>; wear a hat."
+    assert rest == "Smile"
+
+
+def test_split_reference_sentences_without_tags_returns_stripped_draft():
+    assert split_reference_sentences("  a woman standing. Soft light.  ") == (
+        "",
+        "a woman standing. Soft light.",
+    )
+
+
+def test_split_reference_sentences_drops_stray_lone_period():
+    reference, rest = split_reference_sentences("<Picture 1> is her. . Soft light.")
+    assert reference == "<Picture 1> is her."
+    assert rest == "Soft light."
+
+
+def test_split_reference_sentences_empty_draft():
+    assert split_reference_sentences("   ") == ("", "")
+
+
+def test_split_reference_sentences_question_and_bang_end_sentences():
+    reference, rest = split_reference_sentences("Who? <Picture 2> wins! Done")
+    assert reference == "<Picture 2> wins!"
+    assert rest == "Who? Done"

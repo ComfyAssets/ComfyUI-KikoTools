@@ -20,8 +20,12 @@ DRAFT = (
     "photograph. The pose: Low angle view, pose: Leaning-back sit (Sitting)"
 )
 
+REFERENCE = (
+    "<Picture 1> is the character. <Picture 2> is the outfit. <Picture 3> is the pose."
+)
+REST = "Photorealistic studio photograph. The pose: Leaning-back sit."
+
 SECTIONS = (
-    "reference sentences",
     "subject",
     "outfit",
     "pose",
@@ -99,14 +103,14 @@ def test_describe_user_rejects_unknown_role():
 def test_writer_system_lists_sections_in_order():
     text = writer_system().lower()
     items = re.findall(r"^([1-9])\. (.*)$", text, re.MULTILINE)
-    assert [number for number, _ in items] == list("123456789")
+    assert [number for number, _ in items] == list("12345678")
     for (_, line), name in zip(items, SECTIONS):
         assert name in line
     assert "250" in text and "450" in text
     assert "full sentences" in text
     assert "<picture n>" in text
     assert "exactly" in text
-    assert "add none" in text or "do not add" in text
+    assert "never write a tag that is not in the draft" in text
 
 
 def test_writer_system_carries_the_rules():
@@ -123,8 +127,8 @@ def test_writer_user_labels_notes_by_tag():
         (2, "outfit", "A red wool coat."),
         (3, "pose", None),
     ]
-    text = writer_user(DRAFT, notes)
-    assert DRAFT in text
+    text = writer_user(REFERENCE, REST, notes)
+    assert REFERENCE in text and REST in text
     assert "Notes for <Picture 2> (outfit): A red wool coat." in text
     assert "<Picture 3> (pose)" in text
     assert "no picture" in text.lower()
@@ -132,13 +136,13 @@ def test_writer_user_labels_notes_by_tag():
 
 def test_writer_user_marks_slot_missing_from_draft_as_context_only():
     notes = [(2, "outfit", "A red wool coat.")]
-    text = writer_user("Plain draft with <Picture 1> only.", notes)
+    text = writer_user("Plain draft with <Picture 1> only.", "", notes)
     assert "do not write its tag" in text.lower()
     assert "context only" in text.lower()
 
 
 def test_writer_user_tagged_slot_is_not_context_only():
-    text = writer_user(DRAFT, [(2, "outfit", "A red wool coat.")])
+    text = writer_user(REFERENCE, REST, [(2, "outfit", "A red wool coat.")])
     assert "context only" not in text.lower()
 
 
@@ -158,7 +162,6 @@ def test_retry_user_omits_empty_side():
 
 def test_writer_system_has_fallbacks():
     text = writer_system().lower()
-    assert "names no pictures, skip" in text
     assert "no style sentence, skip" in text
     assert "lighting and the background from the draft first" in text
     assert "plain, neutral choice" in text
@@ -170,13 +173,13 @@ def test_describe_user_forbids_tags():
 
 
 def test_writer_user_skips_empty_slot_not_in_draft():
-    text = writer_user("Only <Picture 1> here.", [(3, "pose", None)])
+    text = writer_user("Only <Picture 1> here.", "", [(3, "pose", None)])
     assert "<Picture 3>" not in text
     assert "No notes." in text
 
 
 def test_writer_user_keeps_empty_slot_in_draft():
-    text = writer_user(DRAFT, [(3, "pose", None)])
+    text = writer_user(REFERENCE, REST, [(3, "pose", None)])
     assert "Notes for <Picture 3> (pose): no picture" in text
 
 
@@ -189,12 +192,40 @@ def test_writer_system_forbids_labels_with_examples():
     assert '"The style sentence from the draft:"' in text
 
 
-def test_writer_system_part_one_copies_only_tagged_sentences():
+def test_writer_system_says_reference_sentences_are_already_written():
     lowered = " ".join(writer_system().lower().split())
-    assert "only the draft's sentences that contain a <picture n> tag" in lowered
-    assert "every other draft sentence" in lowered
-    assert "style, framing, pose name" in lowered
-    assert "its own part below, once" in lowered
+    assert "are already written by the program" in lowered
+    assert "start directly with the subject" in lowered
+    assert "never repeat or rewrite them" in lowered
+    assert "unless you repeat one of the draft's tags" in lowered
+    assert "style sentence" in lowered
+    assert "no style sentence, skip" in lowered
+
+
+def test_writer_system_has_no_reference_copy_part():
+    lowered = writer_system().lower()
+    assert "copy only the draft's sentences" not in lowered
+    assert "1. the reference sentences" not in lowered
+
+
+def test_writer_user_shows_reference_and_rest_separately():
+    text = writer_user(REFERENCE, REST, [])
+    ref_at = text.index(REFERENCE)
+    rest_at = text.index(REST)
+    assert "already written; do not repeat" in text[: ref_at + len(REFERENCE) + 80]
+    assert "follow these; keep the style sentence" in text[ref_at : rest_at + 1]
+    assert ref_at < rest_at
+
+
+def test_writer_user_without_reference_has_no_reference_block():
+    text = writer_user("", "a woman standing.", [])
+    assert "already written" not in text
+    assert "a woman standing." in text
+
+
+def test_writer_user_with_no_remaining_sentences_says_none():
+    text = writer_user(REFERENCE, "", [])
+    assert "(none)" in text
 
 
 def test_writer_system_closing_list_is_short_distinct_and_last():

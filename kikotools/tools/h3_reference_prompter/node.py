@@ -22,9 +22,11 @@ from .logic import (
     ROLES,
     SLOTS,
     clean_result,
+    drop_repeats,
     image_key,
     item_seed,
     pair_items,
+    split_reference_sentences,
     tag_problems,
 )
 from .models import (
@@ -124,13 +126,15 @@ def _describe(run: _Run, item, role, slot, model, seed, tokens) -> Optional[str]
         return None
     key = image_key(image, role, model)
     if key not in _NOTES_CACHE:
-        text = run.generate(
-            describe_system(role),
-            describe_user(role, item["prompt"]),
-            image,
-            seed,
-            tokens,
-        ).strip()
+        text = drop_repeats(
+            run.generate(
+                describe_system(role),
+                describe_user(role, item["prompt"]),
+                image,
+                seed,
+                tokens,
+            ).strip()
+        )
         if not text:
             raise ValueError(
                 f"{model} returned no description for image_{slot} ({role}); "
@@ -141,14 +145,21 @@ def _describe(run: _Run, item, role, slot, model, seed, tokens) -> Optional[str]
 
 
 def _write_one(run: _Run, draft: str, notes, seed: int, tokens: int) -> str:
-    message = writer_user(draft, notes)
-    result = clean_result(run.generate(writer_system(), message, None, seed, tokens))
-    problems = tag_problems(draft, result)
+    reference, rest = split_reference_sentences(draft)
+    message = writer_user(reference, rest, notes)
+
+    def attempt(text: str) -> Tuple[str, str]:
+        written = clean_result(run.generate(writer_system(), text, None, seed, tokens))
+        combined = f"{reference}\n\n{written}" if reference else written
+        return written, combined
+
+    written, combined = attempt(message)
+    problems = tag_problems(draft, combined)
     if not any(problems):
-        return result
-    retry = f"{message}\n\nYour previous prompt:\n{result}\n\n{retry_user(problems)}"
-    result = clean_result(run.generate(writer_system(), retry, None, seed, tokens))
-    missing, extra = tag_problems(draft, result)
+        return combined
+    retry = f"{message}\n\nYour previous prompt:\n{written}\n\n{retry_user(problems)}"
+    _, combined = attempt(retry)
+    missing, extra = tag_problems(draft, combined)
     if missing or extra:
         parts = []
         if missing:
@@ -159,7 +170,7 @@ def _write_one(run: _Run, draft: str, notes, seed: int, tokens: int) -> str:
             "The prompt model did not keep the picture tags after a retry: "
             + "; ".join(parts)
         )
-    return result
+    return combined
 
 
 def _run_item(run, item, index, roles, settings) -> Tuple[str, str]:

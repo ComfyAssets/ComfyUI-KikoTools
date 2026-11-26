@@ -33,6 +33,22 @@ def tag_problems(draft: str, result: str) -> Tuple[List[int], List[int]]:
     return sorted(wanted - produced), sorted(produced - wanted)
 
 
+def split_reference_sentences(draft: str) -> Tuple[str, str]:
+    """Split a draft into (sentences naming a picture, all other sentences).
+
+    Sentences keep their exact words and order; fragments with no letter or
+    digit (a stray lone period) are dropped.
+    """
+    reference: List[str] = []
+    rest: List[str] = []
+    for sentence in _SENTENCE_BREAK.split(draft.strip()):
+        sentence = sentence.strip()
+        if not re.search(r"\w", sentence):
+            continue
+        (reference if find_tags(sentence) else rest).append(sentence)
+    return " ".join(reference), " ".join(rest)
+
+
 def pair_items(**columns: List[Any]) -> List[Dict[str, Any]]:
     lengths = {name: len(values) for name, values in columns.items()}
     sized = {length for length in lengths.values() if length > 1}
