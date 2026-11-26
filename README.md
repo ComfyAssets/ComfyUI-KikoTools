@@ -19,6 +19,18 @@ I tried forking, patching, and submitting merge requests, but eventually decided
 
 I’m sharing them here with the community, and I hope you find them as useful as I do.
 
+## 1.11.0: Character Hint
+
+Two new nodes, [Character Hint (Female) and Character Hint (Male)](#-character-hint-female--male),
+build a character description from dropdowns: age, body, face, makeup, hair,
+skin, expression and more. Connect one to the new `character_hint` input of the
+[H3 Reference Prompter](#-h3-reference-prompter) and its traits are written into
+the prompt, winning over what the character picture shows. Every option was
+tested against MiniMax H3 Image, and you can add your own. The prompter's panel
+also resizes properly now. See the [release notes](CHANGELOG.md).
+
+![Character Hint](docs/screenshots/character-hint/dark.png)
+
 ## 1.10.0: H3 Reference Prompter
 
 The new [H3 Reference Prompter](#-h3-reference-prompter) looks at your character,
@@ -650,6 +662,10 @@ Two nodes that build a short character description from dropdowns. The output is
 - **Unclothed detail**: the female nodes' `nipples` and `areola` fields are used only when the draft says nude and no outfit picture is connected
 - **Your own options**: add, change or remove dropdown options in `ComfyUI/user/kikotools/character_hint.json`; it survives updates. See [Your own options](examples/documentation/character_hint.md#your-own-options)
 - **Tested**: every option was tested against MiniMax H3 Image; options the model ignores were left out
+
+![Character Hint](docs/screenshots/character-hint/dark.png)
+
+Example workflow: [character_hint_example.json](examples/workflows/character_hint_example.json) · [Light theme screenshot](docs/screenshots/character-hint/light.png). It needs only KikoTools: a draft, a Character Hint node and the prompter, with the hint and the prompt shown in Display Text nodes. It does not draw an image. For the full character sheet setup with the hint wired in, see [h3_reference_prompter_charsheet_test.json](examples/workflows/h3_reference_prompter_charsheet_test.json).
 
 #### ⏱️ Workflow Timer
 Real-time execution timer that displays workflow duration with millisecond precision.

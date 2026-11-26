@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.11.0
 
 ### Added
 
@@ -14,7 +14,8 @@
 - H3 Reference Prompter: optional `character_hint` input. Traits in the hint
   win over the character picture's notes. With no character picture, the
   hint's age is what a nude draft is checked against; with one, the picture's
-  estimate still decides.
+  estimate still decides. A hint that says nude or naked turns on the same
+  checks as a draft that does.
 
 ### Fixed
 
