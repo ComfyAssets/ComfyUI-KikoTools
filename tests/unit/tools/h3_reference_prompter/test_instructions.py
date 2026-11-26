@@ -259,3 +259,17 @@ def test_character_describer_says_each_trait_once():
     text = describe_system("character")
     assert "Say each trait once." in text
     assert "twice" not in text
+
+
+def test_character_describer_pins_bangs_and_mouth():
+    text = describe_system("character")
+    assert "the fringe or bangs exactly as they fall" in text
+    assert "a wide smile with the teeth showing" in text
+
+
+def test_outfit_describer_says_length_and_where_items_are_worn():
+    text = describe_system("outfit")
+    assert "how far it reaches on the body" in text
+    assert "socks at the ankle, mid-calf or knee" in text
+    assert "a hat worn on the head" in text
+    assert "is still worn in its usual place" in text
