@@ -5,6 +5,7 @@ import kikotools
 from kikotools.tools.h3_reference_prompter import node as node_module
 from kikotools.tools.h3_reference_prompter.instructions import (
     describe_system,
+    describe_user,
     retry_user,
     writer_user,
 )
@@ -25,12 +26,14 @@ def entry(kind="hf", name="hf: demo"):
 class Harness:
     def __init__(self, monkeypatch, writes=None, kind="hf"):
         self.calls = []
+        self.batches = []
         self.events = []
         self.writes = list(writes or [BODY])
         self.entry = entry(kind)
         self.clip_loads = 0
         node_module._NOTES_CACHE.clear()
         monkeypatch.setattr(node_module, "_generate", self.generate)
+        monkeypatch.setattr(node_module, "_generate_batch", self.generate_batch)
         monkeypatch.setattr(node_module, "find_prompter_model", self.find)
         monkeypatch.setattr(
             node_module, "unload_models_safely", lambda: self.events.append("unload")
@@ -60,6 +63,16 @@ class Harness:
         if image is not None:
             return "notes " + system[:10]
         return self.writes.pop(0) if len(self.writes) > 1 else self.writes[0]
+
+    def generate_batch(self, entry, requests, seed, temp, max_length):
+        kind = "describe" if requests[0][2] is not None else "write"
+        self.batches.append((kind, len(requests)))
+        return [
+            node_module._generate(
+                entry, None, system, prompt, image, seed, temp, max_length
+            )
+            for system, prompt, image in requests
+        ]
 
     @property
     def describes(self):
@@ -156,9 +169,99 @@ def test_one_per_pose_caches_character_and_outfit(monkeypatch):
     )
     assert len(h.describes) == 5
     assert len(h.writers) == 3
-    assert [c["seed"] for c in h.writers] == [10, 11, 12]
+    # One batched call samples with one seed: every hf item uses the base seed.
+    assert [c["seed"] for c in h.writers] == [10, 10, 10]
     assert h.events.count("unload") == 1
     assert len(out["result"][0]) == 3
+
+
+def three_poses(h, seed=10, writes=None):
+    if writes is not None:
+        h.writes = list(writes)
+    return run(
+        prompt=[DRAFT] * 3,
+        images={
+            "image_1": [img(1)],
+            "image_2": [img(2)],
+            "image_3": [img(3), img(4), img(5)],
+        },
+        seed=seed,
+    )
+
+
+def test_hf_three_poses_describe_in_one_batch_and_write_in_another(monkeypatch):
+    h = Harness(monkeypatch)
+    out = three_poses(h)
+    assert h.batches == [("describe", 5), ("write", 3)]
+    assert out["result"][0] == [FULL] * 3
+    notes = out["result"][1]
+    assert len(set(notes)) == 1 and notes[0].count("<Picture") == 3
+
+
+def test_hf_cached_pictures_skip_the_describe_batch(monkeypatch):
+    h = Harness(monkeypatch)
+    three_poses(h)
+    h.batches.clear()
+    three_poses(h)
+    assert h.batches == [("write", 3)]
+
+
+def test_hf_retries_only_failing_items_in_one_batch(monkeypatch):
+    h = Harness(monkeypatch)
+    bad = "Body with <Picture 4>."
+    out = three_poses(h, writes=[BODY, bad, BODY, BODY])
+    assert h.batches == [("describe", 5), ("write", 3), ("write", 1)]
+    retry = h.writers[-1]
+    assert "Your previous prompt:\n" + bad in retry["prompt"]
+    assert retry["seed"] == 10
+    assert out["result"][0] == [FULL] * 3
+
+
+def test_hf_still_failing_items_raise_naming_the_first_failing_item(monkeypatch):
+    h = Harness(monkeypatch)
+    four, five = "Body <Picture 4>.", "Body <Picture 5>."
+    with pytest.raises(ValueError, match="did not keep") as caught:
+        three_poses(h, writes=[BODY, four, five, four, five])
+    assert h.batches[-2:] == [("write", 3), ("write", 2)]
+    assert "unexpected <Picture 4>" in str(caught.value)
+    assert "<Picture 5>" not in str(caught.value)
+    assert "repair" in h.events
+
+
+def test_shared_picture_is_described_with_the_first_items_draft(monkeypatch):
+    h = Harness(monkeypatch)
+    drafts = ["<Picture 1> first.", "<Picture 1> second."]
+    run(prompt=drafts, images={"image_1": [img(1)]})
+    assert h.batches == [("describe", 1), ("write", 2)]
+    assert h.describes[0]["prompt"] == describe_user("character", drafts[0])
+
+
+@pytest.mark.parametrize("kind", ["gguf", "native"])
+def test_gguf_and_native_loop_with_per_item_seeds(monkeypatch, kind):
+    h = Harness(monkeypatch, kind=kind)
+    h.entry = entry(kind, f"{kind}: m")
+    run(
+        prompt=[DRAFT] * 3,
+        model=[f"{kind}: m"],
+        images={
+            "image_1": [img(1)],
+            "image_2": [img(2)],
+            "image_3": [img(3), img(4), img(5)],
+        },
+        seed=10,
+    )
+    assert h.batches == []
+    assert len(h.describes) == 5
+    assert [c["seed"] for c in h.writers] == [10, 11, 12]
+
+
+def test_gguf_retries_each_item_before_writing_the_next(monkeypatch):
+    h = Harness(monkeypatch, kind="gguf")
+    h.entry = entry("gguf", "gguf: m")
+    h.writes = ["Body <Picture 4>.", BODY, BODY]
+    run(prompt=[DRAFT] * 2, model=["gguf: m"], seed=3)
+    assert [c["seed"] for c in h.writers] == [3, 3, 4]
+    assert "Your previous prompt:" in h.writers[1]["prompt"]
 
 
 def test_plain_draft_without_tags(monkeypatch):
@@ -374,6 +477,16 @@ def test_real_dispatch_routes_by_kind(monkeypatch):
     assert seen[2][1][0] == "c" and seen[2][1][-1] is False
 
 
+def test_real_batch_dispatch_uses_generate_hf_batch(monkeypatch):
+    seen = []
+    monkeypatch.setattr(
+        node_module, "generate_hf_batch", lambda *a: seen.append(a) or ["h"]
+    )
+    requests = [("s", "p", None)]
+    assert node_module._generate_batch(entry("hf"), requests, 1, 0.7, 99) == ["h"]
+    assert seen == [(entry("hf"), requests, 1, 0.7, 99)]
+
+
 def test_empty_describe_result_raises_naming_slot_and_model_and_is_not_cached(
     monkeypatch,
 ):
@@ -451,3 +564,16 @@ def test_failed_unload_does_not_trigger_repair(monkeypatch):
     with pytest.raises(RuntimeError, match="unload broke"):
         run()
     assert "repair" not in h.events
+
+
+def test_native_errors_pass_through_unwrapped_and_repair(monkeypatch):
+    h = Harness(monkeypatch, kind="native")
+    h.entry = entry("native", "native: clip")
+
+    def boom(*args):
+        raise RuntimeError("clip broke")
+
+    monkeypatch.setattr(node_module, "_generate", boom)
+    with pytest.raises(RuntimeError, match="clip broke"):
+        run(model=["native: clip"], images={"image_1": [img(1)]})
+    assert "repair" in h.events

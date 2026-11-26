@@ -7,7 +7,12 @@ import torch
 from PIL import Image
 
 from kikotools.tools.h3_reference_prompter import hf_backend
-from kikotools.tools.h3_reference_prompter.hf_backend import free_hf, generate_hf
+from kikotools.tools.h3_reference_prompter.hf_backend import (
+    HF_BATCH_SIZE,
+    free_hf,
+    generate_hf,
+    generate_hf_batch,
+)
 from kikotools.tools.prompt_enhancer.models import ModelEntry
 
 ENTRY = ModelEntry("hf: a", "hf", Path("/m/a"), True, None, None)
@@ -25,6 +30,15 @@ class FakeBatch(dict):
         return self
 
 
+def _prompt_ids(conversation):
+    """Digit prompts tokenize to a request-specific, variable-length row."""
+    text = conversation[-1]["content"][-1]["text"]
+    if not text.isdigit():
+        return PROMPT_IDS[0]
+    number = int(text)
+    return [9] * (number % 3) + [10 + number]
+
+
 class FakeProcessor:
     instances = []
     raises = None
@@ -34,24 +48,36 @@ class FakeProcessor:
         self.path = path
         self.kwargs = kwargs
         self.template_calls = []
+        self.padding_sides = []
         self.decoded = []
+        self.tokenizer = types.SimpleNamespace(padding_side="right")
         FakeProcessor.instances.append(self)
 
     @classmethod
     def from_pretrained(cls, path, **kwargs):
         return cls(path, kwargs)
 
-    def apply_chat_template(self, messages, **kwargs):
-        self.template_calls.append((messages, kwargs))
+    def apply_chat_template(self, conversations, **kwargs):
+        self.template_calls.append((conversations, kwargs))
+        self.padding_sides.append(self.tokenizer.padding_side)
         if FakeProcessor.raises is not None:
             raise FakeProcessor.raises
+        rows = [_prompt_ids(conversation) for conversation in conversations]
+        width = max(len(row) for row in rows)
+        padded = [[0] * (width - len(row)) + row for row in rows]
+        mask = [[0] * (width - len(row)) + [1] * len(row) for row in rows]
         return FakeBatch(
-            input_ids=torch.tensor(PROMPT_IDS), pixel_values=torch.zeros(1)
+            input_ids=torch.tensor(padded),
+            attention_mask=torch.tensor(mask),
+            pixel_values=torch.zeros(1),
         )
 
     def batch_decode(self, ids, **kwargs):
         self.decoded.append((ids, kwargs))
-        return ["  A tidy prompt.  "]
+        return [
+            "  A tidy prompt.  " if row == NEW_IDS else f" r{row[0] - 14} "
+            for row in ids.tolist()
+        ]
 
 
 class FakeModel:
@@ -78,7 +104,9 @@ class FakeModel:
     def generate(self, **kwargs):
         self.generate_calls.append(kwargs)
         self.seeds.append(torch.initial_seed())
-        return torch.tensor([PROMPT_IDS[0] + NEW_IDS])
+        ids = kwargs["input_ids"]
+        last = ids[:, -1:]
+        return torch.cat([ids, last + 4, last + 5], dim=1)
 
 
 @pytest.fixture(autouse=True)
@@ -144,12 +172,13 @@ def test_uses_bfloat16_on_cuda(monkeypatch):
 
 def test_chat_template_gets_thinking_off_and_generation_prompt():
     run()
-    messages, kwargs = FakeProcessor.instances[0].template_calls[0]
+    (messages,), kwargs = FakeProcessor.instances[0].template_calls[0]
     assert kwargs == {
         "tokenize": True,
         "return_dict": True,
         "return_tensors": "pt",
         "add_generation_prompt": True,
+        "processor_kwargs": {"padding": True},
         "enable_thinking": False,
     }
     assert messages[0] == {
@@ -206,7 +235,7 @@ def test_image_becomes_pil_part_before_text():
     frame[0, :, :, 0] = 1.5
     frame[0, 0, 0, 1] = 0.5
     run(image=frame)
-    content = FakeProcessor.instances[0].template_calls[0][0][1]["content"]
+    content = FakeProcessor.instances[0].template_calls[0][0][0][1]["content"]
     assert content[0]["type"] == "image"
     pil = content[0]["image"]
     assert isinstance(pil, Image.Image) and pil.mode == "RGB"
@@ -275,3 +304,108 @@ def test_repetition_penalty_is_passed_to_generate():
     assert call["repetition_penalty"] == 1.05
     run(temperature=0)
     assert FakeModel.instances[0].generate_calls[1]["repetition_penalty"] == 1.05
+
+
+def batch(requests, seed=5, temperature=0.7, max_length=64):
+    return generate_hf_batch(ENTRY, requests, seed, temperature, max_length)
+
+
+def text_request(number):
+    return ("sys", str(number), None)
+
+
+def image_request(number):
+    return ("sys", str(number), torch.zeros(1, 2, 2, 3))
+
+
+def test_batch_returns_results_in_request_order_with_padding_sliced_off():
+    assert batch([text_request(n) for n in (2, 0, 1)]) == ["r2", "r0", "r1"]
+    processor = FakeProcessor.instances[0]
+    assert len(processor.template_calls) == 1
+    ids, kwargs = processor.decoded[0]
+    assert ids.tolist() == [[16, 17], [14, 15], [15, 16]]
+    assert kwargs == {"skip_special_tokens": True}
+
+
+def test_batch_tokenizes_all_conversations_padded_in_one_call():
+    batch([text_request(1), text_request(2)])
+    conversations, kwargs = FakeProcessor.instances[0].template_calls[0]
+    assert [c[1]["content"] for c in conversations] == [
+        [{"type": "text", "text": "1"}],
+        [{"type": "text", "text": "2"}],
+    ]
+    assert all(
+        c[0]["content"] == [{"type": "text", "text": "sys"}] for c in conversations
+    )
+    assert kwargs["processor_kwargs"] == {"padding": True}
+    call = FakeModel.instances[0].generate_calls[0]
+    assert call["attention_mask"].tolist() == [[0, 1, 1], [1, 1, 1]]
+
+
+def test_batch_pads_on_the_left_then_restores_the_padding_side():
+    batch([text_request(1), text_request(2)])
+    processor = FakeProcessor.instances[0]
+    assert processor.padding_sides == ["left"]
+    assert processor.tokenizer.padding_side == "right"
+
+
+def test_batch_restores_the_padding_side_after_an_error():
+    batch([text_request(1)])
+    processor = FakeProcessor.instances[0]
+    FakeProcessor.raises = TypeError("bad image")
+    with pytest.raises(TypeError, match="bad image"):
+        batch([text_request(1)])
+    assert processor.tokenizer.padding_side == "right"
+
+
+def test_batch_splits_into_chunks_of_four_each_seeded_alike():
+    assert HF_BATCH_SIZE == 4
+    out = batch([text_request(n) for n in range(9)], seed=2**32 + 3)
+    assert out == [f"r{n}" for n in range(9)]
+    calls = FakeProcessor.instances[0].template_calls
+    assert [len(conversations) for conversations, _ in calls] == [4, 4, 1]
+    model = FakeModel.instances[0]
+    assert len(model.generate_calls) == 3
+    assert model.seeds == [3, 3, 3]
+
+
+def test_batch_never_mixes_image_and_text_requests():
+    requests = [
+        image_request(0),
+        text_request(1),
+        image_request(2),
+        text_request(3),
+        text_request(4),
+    ]
+    assert batch(requests) == ["r0", "r1", "r2", "r3", "r4"]
+    calls = FakeProcessor.instances[0].template_calls
+    kinds = [
+        [c[1]["content"][0]["type"] for c in conversations]
+        for conversations, _ in calls
+    ]
+    assert kinds == [["image", "image"], ["text", "text", "text"]]
+
+
+def test_batch_uses_generate_hf_sampling_settings():
+    batch([text_request(1), text_request(2)], temperature=0, max_length=21)
+    call = FakeModel.instances[0].generate_calls[0]
+    assert call["do_sample"] is False and "temperature" not in call
+    assert call["max_new_tokens"] == 21
+    assert call["repetition_penalty"] == 1.05
+
+
+def test_empty_batch_returns_nothing_without_loading():
+    assert batch([]) == []
+    assert FakeModel.instances == []
+
+
+def test_generate_hf_is_a_one_request_batch(monkeypatch):
+    seen = []
+    monkeypatch.setattr(
+        hf_backend,
+        "generate_hf_batch",
+        lambda *args: seen.append(args) or ["only"],
+    )
+    image = torch.zeros(1, 2, 2, 3)
+    assert generate_hf(ENTRY, "s", "p", image, 3, 0.5, 9) == "only"
+    assert seen == [(ENTRY, [("s", "p", image)], 3, 0.5, 9)]

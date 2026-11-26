@@ -9,7 +9,7 @@ from ..kiko_purge_vram.logic import repair_loaded_models, unload_models_safely
 from ..prompt_enhancer.gguf_backend import free_gguf, generate_gguf
 from ..prompt_enhancer.models import ModelEntry
 from ..prompt_enhancer.native_backend import generate_native, load_native
-from .hf_backend import free_hf, generate_hf
+from .hf_backend import Request, free_hf, generate_hf, generate_hf_batch
 from .instructions import (
     describe_system,
     describe_user,
@@ -64,6 +64,16 @@ def _generate(
     )
 
 
+def _generate_batch(
+    entry: ModelEntry,
+    requests: List[Request],
+    seed: int,
+    temperature: float,
+    max_length: int,
+) -> List[str]:
+    return generate_hf_batch(entry, requests, seed, temperature, max_length)
+
+
 def _resolve_model(name: str) -> ModelEntry:
     entry = find_prompter_model(name)
     if entry is None:
@@ -87,12 +97,26 @@ def _check_batches(items: List[Dict[str, Any]]) -> None:
 
 
 class _Run:
-    """One execution: backend dispatch with a lazily loaded native clip."""
+    """One execution: backend dispatch with a lazily loaded native clip.
+
+    Seeds: one batched call samples with a single seed, so for hf entries
+    every item in a batch uses the base seed and runs still repeat exactly.
+    The gguf and native loops keep per-item seeds (base seed plus index).
+    """
 
     def __init__(self, entry: ModelEntry, temperature: float) -> None:
         self.entry = entry
         self.temperature = temperature
         self.clip = None
+
+    @property
+    def batched(self) -> bool:
+        return self.entry.kind == "hf"
+
+    def generate_batch(
+        self, requests: List[Request], seed: int, max_length: int
+    ) -> List[str]:
+        return _generate_batch(self.entry, requests, seed, self.temperature, max_length)
 
     def generate(
         self, system: str, prompt: str, image: Any, seed: int, max_length: int
@@ -120,28 +144,81 @@ class _Run:
             ) from error
 
 
-def _describe(run: _Run, item, role, slot, model, seed, tokens) -> Optional[str]:
-    image = item.get(f"image_{slot}")
-    if image is None:
-        return None
-    key = image_key(image, role, model)
-    if key not in _NOTES_CACHE:
-        text = drop_repeats(
-            run.generate(
-                describe_system(role),
-                describe_user(role, item["prompt"]),
-                image,
-                seed,
-                tokens,
-            ).strip()
-        )
+Pending = Tuple[int, str, Any, str]  # (slot, role, image, draft)
+
+
+def _pending_pictures(items, roles, model: str) -> Dict[str, Pending]:
+    """Uncached pictures across all items, keyed by image_key; first item wins."""
+    pending: Dict[str, Pending] = {}
+    for item in items:
+        for slot, role in enumerate(roles, start=1):
+            image = item.get(f"image_{slot}")
+            if image is None:
+                continue
+            key = image_key(image, role, model)
+            if key not in _NOTES_CACHE and key not in pending:
+                pending[key] = (slot, role, image, item["prompt"])
+    return pending
+
+
+def _describe_all(run: _Run, items, roles, model, seed, tokens) -> None:
+    """Fill _NOTES_CACHE for every picture of every item."""
+    pending = _pending_pictures(items, roles, model)
+    requests = [
+        (describe_system(role), describe_user(role, draft), image)
+        for slot, role, image, draft in pending.values()
+    ]
+    if run.batched:
+        texts = run.generate_batch(requests, seed, tokens) if requests else []
+    else:
+        texts = [run.generate(*request, seed, tokens) for request in requests]
+    for (key, (slot, role, _, _)), raw in zip(pending.items(), texts):
+        text = drop_repeats(raw.strip())
         if not text:
             raise ValueError(
                 f"{model} returned no description for image_{slot} ({role}); "
                 "try again or pick another model"
             )
         _NOTES_CACHE[key] = text
-    return _NOTES_CACHE[key]
+
+
+def _item_notes(item, roles, model: str) -> List[Tuple[int, str, Optional[str]]]:
+    notes: List[Tuple[int, str, Optional[str]]] = []
+    for slot, role in enumerate(roles, start=1):
+        image = item.get(f"image_{slot}")
+        text = None if image is None else _NOTES_CACHE[image_key(image, role, model)]
+        notes.append((slot, role, text))
+    return notes
+
+
+def _notes_text(notes: List[Tuple[int, str, Optional[str]]]) -> str:
+    return "\n\n".join(
+        f"<Picture {slot}> ({role}): {text}"
+        for slot, role, text in notes
+        if text is not None
+    )
+
+
+def _combine(reference: str, raw: str) -> Tuple[str, str]:
+    """(written, combined): the cleaned model text, and the full prompt."""
+    written = clean_result(raw)
+    return written, f"{reference}\n\n{written}" if reference else written
+
+
+def _retry_message(message: str, written: str, problems) -> str:
+    return f"{message}\n\nYour previous prompt:\n{written}\n\n{retry_user(problems)}"
+
+
+def _tag_error(missing: List[int], extra: List[int]) -> ValueError:
+    parts = []
+    if missing:
+        parts.append("missing " + ", ".join(f"<Picture {n}>" for n in missing))
+    if extra:
+        parts.append("unexpected " + ", ".join(f"<Picture {n}>" for n in extra))
+    return ValueError(
+        "The prompt model did not keep the picture tags after a retry: "
+        + "; ".join(parts)
+    )
 
 
 def _write_one(run: _Run, draft: str, notes, seed: int, tokens: int) -> str:
@@ -149,46 +226,66 @@ def _write_one(run: _Run, draft: str, notes, seed: int, tokens: int) -> str:
     message = writer_user(reference, rest, notes)
 
     def attempt(text: str) -> Tuple[str, str]:
-        written = clean_result(run.generate(writer_system(), text, None, seed, tokens))
-        combined = f"{reference}\n\n{written}" if reference else written
-        return written, combined
+        return _combine(
+            reference, run.generate(writer_system(), text, None, seed, tokens)
+        )
 
     written, combined = attempt(message)
     problems = tag_problems(draft, combined)
     if not any(problems):
         return combined
-    retry = f"{message}\n\nYour previous prompt:\n{written}\n\n{retry_user(problems)}"
-    _, combined = attempt(retry)
+    _, combined = attempt(_retry_message(message, written, problems))
     missing, extra = tag_problems(draft, combined)
     if missing or extra:
-        parts = []
-        if missing:
-            parts.append("missing " + ", ".join(f"<Picture {n}>" for n in missing))
-        if extra:
-            parts.append("unexpected " + ", ".join(f"<Picture {n}>" for n in extra))
-        raise ValueError(
-            "The prompt model did not keep the picture tags after a retry: "
-            + "; ".join(parts)
-        )
+        raise _tag_error(missing, extra)
     return combined
 
 
-def _run_item(run, item, index, roles, settings) -> Tuple[str, str]:
-    """Describe the item's pictures, then write its prompt: (prompt, notes)."""
+def _write_batch(
+    run: _Run, drafts: List[str], notes, seed: int, tokens: int
+) -> List[str]:
+    """Write every draft in one batch, then retry the failing ones in one more."""
+    references = [split_reference_sentences(draft) for draft in drafts]
+    messages = [writer_user(ref, rest, n) for (ref, rest), n in zip(references, notes)]
+
+    def attempt(indices: List[int], texts: List[str]) -> List[Tuple[str, str]]:
+        raws = run.generate_batch(
+            [(writer_system(), t, None) for t in texts], seed, tokens
+        )
+        return [_combine(references[i][0], raw) for i, raw in zip(indices, raws)]
+
+    results = attempt(list(range(len(drafts))), messages)
+    problems = [tag_problems(d, combined) for d, (_, combined) in zip(drafts, results)]
+    failing = [i for i, found in enumerate(problems) if any(found)]
+    if not failing:
+        return [combined for _, combined in results]
+    retries = [_retry_message(messages[i], results[i][0], problems[i]) for i in failing]
+    redone = dict(zip(failing, attempt(failing, retries)))
+    final = [redone.get(i, result)[1] for i, result in enumerate(results)]
+    for index in failing:
+        missing, extra = tag_problems(drafts[index], final[index])
+        if missing or extra:
+            raise _tag_error(missing, extra)
+    return final
+
+
+def _write_all(run: _Run, items, notes, base_seed: int, tokens: int) -> List[str]:
+    drafts = [item["prompt"] for item in items]
+    if run.batched:
+        return _write_batch(run, drafts, notes, base_seed, tokens)
+    return [
+        _write_one(run, draft, item_notes, item_seed(base_seed, index), tokens)
+        for index, (draft, item_notes) in enumerate(zip(drafts, notes))
+    ]
+
+
+def _run_items(run, items, roles, settings) -> List[Tuple[str, str]]:
+    """Describe every picture first, then write every prompt: (prompt, notes)."""
     model_name, base_seed, describe_max, write_max = settings
-    notes: List[Tuple[int, str, Optional[str]]] = []
-    for slot, role in enumerate(roles, start=1):
-        text = _describe(run, item, role, slot, model_name, base_seed, describe_max)
-        notes.append((slot, role, text))
-    written = _write_one(
-        run, item["prompt"], notes, item_seed(base_seed, index), write_max
-    )
-    notes_text = "\n\n".join(
-        f"<Picture {slot}> ({role}): {text}"
-        for slot, role, text in notes
-        if text is not None
-    )
-    return written, notes_text
+    _describe_all(run, items, roles, model_name, base_seed, describe_max)
+    notes = [_item_notes(item, roles, model_name) for item in items]
+    written = _write_all(run, items, notes, base_seed, write_max)
+    return [(text, _notes_text(n)) for text, n in zip(written, notes)]
 
 
 def _result(pairs: List[Tuple[str, str]]) -> Dict[str, Any]:
@@ -205,10 +302,7 @@ def _execute(run, items, roles, settings, keep: bool) -> List[Tuple[str, str]]:
     try:
         unload_models_safely()
         unloaded = True
-        return [
-            _run_item(run, item, index, roles, settings)
-            for index, item in enumerate(items)
-        ]
+        return _run_items(run, items, roles, settings)
     except Exception:
         if unloaded:
             _repair_quietly()
