@@ -12,10 +12,16 @@
   error naming the tags.
 - Two passes: each picture is described once and cached for the session, then
   the prompt is written.
-- One-per-pose runs give one prompt and one set of notes per item, with the
-  base seed plus the item index.
-- Models: transformers folders under `models/LLM` (Qwen3.5, Qwen3-VL, Gemma 4),
+- One-per-pose runs give one prompt and one set of notes per item.
+- Transformers models describe all the pictures of a run in one batch and write
+  all the prompts in another; only prompts with wrong tags are retried, again
+  in one batch. Batched items all use the base seed. GGUF and native models
+  run one call at a time, with the base seed plus the item index.
+- Models: transformers folders under `models/LLM` (Qwen3-VL, Qwen3.5, Gemma 4),
   the Prompt Enhancer's vision text encoders, and GGUF models with an `mmproj`.
+  The picker defaults to Huihui-Qwen3-VL-8B-Instruct-abliterated, then any
+  Qwen3-VL-8B, then the first transformers folder. The 8B uses about 17 GB of
+  VRAM while it runs.
 - ComfyUI's loaded models are freed first with the safe unload from Kiko Purge
   VRAM; the prompt model is unloaded afterwards unless `keep_loaded` is on.
 - A panel on the node shows each prompt with its word count, previous and next

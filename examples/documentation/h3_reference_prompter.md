@@ -41,21 +41,28 @@ The prompt must contain exactly the tags the draft has. If the model drops or ad
 1. Each picture is described once, according to its role. The description is cached for the ComfyUI session, so the same picture, role and model are not described again.
 2. The prompt is written from the draft and the descriptions.
 
+With a transformers (`hf:`) model both passes run in batches. All the pictures of a run that are not cached yet are described in one batch, and all the prompts are written in another. Only prompts with wrong tags are retried, together in one more batch. Batches hold at most four requests. GGUF and native models run one call at a time.
+
 The pose description never describes the mannequin's own look (surface, colour, build, face), only the pose.
 
 ## One prompt per pose
 
-When `prompt` and `image_3` arrive as lists, for example from a pose picker that returns several poses, the node writes one prompt per item. Single values, such as one character and one outfit, are used for every item and described once. Each item gets its own prompt and notes. The seed of each item is the base seed plus the item index. The model loads once for the whole run.
+When `prompt` and `image_3` arrive as lists, for example from a pose picker that returns several poses, the node writes one prompt per item. Single values, such as one character and one outfit, are used for every item and described once. Each item gets its own prompt and notes. The model loads once for the whole run.
+
+Seeds: one batched call samples with one seed, so with a transformers model every item uses the base seed, and the same inputs and seed still give the same prompts. With GGUF and native models, which run one call at a time, the seed of each item is the base seed plus the item index.
 
 ## Models
 
 The picker lists three kinds of model:
 
-- `hf: <folder>`: transformers folders under `ComfyUI/models/LLM`, searched recursively, whose `config.json` lists a Qwen3.5, Qwen3-VL or Gemma 4 vision architecture. For example:
+- `hf: <folder>`: transformers folders under `ComfyUI/models/LLM`, searched recursively, whose `config.json` lists a Qwen3-VL, Qwen3.5 or Gemma 4 vision architecture. For example:
+  - Recommended: `ComfyUI/models/LLM/Qwen-VL/Huihui-Qwen3-VL-8B-Instruct-abliterated/` from https://huggingface.co/huihui-ai/Huihui-Qwen3-VL-8B-Instruct-abliterated. It gave the best images in side-by-side tests. It uses about 17 GB of VRAM while it runs; ComfyUI's models are freed first.
   - `ComfyUI/models/LLM/Qwen-VL/Qwen3.5-4B-Unredacted-MAX/` from https://huggingface.co/prithivMLmods/Qwen3.5-4B-Unredacted-MAX
   - a Gemma 4 E4B folder from https://huggingface.co/collections/huihui-ai/gemma-4-abliterated
 - `native: <file>`: the vision text encoders that the Kiko Prompt Enhancer lists.
 - `gguf: <file>`: GGUF models that have an `mmproj` file. If a GGUF model fails to load, the node tells you to use a transformers folder instead.
+
+The picker defaults to a name containing `Huihui-Qwen3-VL-8B-Instruct-abliterated`, then any name containing `Qwen3-VL-8B`, then the first `hf:` entry, then the first entry.
 
 A workflow saved with a model this machine does not have still loads. It stops when it runs, with a message naming the model and the folders searched.
 
