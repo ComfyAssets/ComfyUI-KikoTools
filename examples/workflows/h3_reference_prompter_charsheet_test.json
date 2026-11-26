@@ -1,6 +1,4 @@
 {
-  "last_node_id": 9,
-  "last_link_id": 13,
   "nodes": [
     {
       "id": 1,
@@ -60,7 +58,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            1
+            5
           ]
         },
         {
@@ -99,7 +97,7 @@
       "type": "CharSheetCostume",
       "pos": [
         0,
-        920
+        970
       ],
       "size": [
         720,
@@ -162,16 +160,14 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            2
+            6
           ]
         },
         {
           "localized_name": "prompt_en",
           "name": "prompt_en",
           "type": "STRING",
-          "links": [
-            4
-          ]
+          "links": []
         },
         {
           "localized_name": "prompt_zh",
@@ -189,13 +185,25 @@
           "localized_name": "footwear_en",
           "name": "footwear_en",
           "type": "STRING",
-          "links": [
-            5
-          ]
+          "links": []
         },
         {
           "localized_name": "footwear_zh",
           "name": "footwear_zh",
+          "type": "STRING",
+          "links": []
+        },
+        {
+          "localized_name": "outfit_en",
+          "name": "outfit_en",
+          "type": "STRING",
+          "links": [
+            1
+          ]
+        },
+        {
+          "localized_name": "outfit_zh",
+          "name": "outfit_zh",
           "type": "STRING",
           "links": []
         }
@@ -209,7 +217,8 @@
         "crop to size",
         1024,
         1280,
-        true
+        true,
+        2
       ],
       "color": "#417505"
     },
@@ -218,7 +227,7 @@
       "type": "CharSheetPose",
       "pos": [
         0,
-        1900
+        2004
       ],
       "size": [
         720,
@@ -272,7 +281,7 @@
           "shape": 6,
           "type": "IMAGE",
           "links": [
-            3
+            7
           ]
         },
         {
@@ -281,7 +290,7 @@
           "shape": 6,
           "type": "STRING",
           "links": [
-            6
+            2
           ]
         },
         {
@@ -319,7 +328,7 @@
       "properties": {
         "Node name for S&R": "CharSheetPose"
       },
-      "title": "Poses (one prompt per pose)",
+      "title": "Poses (one image per pose)",
       "widgets_values": [
         "{\"ids\": [\"full_single_P001_front\", \"full_single_P015_front\", \"full_single_P002_side\"], \"flip\": [], \"use_depth\": false}",
         "crop to size",
@@ -330,138 +339,147 @@
     },
     {
       "id": 4,
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "type": "CharSheetReferencePrompt",
+      "type": "StringConcatenate",
       "pos": [
-        780,
+        830,
         0
       ],
       "size": [
         460,
-        480
+        200
       ],
-      "title": "Draft prompt (from the charsheet pickers)",
+      "flags": {},
+      "order": 4,
+      "mode": 0,
       "inputs": [
         {
-          "name": "character_image",
-          "type": "IMAGE",
-          "shape": 7,
+          "localized_name": "string_a",
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
           "link": 1
         },
         {
-          "name": "outfit_image",
-          "type": "IMAGE",
-          "shape": 7,
+          "localized_name": "string_b",
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
           "link": 2
         },
         {
-          "name": "pose_image",
-          "type": "IMAGE",
-          "shape": 7,
-          "link": 3
-        },
-        {
-          "name": "outfit_prompt",
+          "localized_name": "delimiter",
+          "name": "delimiter",
           "type": "STRING",
-          "shape": 7,
-          "link": 4
-        },
-        {
-          "name": "footwear",
-          "type": "STRING",
-          "shape": 7,
-          "link": 5
-        },
-        {
-          "name": "pose_prompt",
-          "type": "STRING",
-          "shape": 7,
-          "link": 6
-        },
-        {
-          "name": "style",
-          "type": "STRING",
-          "shape": 7,
           "widget": {
-            "name": "style"
-          },
-          "link": null
-        },
-        {
-          "name": "framing",
-          "type": "STRING",
-          "shape": 7,
-          "widget": {
-            "name": "framing"
+            "name": "delimiter"
           },
           "link": null
         }
       ],
       "outputs": [
         {
-          "name": "prompt",
+          "localized_name": "STRING",
+          "name": "STRING",
           "type": "STRING",
           "links": [
-            7,
-            11
+            3
           ]
-        },
-        {
-          "name": "prompt_zh",
-          "type": "STRING",
-          "links": []
-        },
-        {
-          "name": "image_1",
-          "type": "IMAGE",
-          "links": [
-            8
-          ]
-        },
-        {
-          "name": "image_2",
-          "type": "IMAGE",
-          "links": [
-            9
-          ]
-        },
-        {
-          "name": "image_3",
-          "type": "IMAGE",
-          "links": [
-            10
-          ]
-        },
-        {
-          "name": "picture_count",
-          "type": "INT",
-          "links": []
         }
       ],
       "properties": {
-        "Node name for S&R": "CharSheetReferencePrompt"
+        "Node name for S&R": "StringConcatenate"
       },
+      "title": "Outfit + pose text",
       "widgets_values": [
-        "Photorealistic studio photograph, real person, natural skin texture, soft even lighting.",
-        "Full body from head to toe, plain light grey studio background."
-      ]
+        "",
+        "",
+        " The pose: "
+      ],
+      "color": "#F5A623"
     },
     {
       "id": 5,
+      "type": "StringConcatenate",
+      "pos": [
+        830,
+        280
+      ],
+      "size": [
+        460,
+        420
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string_a",
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "string_b",
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 3
+        },
+        {
+          "localized_name": "delimiter",
+          "name": "delimiter",
+          "type": "STRING",
+          "widget": {
+            "name": "delimiter"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "STRING",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            4,
+            8
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate"
+      },
+      "title": "Prompt (pose text is added at the end)",
+      "widgets_values": [
+        "<Picture 1> is the character. <Picture 3> is the pose. Draw the character from <Picture 1> in the pose and camera angle of <Picture 3>; the mannequin is only a pose guide, not an appearance reference. Photorealistic studio photograph, real person, natural skin texture, soft even lighting. Full body from head to toe, plain light grey studio background. ",
+        "",
+        ""
+      ],
+      "color": "#417505"
+    },
+    {
+      "id": 6,
       "type": "KikoH3ReferencePrompter",
       "title": "H3 Reference Prompter",
       "pos": [
-        1300,
+        1340,
         0
       ],
       "size": [
         460,
-        520
+        560
       ],
       "flags": {},
-      "order": 5,
+      "order": 6,
       "mode": 0,
       "inputs": [
         {
@@ -470,25 +488,25 @@
           "widget": {
             "name": "prompt"
           },
-          "link": 7
+          "link": 4
         },
         {
           "name": "image_1",
           "type": "IMAGE",
           "shape": 7,
-          "link": 8
+          "link": 5
         },
         {
           "name": "image_2",
           "type": "IMAGE",
           "shape": 7,
-          "link": 9
+          "link": 6
         },
         {
           "name": "image_3",
           "type": "IMAGE",
           "shape": 7,
-          "link": 10
+          "link": 7
         }
       ],
       "outputs": [
@@ -497,7 +515,7 @@
           "type": "STRING",
           "shape": 6,
           "links": [
-            12
+            9
           ]
         },
         {
@@ -505,7 +523,7 @@
           "type": "STRING",
           "shape": 6,
           "links": [
-            13
+            10
           ]
         }
       ],
@@ -528,53 +546,16 @@
       ]
     },
     {
-      "id": 6,
+      "id": 7,
       "type": "DisplayText",
-      "title": "Draft (what the charsheet wrote)",
+      "title": "Draft (short prompt)",
       "pos": [
-        780,
-        560
+        830,
+        760
       ],
       "size": [
         460,
-        420
-      ],
-      "flags": {},
-      "order": 6,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "text",
-          "type": "STRING",
-          "link": 11
-        }
-      ],
-      "outputs": [
-        {
-          "name": "text",
-          "type": "STRING",
-          "links": []
-        }
-      ],
-      "properties": {
-        "cnr_id": "kikotools",
-        "Node name for S&R": "DisplayText"
-      },
-      "widgets_values": [
-        null
-      ]
-    },
-    {
-      "id": 7,
-      "type": "DisplayText",
-      "title": "H3 prompt (what the prompter wrote)",
-      "pos": [
-        1820,
-        0
-      ],
-      "size": [
-        700,
-        900
+        360
       ],
       "flags": {},
       "order": 7,
@@ -583,7 +564,7 @@
         {
           "name": "text",
           "type": "STRING",
-          "link": 12
+          "link": 8
         }
       ],
       "outputs": [
@@ -604,14 +585,14 @@
     {
       "id": 8,
       "type": "DisplayText",
-      "title": "Notes (what the model saw in each picture)",
+      "title": "H3 prompt (what the prompter wrote)",
       "pos": [
-        1820,
-        960
+        1860,
+        0
       ],
       "size": [
         700,
-        700
+        900
       ],
       "flags": {},
       "order": 8,
@@ -620,7 +601,7 @@
         {
           "name": "text",
           "type": "STRING",
-          "link": 13
+          "link": 9
         }
       ],
       "outputs": [
@@ -640,15 +621,52 @@
     },
     {
       "id": 9,
+      "type": "DisplayText",
+      "title": "Notes (what the model saw)",
+      "pos": [
+        1860,
+        960
+      ],
+      "size": [
+        700,
+        700
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "Node name for S&R": "DisplayText"
+      },
+      "widgets_values": [
+        null
+      ]
+    },
+    {
+      "id": 10,
       "type": "MarkdownNote",
       "title": "How to use",
       "pos": [
-        780,
-        1040
+        1340,
+        620
       ],
       "size": [
         460,
-        520
+        460
       ],
       "flags": {},
       "order": 0,
@@ -657,112 +675,88 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "## H3 Reference Prompter test (no image)\n\nBuilds the same draft the one-per-pose workflow uses, then lets the **H3 Reference Prompter** rewrite it from the pictures. Nothing is drawn: three **Display Text** nodes show the result.\n\n1. Pick a **portrait**, a **costume** and one or more **poses**.\n2. Pick a vision **model** on the H3 Reference Prompter (any `hf:` folder under `models/LLM`).\n3. Queue. Each pose gets its own prompt; the character and outfit are described once.\n\n**Read side by side:**\n- *Draft*: the short prompt from the charsheet.\n- *H3 prompt*: the long prompt. It must keep every `<Picture N>` tag from the draft.\n- *Notes*: what the model saw in each picture. Wrong notes mean a wrong prompt.\n\nThe prompt model is unloaded after the run unless *keep_loaded* is on."
+        "## H3 Reference Prompter test (no image)\n\nThe prompter reads the portrait, the costume and each pose with a local vision model and rewrites the short prompt into a long H3 prompt. The short prompt is kept word for word at the start; the model adds the detail after it. Roles are `auto`.\n\n**Nude** (18+ mode): the costume picture is a blank placeholder and the prompter describes the unclothed adult body. It refuses unless the portrait's estimated age is 20 or older. Never use an uploaded photo of a real person.\n\nThe three Display Text nodes show the short prompt, the H3 prompt and what the model saw."
       ]
     }
   ],
   "links": [
     [
       1,
-      1,
-      0,
+      2,
+      6,
       4,
       0,
-      "IMAGE"
+      "STRING"
     ],
     [
       2,
-      2,
-      0,
+      3,
+      1,
       4,
       1,
-      "IMAGE"
+      "STRING"
     ],
     [
       3,
-      3,
-      0,
       4,
-      2,
-      "IMAGE"
+      0,
+      5,
+      1,
+      "STRING"
     ],
     [
       4,
-      2,
-      1,
-      4,
-      3,
+      5,
+      0,
+      6,
+      0,
       "STRING"
     ],
     [
       5,
-      2,
-      4,
-      4,
-      4,
-      "STRING"
+      1,
+      0,
+      6,
+      1,
+      "IMAGE"
     ],
     [
       6,
-      3,
-      1,
-      4,
-      5,
-      "STRING"
+      2,
+      0,
+      6,
+      2,
+      "IMAGE"
     ],
     [
       7,
-      4,
+      3,
       0,
-      5,
-      0,
-      "STRING"
+      6,
+      3,
+      "IMAGE"
     ],
     [
       8,
-      4,
-      2,
       5,
-      1,
-      "IMAGE"
+      0,
+      7,
+      0,
+      "STRING"
     ],
     [
       9,
-      4,
-      3,
-      5,
-      2,
-      "IMAGE"
+      6,
+      0,
+      8,
+      0,
+      "STRING"
     ],
     [
       10,
-      4,
-      4,
-      5,
-      3,
-      "IMAGE"
-    ],
-    [
-      11,
-      4,
-      0,
       6,
-      0,
-      "STRING"
-    ],
-    [
-      12,
-      5,
-      0,
-      7,
-      0,
-      "STRING"
-    ],
-    [
-      13,
-      5,
       1,
-      8,
+      9,
       0,
       "STRING"
     ]
@@ -778,5 +772,7 @@
       ]
     }
   },
-  "version": 0.4
+  "version": 0.4,
+  "last_link_id": 10,
+  "last_node_id": 10
 }
