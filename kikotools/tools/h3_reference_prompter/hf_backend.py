@@ -11,6 +11,7 @@ from kikotools.tools.prompt_enhancer.models import ModelEntry
 
 NO_TRANSFORMERS = "transformers is not installed; install transformers to use Hugging Face model folders"
 SEED_MASK = 0xFFFFFFFF
+REPETITION_PENALTY = 1.05
 
 # (path, (processor, model, device)) of the last model loaded; one slot only
 _loaded: Optional[Tuple[str, Tuple[Any, Any, torch.device]]] = None
@@ -101,7 +102,12 @@ def generate_hf(
     if temperature > 0:
         sampling["temperature"] = temperature
     with torch.inference_mode():
-        output = model.generate(**inputs, max_new_tokens=max_length, **sampling)
+        output = model.generate(
+            **inputs,
+            max_new_tokens=max_length,
+            repetition_penalty=REPETITION_PENALTY,
+            **sampling,
+        )
 
     new_tokens = output[:, inputs["input_ids"].shape[1] :]
     return processor.batch_decode(new_tokens, skip_special_tokens=True)[0].strip()

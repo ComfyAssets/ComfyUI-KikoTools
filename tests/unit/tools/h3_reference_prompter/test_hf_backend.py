@@ -267,3 +267,11 @@ def test_missing_transformers_raises_value_error(monkeypatch):
     monkeypatch.setitem(sys.modules, "transformers", None)
     with pytest.raises(ValueError, match="install transformers"):
         run()
+
+
+def test_repetition_penalty_is_passed_to_generate():
+    run()
+    call = FakeModel.instances[0].generate_calls[0]
+    assert call["repetition_penalty"] == 1.05
+    run(temperature=0)
+    assert FakeModel.instances[0].generate_calls[1]["repetition_penalty"] == 1.05
