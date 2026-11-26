@@ -5,7 +5,13 @@ import { clampIndex, summary } from './ui/h3-reference-prompter.js';
 const NODE_CLASS = 'KikoH3ReferencePrompter';
 const NODE_WIDTH = 460;
 const FALLBACK_PANEL_HEIGHT = 120;
+// The prompt box is the panel's only stretchy part: it never shrinks below
+// TEXT_MIN_HEIGHT, a new result grows the node until the box shows up to
+// TEXT_PREFERRED_HEIGHT of prompt, and any extra room the user drags in goes to it.
+const TEXT_MIN_HEIGHT = 120;
+const TEXT_PREFERRED_HEIGHT = 320;
 const FIT_RETRY_FRAMES = 60;
+const GROW_STEPS = 4;
 const FIT_SLACK = 1;
 const EMPTY_TEXT = 'Run the workflow to see the written prompt.';
 const COPIED_TEXT = 'Copied';
@@ -51,22 +57,58 @@ function mountPanel(node) {
     const state = { prompts: [], notes: [], index: 0 };
     let panelHeight = FALLBACK_PANEL_HEIGHT;
     let fitRetryPending = false;
+    // A grow asked for while the panel is not laid out yet waits for the retry.
+    let growPending = false;
 
-    // Natural height: padding plus the visible children and the gaps between them.
+    // Smallest height that shows every part: padding, the fixed parts at their
+    // natural height, the gaps, and the prompt box at TEXT_MIN_HEIGHT. The fixed
+    // parts never flex, so this never reads a size the panel has squashed.
     // Returns 0 while the element is detached or not laid out.
     function measurePanel() {
         const element = view.element;
         if (!element.isConnected || element.offsetParent === null) return 0;
         const style = getComputedStyle(element);
         const visible = Array.from(element.children).filter(child => getComputedStyle(child).display !== 'none');
-        if (!visible.length || visible.every(child => child.offsetHeight === 0)) return 0;
+        const fixed = visible.filter(child => child !== view.text);
+        if (!visible.length || (fixed.length && fixed.every(child => child.offsetHeight === 0))) return 0;
         const gap = parseFloat(style.rowGap) || 0;
         const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
-        return Math.ceil(padding + visible.reduce((sum, child) => sum + child.offsetHeight, 0) + gap * (visible.length - 1)) + FIT_SLACK;
+        const parts = fixed.reduce((sum, child) => sum + child.offsetHeight, 0) + (fixed.length < visible.length ? TEXT_MIN_HEIGHT : 0);
+        return Math.ceil(padding + parts + gap * (visible.length - 1)) + FIT_SLACK;
     }
 
-    function fitNodeHeight(attempt = 0) {
+    // Extra height that lets the prompt box show more of a long prompt, up to TEXT_PREFERRED_HEIGHT.
+    function promptRoom() {
+        if (view.text.hidden) return 0;
+        const wanted = Math.min(view.text.scrollHeight, TEXT_PREFERRED_HEIGHT);
+        return Math.max(0, Math.ceil(wanted - TEXT_MIN_HEIGHT));
+    }
+
+    function redraw() {
+        node.setDirtyCanvas?.(true, true);
+        node.graph?.setDirtyCanvas?.(true, true);
+    }
+
+    // The node shares extra height between every stretchy widget (the draft's own
+    // text box takes some), so growing for the prompt takes a few frames: grow by
+    // what the panel still lacks, then look again once the canvas has laid it out.
+    function growPanelTo(wanted, step = 0) {
+        if (scope.signal.aborted || step >= GROW_STEPS) return;
+        requestAnimationFrame(() => {
+            if (scope.signal.aborted) return;
+            const lacking = Math.ceil(wanted - view.element.offsetHeight);
+            if (lacking <= 1) return;
+            node.setSize([node.size[0], node.size[1] + lacking]);
+            redraw();
+            requestAnimationFrame(() => growPanelTo(wanted, step + 1));
+        });
+    }
+
+    // Updates the panel's minimum and grows the node to fit it; with grow set it
+    // also makes room for the prompt. Never shrinks a node the user made taller.
+    function fitNodeHeight(attempt = 0, grow = false) {
         if (scope.signal.aborted) return;
+        growPending = growPending || grow;
         const measured = measurePanel();
         if (!measured) {
             if (attempt < FIT_RETRY_FRAMES && !fitRetryPending && typeof requestAnimationFrame === 'function') {
@@ -78,14 +120,18 @@ function mountPanel(node) {
             }
             return;
         }
+        const growNow = growPending;
+        growPending = false;
+        const changed = measured !== panelHeight;
         panelHeight = measured;
-        const target = node.computeSize?.()?.[1];
-        if (!Number.isFinite(target) || Math.abs(target - node.size[1]) < 1) return;
-        node.setSize([node.size[0], target]);
-        node.graph?.setDirtyCanvas?.(true, true);
+        const minimum = node.computeSize?.()?.[1];
+        if (Number.isFinite(minimum) && minimum > node.size[1] + 0.5) node.setSize([node.size[0], minimum]);
+        // The canvas lays the widgets out again only on a redraw.
+        if (changed || Number.isFinite(minimum)) redraw();
+        if (growNow && typeof requestAnimationFrame === 'function') growPanelTo(measured + promptRoom());
     }
 
-    function render() {
+    function render(grow = false) {
         if (scope.signal.aborted) return;
         const { prompts, notes, index } = state;
         const has = prompts.length > 0;
@@ -102,7 +148,7 @@ function mountPanel(node) {
         view.position.textContent = `${index + 1} / ${prompts.length}`;
         view.previous.disabled = index <= 0;
         view.next.disabled = index >= prompts.length - 1;
-        fitNodeHeight();
+        fitNodeHeight(0, grow);
     }
 
     function setStatus(message) {
@@ -134,7 +180,8 @@ function mountPanel(node) {
     scope.listen(view.notes, 'toggle', () => fitNodeHeight());
 
     node.addDOMWidget('h3_prompt_panel', 'div', view.element, {
-        serialize: false, hideOnZoom: false, getMinHeight: () => panelHeight, getMaxHeight: () => panelHeight,
+        // No max height: when the user makes the node taller the panel takes the room.
+        serialize: false, hideOnZoom: false, getMinHeight: () => panelHeight,
     });
     node.setSize([NODE_WIDTH, node.computeSize?.()?.[1] ?? node.size[1]]);
     if (typeof ResizeObserver === 'function') {
@@ -149,7 +196,7 @@ function mountPanel(node) {
                 if (measured && measured !== panelHeight) fitNodeHeight();
             });
         });
-        for (const child of view.element.children) observer.observe(child);
+        for (const child of view.element.children) if (child !== view.text) observer.observe(child);
         scope.cleanup(() => observer.disconnect());
     }
     mountTheme(view.element, app.ui.settings, scope);
@@ -163,7 +210,7 @@ function mountPanel(node) {
         state.notes = Array.isArray(message?.h3_notes) ? message.h3_notes.map(String) : [];
         state.index = clampIndex(state.index, prompts.length);
         view.status.textContent = '';
-        render();
+        render(true);
         return result;
     };
 

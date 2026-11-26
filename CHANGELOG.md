@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- H3 Reference Prompter: the prompt box no longer squashes to one line after a
+  run, and the node can be resized. A new result grows the node so about 320 px
+  of prompt shows, the prompt box never gets smaller than 120 px, and a taller
+  node gives the prompt box more room, in both the classic and the Nodes 2.0
+  renderer.
+
 ## 1.10.0
 
 ### H3 Reference Prompter
