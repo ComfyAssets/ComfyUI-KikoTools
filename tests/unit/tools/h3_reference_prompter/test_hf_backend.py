@@ -1,3 +1,4 @@
+import json
 import sys
 import types
 from pathlib import Path
@@ -15,6 +16,9 @@ from kikotools.tools.h3_reference_prompter.hf_backend import (
 )
 from kikotools.tools.prompt_enhancer.models import ModelEntry
 
+BATCH_ARCHITECTURES = getattr(hf_backend, "BATCH_ARCHITECTURES", ())
+MAX_IMAGE_PIXELS = getattr(hf_backend, "MAX_IMAGE_PIXELS", None)
+READ_ARCHITECTURES = getattr(hf_backend, "_read_architectures", None)
 ENTRY = ModelEntry("hf: a", "hf", Path("/m/a"), True, None, None)
 OTHER = ModelEntry("hf: b", "hf", Path("/m/b"), True, None, None)
 PROMPT_IDS = [[1, 2, 3]]
@@ -109,13 +113,28 @@ class FakeModel:
         return torch.cat([ids, last + 4, last + 5], dim=1)
 
 
+QWEN3_VL = ("Qwen3VLForConditionalGeneration",)
+ARCHITECTURES = {"value": QWEN3_VL, "reads": []}
+
+
+def fake_read_architectures(path):
+    ARCHITECTURES["reads"].append(path)
+    return ARCHITECTURES["value"]
+
+
 @pytest.fixture(autouse=True)
 def fake_transformers(monkeypatch):
+    ARCHITECTURES["value"] = QWEN3_VL
+    ARCHITECTURES["reads"] = []
+    monkeypatch.setattr(
+        hf_backend, "_read_architectures", fake_read_architectures, raising=False
+    )
     FakeProcessor.instances = []
     FakeProcessor.chat_template = "{% if enable_thinking %}x{% endif %}"
     FakeProcessor.raises = None
     FakeModel.instances = []
     module = types.ModuleType("transformers")
+    module.__version__ = "5.19.0"
     module.AutoProcessor = FakeProcessor
     module.AutoModelForImageTextToText = FakeModel
     monkeypatch.setitem(sys.modules, "transformers", module)
@@ -196,8 +215,10 @@ def test_chat_template_gets_thinking_off_and_generation_prompt():
     [
         ("{{ enable_thinking }}", True),
         ("plain template", False),
-        ({"default": "plain", "alt": "{% if enable_thinking %}"}, True),
-        ({"default": "plain"}, False),
+        ({"default": "plain", "alt": "{% if enable_thinking %}"}, False),
+        ({"default": "{{ enable_thinking }}", "alt": "plain"}, True),
+        ({"alt": "{{ enable_thinking }}"}, False),
+        ({"default": None}, False),
         (None, False),
     ],
 )
@@ -409,3 +430,129 @@ def test_generate_hf_is_a_one_request_batch(monkeypatch):
     image = torch.zeros(1, 2, 2, 3)
     assert generate_hf(ENTRY, "s", "p", image, 3, 0.5, 9) == "only"
     assert seen == [(ENTRY, [("s", "p", image)], 3, 0.5, 9)]
+
+
+def test_large_image_is_scaled_to_about_one_megapixel_keeping_aspect():
+    assert MAX_IMAGE_PIXELS == 1_048_576
+    run(image=torch.zeros(1, 1500, 2000, 3))
+    pil = FakeProcessor.instances[0].template_calls[0][0][0][1]["content"][0]["image"]
+    width, height = pil.size
+    assert width * height <= MAX_IMAGE_PIXELS
+    assert width * height > 0.99 * MAX_IMAGE_PIXELS
+    assert abs(width / height - 2000 / 1500) < 0.01
+
+
+def test_large_image_uses_lanczos(monkeypatch):
+    seen = []
+    original = Image.Image.resize
+
+    def spy(self, size, resample=None, *args, **kwargs):
+        seen.append(resample)
+        return original(self, size, resample, *args, **kwargs)
+
+    monkeypatch.setattr(Image.Image, "resize", spy)
+    hf_backend._to_pil(torch.zeros(1, 1100, 1100, 3))
+    assert seen == [Image.Resampling.LANCZOS]
+
+
+@pytest.mark.parametrize("shape", [(1, 4, 6, 3), (1, 1024, 1024, 3)])
+def test_small_image_keeps_its_size(shape):
+    pil = hf_backend._to_pil(torch.zeros(*shape))
+    assert pil.size == (shape[2], shape[1])
+
+
+def test_batch_architectures_are_the_verified_qwen_families():
+    assert BATCH_ARCHITECTURES == (
+        "Qwen3VLForConditionalGeneration",
+        "Qwen3_5ForConditionalGeneration",
+    )
+
+
+@pytest.mark.parametrize("arch", BATCH_ARCHITECTURES)
+def test_verified_architectures_batch(arch):
+    ARCHITECTURES["value"] = ("Other", arch)
+    batch([text_request(n) for n in range(5)])
+    calls = FakeProcessor.instances[0].template_calls
+    assert [len(conversations) for conversations, _ in calls] == [4, 1]
+
+
+@pytest.mark.parametrize("architectures", [("Gemma4ForConditionalGeneration",), ()])
+def test_other_architectures_run_one_request_at_a_time_in_order(architectures):
+    ARCHITECTURES["value"] = architectures
+    requests = [image_request(0), text_request(1), image_request(2)]
+    assert batch(requests) == ["r0", "r1", "r2"]
+    calls = FakeProcessor.instances[0].template_calls
+    assert [len(conversations) for conversations, _ in calls] == [1, 1, 1]
+    assert len(FakeModel.instances[0].generate_calls) == 3
+
+
+def test_architectures_are_read_once_per_load():
+    run()
+    run()
+    assert ARCHITECTURES["reads"] == [ENTRY.path]
+    run(OTHER)
+    assert ARCHITECTURES["reads"] == [ENTRY.path, OTHER.path]
+
+
+@pytest.mark.parametrize("version", ["4.57.1", "4.0", "", "dev"])
+def test_transformers_below_5_runs_alone_without_processor_kwargs(version):
+    sys.modules["transformers"].__version__ = version
+    assert batch([text_request(n) for n in range(3)]) == ["r0", "r1", "r2"]
+    calls = FakeProcessor.instances[0].template_calls
+    assert [len(conversations) for conversations, _ in calls] == [1, 1, 1]
+    assert all("processor_kwargs" not in kwargs for _, kwargs in calls)
+
+
+def test_transformers_without_version_runs_alone():
+    del sys.modules["transformers"].__version__
+    batch([text_request(1), text_request(2)])
+    calls = FakeProcessor.instances[0].template_calls
+    assert [len(conversations) for conversations, _ in calls] == [1, 1]
+
+
+def test_transformers_5_batches_with_processor_kwargs():
+    sys.modules["transformers"].__version__ = "5.0.0"
+    batch([text_request(1), text_request(2)])
+    ((conversations, kwargs),) = FakeProcessor.instances[0].template_calls
+    assert len(conversations) == 2
+    assert kwargs["processor_kwargs"] == {"padding": True}
+
+
+def test_only_named_template_arguments_are_passed():
+    FakeProcessor.chat_template = "plain"
+    run()
+    kwargs = FakeProcessor.instances[0].template_calls[0][1]
+    assert set(kwargs) == {
+        "tokenize",
+        "return_dict",
+        "return_tensors",
+        "add_generation_prompt",
+        "processor_kwargs",
+    }
+
+
+def write_config(folder, content):
+    folder.mkdir()
+    (folder / "config.json").write_text(content, encoding="utf-8")
+    return folder
+
+
+def test_read_architectures_from_config(tmp_path):
+    folder = write_config(
+        tmp_path / "m",
+        json.dumps({"architectures": ["Qwen3VLForConditionalGeneration"]}),
+    )
+    assert READ_ARCHITECTURES(folder) == QWEN3_VL
+
+
+@pytest.mark.parametrize(
+    "content", ["not json", "[1]", json.dumps({"architectures": "x"}), "{}"]
+)
+def test_read_architectures_bad_config_is_empty(tmp_path, content):
+    folder = write_config(tmp_path / "m", content)
+    assert READ_ARCHITECTURES(folder) == ()
+
+
+def test_read_architectures_missing_folder_is_empty(tmp_path):
+    assert READ_ARCHITECTURES(tmp_path / "gone") == ()
+    assert READ_ARCHITECTURES(None) == ()

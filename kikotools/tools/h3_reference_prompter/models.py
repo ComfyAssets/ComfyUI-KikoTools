@@ -8,7 +8,7 @@ own picker is left untouched.
 import json
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from ..prompt_enhancer.models import NONE_FOUND, ModelEntry, list_models
 
@@ -23,17 +23,22 @@ HF_ARCHITECTURES = (
 PREFERRED_DEFAULTS = ("Huihui-Qwen3-VL-8B-Instruct-abliterated", "Qwen3-VL-8B")
 
 
-def _is_recognised(folder: Path) -> bool:
+def read_architectures(folder: Optional[Path]) -> Tuple[str, ...]:
+    """The ``architectures`` list of a folder's config.json; () when unreadable."""
+    if folder is None:
+        return ()
     try:
-        config = json.loads((folder / "config.json").read_text(encoding="utf-8"))
+        config = json.loads((Path(folder) / "config.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return False
-    if not isinstance(config, dict):
-        return False
-    architectures = config.get("architectures")
+        return ()
+    architectures = config.get("architectures") if isinstance(config, dict) else None
     if not isinstance(architectures, list):
-        return False
-    return any(arch in HF_ARCHITECTURES for arch in architectures)
+        return ()
+    return tuple(arch for arch in architectures if isinstance(arch, str))
+
+
+def _is_recognised(folder: Path) -> bool:
+    return any(arch in HF_ARCHITECTURES for arch in read_architectures(folder))
 
 
 def hf_entries(llm_root: Path) -> List[ModelEntry]:
