@@ -1,6 +1,6 @@
 import { app } from '../../scripts/app.js';
 import { createButton, createScope, mountTheme } from './ui/core.js';
-import { clampIndex, summary } from './ui/h3-reference-prompter.js';
+import { clampIndex, summary, withoutLegacyDraft } from './ui/h3-reference-prompter.js';
 
 const NODE_CLASS = 'KikoH3ReferencePrompter';
 const NODE_WIDTH = 460;
@@ -234,6 +234,15 @@ app.registerExtension({
             const result = onNodeCreated?.apply(this, arguments);
             mountPanel(this);
             return result;
+        };
+        // The frontend only drops the old draft value while the draft is the
+        // node's one forced input; with `character_hint` it leaves the list
+        // alone, so every setting would shift by one.
+        const configure = nodeType.prototype.configure;
+        nodeType.prototype.configure = function (info) {
+            const count = (this.widgets || []).filter(widget => widget.serialize !== false).length;
+            const values = withoutLegacyDraft(info?.widgets_values, count);
+            return configure.call(this, values === info?.widgets_values ? info : { ...info, widgets_values: values });
         };
     },
 });

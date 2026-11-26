@@ -13,3 +13,11 @@ export function summary(prompts) {
     const words = prompts.reduce((sum, prompt) => sum + wordCount(prompt), 0);
     return `${prompts.length} ${prompts.length === 1 ? 'prompt' : 'prompts'} · ${words} ${words === 1 ? 'word' : 'words'}`;
 }
+
+// A workflow saved while the draft was a text box stores the draft as the first
+// widget value. `count` is the number of values the node saves today; a list
+// that is exactly one longer still carries that draft, so it is dropped.
+export function withoutLegacyDraft(values, count) {
+    if (!Array.isArray(values) || !(count > 0) || values.length !== count + 1) return values;
+    return values.slice(1);
+}
