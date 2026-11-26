@@ -125,9 +125,9 @@ def _lip_colour_for_face(gender: str, values: Mapping[str, str]) -> List[str]:
 
 def _extra_part(extra: str) -> Optional[str]:
     text = (extra or "").strip()
-    if not text:
+    if not any(char.isalnum() for char in text):
         return None
-    if not text.endswith("."):
+    if not text.endswith((".", "!", "?")):
         text += "."
     return f"Extra: {text}"
 

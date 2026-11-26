@@ -75,6 +75,18 @@ def test_extra_full_stop_not_doubled():
     assert text.endswith("Extra: has a scar.")
 
 
+@pytest.mark.parametrize("extra", ["love it!", "what?"])
+def test_extra_keeps_its_own_end_punctuation(extra):
+    text = logic.build_hint("woman", 30, {}, extra=extra)
+    assert text.endswith(f"Extra: {extra}")
+
+
+def test_extra_without_letters_or_digits_adds_nothing():
+    plain = logic.build_hint("woman", 30, {})
+    assert logic.build_hint("woman", 30, {}, extra="...") == plain
+    assert logic.build_hint("woman", 30, {}, extra=" ! ") == plain
+
+
 @pytest.mark.parametrize("extra", ["", "   \n"])
 def test_blank_extra_adds_nothing(extra):
     text = logic.build_hint("woman", 30, {}, extra=extra)
