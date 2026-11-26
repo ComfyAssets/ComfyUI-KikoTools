@@ -727,6 +727,10 @@ def test_hint_says_nude_ignores_lip_colours(hint):
         "Extra: nude.",
         "She is naked, with satin nude lips.",
         "Makeup: nude lips. Extra: fully nude.",
+        "Extra: nude with lips parted.",
+        "Extra: nude with lipstick.",
+        "Extra: nude and lips parted.",
+        "Extra: nude-bodied lips.",
         "裸",
     ],
 )

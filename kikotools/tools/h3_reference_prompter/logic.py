@@ -43,7 +43,13 @@ YOUTH_WORDS: Tuple[str, ...] = (
 )
 _NUDE = re.compile(r"\b(?:nude|naked)\b|裸", re.IGNORECASE)
 # "nude lips", "nude-pink lips", "nude lipstick": a colour, not a state of dress.
-_NUDE_LIP_COLOUR = re.compile(r"\bnude(?:[- ][a-z]+)?[- ]lip\w*", re.IGNORECASE)
+# Only "nude" directly before the lip word, or joined to a colour by a hyphen,
+# or a space, counts; "nude with lips parted" stays a nude request.
+_NUDE_LIP_COLOUR = re.compile(
+    r"\bnude(?:[- ](?:pink|rose|beige|brown|peach|mauve|coral))?"
+    r" (?:lips?|lipstick|lip gloss)\b",
+    re.IGNORECASE,
+)
 _AGE_LINE = re.compile(
     r"estimated\s+age\s*:\s*(\d+)\s*(?:to|-|–)\s*(\d+)\s*years?", re.IGNORECASE
 )
