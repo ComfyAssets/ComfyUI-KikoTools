@@ -115,6 +115,45 @@ See [Nude mode](h3_reference_prompter.md#nude-mode).
 
 `nipples` and `areola` are written as "Unclothed detail:". The prompter uses that sentence only when the draft says nude or naked and no outfit picture is connected. In any other case it removes the sentence before the writer sees the hint.
 
+## Your own options
+
+The shipped lists are in `kikotools/tools/character_hint/options.json`. Do not edit that file, because a pack update replaces it.
+
+To change the lists, make this file instead: `ComfyUI/user/kikotools/character_hint.json`. It survives updates. A copy of the example below ships as `character_hint.example.json` in the same folder as `options.json`.
+
+```json
+{
+  "heritage": {
+    "Maori": "Maori"
+  },
+  "makeup": {
+    "Festival glitter": {
+      "look": "festival makeup, scattered face gems, bright glitter eyeshadow, bold liner",
+      "lips": "glossy coral lips"
+    }
+  },
+  "hair_color": {
+    "Copper": "bright copper hair"
+  },
+  "tattoo": {
+    "Sleeve tattoo": null
+  }
+}
+```
+
+How it works:
+
+- Each key is a table name, such as `heritage`, `makeup`, `hair_color` or `tattoo`. The names are the keys in `options.json`.
+- Inside a table, `"Label": "phrase"` adds a new option at the end of the list. If the label already exists, it changes the phrase and keeps the position.
+- `"Label": null` removes the option.
+- `makeup` is different. Each style is an object with a `look` and `lips`, both required.
+- You cannot change `-`, the age limits, or empty a whole table.
+- A bad entry is skipped and a warning goes to the ComfyUI log. It starts with "Character Hint options" and names the file. The other entries still apply.
+- Refresh the browser page to see your edits in the dropdowns. You do not need to restart ComfyUI.
+- If you remove an option, a saved workflow that used it fails with an error that names the field.
+
+The shipped options were tested against MiniMax H3 Image. Your own additions were not.
+
 ## Tested options
 
 Every option was tested against MiniMax H3 Image, and only options the model draws are in the lists. Some choices were left out on purpose because the model ignores them: height, waist, breast shape, face shapes other than round and oblong, and pupils.

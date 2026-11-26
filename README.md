@@ -648,6 +648,7 @@ Two nodes that build a short character description from dropdowns. The output is
 - **With the prompter**: traits in the hint win over the character picture's notes; the picture fills in the rest. See [Character hint](examples/documentation/h3_reference_prompter.md#character-hint)
 - **Age**: with no character picture, the hint's age is what a nude draft is checked against. With a character picture, the picture's estimate still decides and the hint cannot override it
 - **Unclothed detail**: the female nodes' `nipples` and `areola` fields are used only when the draft says nude and no outfit picture is connected
+- **Your own options**: add, change or remove dropdown options in `ComfyUI/user/kikotools/character_hint.json`; it survives updates. See [Your own options](examples/documentation/character_hint.md#your-own-options)
 - **Tested**: every option was tested against MiniMax H3 Image; options the model ignores were left out
 
 #### ⏱️ Workflow Timer
