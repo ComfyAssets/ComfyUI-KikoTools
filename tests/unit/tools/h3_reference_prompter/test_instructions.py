@@ -247,3 +247,15 @@ def test_pose_describer_says_hidden_limbs_are_hidden():
     text = " ".join(describe_system("pose").lower().split())
     assert "hidden" in text
     assert "instead of guessing" in text
+
+
+def test_writer_repeats_traits_inside_sentences_not_as_a_summary():
+    text = writer_system()
+    assert "mention the key traits once more in other words" in text
+    assert 'never write a separate summary such as "Same description:"' in text
+
+
+def test_character_describer_says_each_trait_once():
+    text = describe_system("character")
+    assert "Say each trait once." in text
+    assert "twice" not in text

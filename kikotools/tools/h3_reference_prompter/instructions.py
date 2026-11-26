@@ -21,8 +21,8 @@ _DESCRIBE_ROLE = {
         "range and the build, the face shape, the eyes, the brows, the nose "
         "and the lips, the skin tone and skin texture, the hair (colour, "
         "length, style and parting), any distinctive marks such as freckles "
-        "or moles, and the expression. Say the most important traits "
-        "twice, in different words. Do not describe the clothing, the "
+        "or moles, and the expression. Say each trait once. Do not "
+        "describe the clothing, the "
         "background or the lighting."
     ),
     "outfit": (
@@ -77,8 +77,10 @@ numbers, part names or labels in the prompt: do not write lines such as \
 "The subject:" or "The style sentence from the draft:". Just write the \
 sentences.
 1. The subject, from the head down to the hands: age and build, face, \
-hair, clothing in one line, expression, then each hand. Say the key traits \
-two times, in different words.
+hair, clothing in one line, expression, then each hand. Later in the \
+prompt, mention the key traits once more in other words, inside a sentence \
+about something else; never write a separate summary such as \
+"Same description:".
 2. The outfit, garment by garment, with the colour, the specific material \
 and the surface detail of each one (weave, sheen, stitching, wear).
 3. The pose, with what each hand does and what each foot does, and where the \
