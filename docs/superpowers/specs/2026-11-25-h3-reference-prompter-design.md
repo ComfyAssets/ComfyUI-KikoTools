@@ -215,3 +215,31 @@ labelled `<Picture 1>`, `<Picture 2>`, … in input order.
   supported.
 - **Batching.** Transformers models describe and write in batches (Qwen3-VL and
   Qwen3.5 only; others one at a time), so items in a batch share the base seed.
+
+## Nude mode (approved 2026-11-25)
+
+KikoCharSheet's 18+ mode offers a picture-less costume, **Nude**. Picking it
+sends no outfit picture, renumbers the pictures (character `<Picture 1>`, pose
+`<Picture 2>`, `image_3` empty) and writes "The character's outfit: completely
+nude, wearing no clothing and no footwear." into the draft.
+
+- **Auto roles.** A new role `auto`, the default for all three slots, reads the
+  draft's "`<Picture N>` is the character/outfit/pose." sentences, so roles
+  follow the charsheet's numbering. A slot the draft does not name falls back to
+  its old default (1 character, 2 outfit, 3 pose). Explicit roles still win.
+- **Nude detection.** An item is in nude mode when its draft says nude or naked
+  and no connected picture has the outfit role.
+- **Body section.** In nude mode the outfit part becomes a plain description of
+  the unclothed adult body: build, proportions, skin tone and texture following
+  the character notes, natural adult anatomy, in the register of a figure or
+  photography reference. No sexual acts, sexual poses or arousal language.
+- **Adult age check (code, not only instructions).** The character describer
+  always ends with "Estimated age: N to M years." In nude mode the node refuses
+  (ValueError) unless a character picture is connected, the estimate parses,
+  and its lower bound is 20 or more. The written prompt states the person is an
+  adult woman in her twenties or the estimated range; the model's part must not
+  contain youth words (teen, teenage, adolescent, schoolgirl, girl, child,
+  childlike, kid, minor, underage, loli). A reply with one is retried once, then
+  refused.
+- **Uploads (KikoCharSheet).** Nude cannot be combined with an uploaded
+  portrait; the gallery portraits are AI-generated, uploads may be real people.
