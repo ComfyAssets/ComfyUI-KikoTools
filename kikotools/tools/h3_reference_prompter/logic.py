@@ -46,7 +46,20 @@ _AGE_LINE = re.compile(
     r"estimated\s+age\s*:\s*(\d+)\s*(?:to|-|–)\s*(\d+)\s*years?", re.IGNORECASE
 )
 _HINT_AGE = re.compile(r"\baged (\d{1,3})\b", re.IGNORECASE)
-_UNCLOTHED = re.compile(r"\s*Unclothed detail:.*?\.(?=\s|$)", re.DOTALL)
+_ADULT = re.compile(r"\badult\b", re.IGNORECASE)
+_FIRST_SENTENCE = re.compile(r"[^.!?\n]*")
+# The label, then text up to and including the first sentence end, or up to a
+# line break, or to the end of the text.
+_UNCLOTHED = re.compile(
+    r"\s*Unclothed detail:(?:[^\n.!?]|[.!?](?!\s|$))*(?:[.!?](?=\s|$))?",
+    re.IGNORECASE,
+)
+_STATED_AGE = re.compile(
+    r"\b(\d{1,2})[\s-]*(?:years?|yrs?)[\s-]*old\b"
+    r"|\b(\d{1,2})\s*yo\b"
+    r"|\bage(?:d| of)?\s+(\d{1,2})\b",
+    re.IGNORECASE,
+)
 
 
 # Forms the plain words plus an "s" do not reach.
@@ -345,14 +358,26 @@ def _check_character(slot: int, notes: str) -> Tuple[int, int]:
 
 
 def parse_hint_age(hint: Optional[str]) -> Optional[int]:
-    """The first "aged N" in a character hint, or None."""
-    match = _HINT_AGE.search(hint or "")
+    """The first "aged N" in the hint's first sentence, which must say "adult"."""
+    first = _FIRST_SENTENCE.match((hint or "").lstrip()).group(0)
+    if not _ADULT.search(first):
+        return None
+    match = _HINT_AGE.search(first)
     return int(match.group(1)) if match else None
 
 
 def strip_unclothed(hint: str) -> str:
-    """The hint without its "Unclothed detail:" sentence."""
+    """The hint without any "Unclothed detail:" part."""
     return _UNCLOTHED.sub("", hint).strip()
+
+
+def find_minor_age(text: Optional[str]) -> Optional[int]:
+    """The first stated age under HINT_MIN_AGE in ``text``, or None."""
+    for match in _STATED_AGE.finditer(text or ""):
+        age = int(next(group for group in match.groups() if group))
+        if age < HINT_MIN_AGE:
+            return age
+    return None
 
 
 def _hint_age(hint: str) -> Optional[int]:
@@ -373,9 +398,15 @@ def check_adult(
     word = find_youth_word(draft)
     if word is not None:
         raise ValueError(f"{_REFUSAL} The draft uses the word '{word}'.")
+    age = find_minor_age(draft)
+    if age is not None:
+        raise ValueError(f"{_REFUSAL} The draft states an age of {age}.")
     word = find_youth_word(hint)
     if word is not None:
         raise ValueError(f"{_REFUSAL} The character hint uses the word '{word}'.")
+    age = find_minor_age(hint)
+    if age is not None:
+        raise ValueError(f"{_REFUSAL} The character hint states an age of {age}.")
     hint_age = _hint_age(hint)
     if not characters:
         if hint_age is None:

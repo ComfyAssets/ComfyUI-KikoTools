@@ -85,7 +85,8 @@ A blank placeholder picture (a small, uniformly white image, such as KikoCharShe
 - the estimate is missing or cannot be read;
 - the lower bound is under 20, so a picture whose estimate could be under 20 is refused;
 - the character notes use a youth word: teen, teenage, teenager, adolescent, schoolgirl, child, childlike, kid, minor, underage or loli (whole words, any case, plurals included, so "late teens" counts);
-- the draft or the character hint uses one of those words.
+- the draft or the character hint uses one of those words;
+- the draft or the character hint states an age under 18, such as "12 years old" or "aged 15". A hand-typed hint must start with a sentence like "The character is an adult woman aged 25." for its age to count.
 
 The hint cannot override a character picture: when one is connected, its estimate must still pass, and when it does the prompt uses the hint's age. The error says that nude prompts need an adult character picture whose estimated age is 20 or older, and gives the estimate it found. Nothing is written for any item; like other errors, ComfyUI's model list is repaired and the prompt model is freed.
 

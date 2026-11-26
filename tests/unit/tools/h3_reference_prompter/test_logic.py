@@ -18,6 +18,7 @@ from kikotools.tools.h3_reference_prompter.logic import (
     says_nude,
     drop_repeats,
     find_tags,
+    find_minor_age,
     find_youth_word,
     parse_hint_age,
     strip_unclothed,
@@ -525,7 +526,7 @@ def test_hint_min_age_is_eighteen():
     "hint, expected",
     [
         ("The character is an adult woman aged 25.", 25),
-        ("Aged 30", 30),
+        ("Adult, aged 30", 30),
         ("ages well", None),
         ("", None),
         (None, None),
@@ -548,9 +549,7 @@ def test_check_adult_without_pictures_uses_the_hint_age():
     assert check_adult([], "nude", HINT_25) == (25, 25)
 
 
-@pytest.mark.parametrize(
-    "hint", ["The character is an adult woman aged 17.", "A woman with green eyes.", ""]
-)
+@pytest.mark.parametrize("hint", ["A woman with green eyes.", "A woman aged 25.", ""])
 def test_check_adult_without_pictures_refuses_a_missing_or_young_hint_age(hint):
     with pytest.raises(ValueError, match="character hint gives no adult age"):
         check_adult([], "nude", hint)
@@ -567,9 +566,105 @@ def test_check_adult_keeps_refusing_a_young_picture_whatever_the_hint_says():
 
 
 def test_check_adult_uses_the_hint_age_when_the_picture_passes():
-    assert check_adult([(1, OLDER_NOTES)], "nude", "aged 25") == (25, 25)
+    assert check_adult([(1, OLDER_NOTES)], "nude", HINT_25) == (25, 25)
     assert check_adult([(1, OLDER_NOTES)], "nude") == (30, 45)
 
 
-def test_check_adult_ignores_a_hint_age_under_eighteen_with_a_picture():
-    assert check_adult([(1, OLDER_NOTES)], "nude", "aged 17") == (30, 45)
+def test_check_adult_ignores_a_hint_age_without_adult_with_a_picture():
+    assert check_adult([(1, OLDER_NOTES)], "nude", "A woman aged 25.") == (30, 45)
+
+
+@pytest.mark.parametrize(
+    "hint, expected",
+    [
+        ("The character is an adult woman aged 25.", 25),
+        ("The character is an adult Japanese man aged 40. Extra: x", 40),
+        ("An adult woman aged 30", 30),
+        ("The character is 12 years old. Extra: her mother aged 40.", None),
+        ("The character is a woman. Extra: her friend is aged 25.", None),
+        ("A woman aged 25.", None),
+        ("caged 25", None),
+        ("an adult aged 5 ... aged 30", 5),
+        ("An adult woman.\nShe is aged 30.", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_parse_hint_age_reads_only_the_first_sentence_with_adult(hint, expected):
+    assert parse_hint_age(hint) == expected
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("A. Unclothed detail: pierced nipples", "A."),
+        ("A. unclothed detail: pierced nipples. Extra: z.", "A. Extra: z."),
+        ("A. UNCLOTHED DETAIL: nipples. Extra: z.", "A. Extra: z."),
+        ("A. Unclothed detail: x. B. Unclothed detail: y.", "A. B."),
+        ("A. Unclothed detail: x, y. Extra: z.", "A. Extra: z."),
+        ("A. Extra: z.", "A. Extra: z."),
+    ],
+)
+def test_strip_unclothed_handles_hand_typed_hints(text, expected):
+    out = strip_unclothed(text)
+    assert out == expected
+    assert "unclothed" not in out.lower()
+
+
+def test_strip_unclothed_stops_at_a_line_break():
+    out = strip_unclothed("A.\nUnclothed detail: pierced nipples\nExtra: z")
+    assert "A." in out and "Extra: z" in out
+    assert "nipples" not in out and "unclothed" not in out.lower()
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("a 15-year-old aged 30", 15),
+        ("A 12 year old, nude", 12),
+        ("she is 17 yo", 17),
+        ("aged 9", 9),
+        ("age 16", 16),
+        ("the age of 14", 14),
+        ("a 10 yr old", 10),
+        ("an adult woman aged 25", None),
+        ("25 years old", None),
+        ("a 1960s dress", None),
+        ("size 12 shoes", None),
+        (None, None),
+    ],
+)
+def test_find_minor_age(text, expected):
+    assert find_minor_age(text) == expected
+
+
+@pytest.mark.parametrize(
+    "draft, hint, match",
+    [
+        ("nude", "The character is 12 years old. Extra: her mother aged 40.", "hint"),
+        ("nude", "a 15-year-old aged 30", "hint"),
+        (
+            "A 12 year old, nude, standing.",
+            "The character is an adult woman aged 25.",
+            "draft",
+        ),
+        (
+            "nude",
+            "The character is a woman. Extra: her friend is aged 25.",
+            "adult age",
+        ),
+        ("nude", "The character is an adult woman aged 17.", "age of 17"),
+    ],
+)
+def test_check_adult_refuses_a_stated_minor_age(draft, hint, match):
+    with pytest.raises(ValueError, match=match):
+        check_adult([], draft, hint)
+
+
+def test_check_adult_refuses_a_stated_minor_age_with_a_picture():
+    with pytest.raises(ValueError, match="draft states an age of 16"):
+        check_adult([(1, OLDER_NOTES)], "a 16 year old, nude")
+
+
+def test_a_clothed_draft_with_a_stated_age_is_not_nude_mode():
+    assert not says_nude("a 12 year old in a coat")

@@ -1090,3 +1090,12 @@ def test_hint_age_never_rescues_a_young_picture(monkeypatch):
             character_hint=["The character is an adult woman aged 30."],
             **AUTO_ROLES,
         )
+
+
+def test_gguf_path_carries_the_hint_into_the_writer_message(monkeypatch):
+    h = Harness(monkeypatch, kind="gguf")
+    h.entry = entry("gguf", "gguf: m")
+    run(prompt=["A woman, standing."], model=["gguf: m"], character_hint=[HINT_25])
+    (writer,) = h.writers
+    assert "The character is an adult woman aged 25." in writer["prompt"]
+    assert "Unclothed detail" not in writer["prompt"]

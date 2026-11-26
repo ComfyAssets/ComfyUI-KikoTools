@@ -107,6 +107,7 @@ The age slider starts at 18. The Prompter checks the age of the character before
 - With no character picture, the hint's age is what the draft is checked against. An age of 18 or more passes. A hint with no age is refused.
 - With a character picture, the picture's age estimate still decides. The hint cannot override it. A picture that may show someone under 20 is refused whatever the hint says. When the picture passes, the prompt uses the hint's age.
 - A youth word in the hint (teen, child, minor and the like) stops the run, as it does in the draft.
+- A nude draft is refused when the draft or the hint states an age under 18 (such as "12 years old" or "aged 15"), and a hand-typed hint must start with a sentence like "The character is an adult woman aged 25." for its age to count.
 
 See [Nude mode](h3_reference_prompter.md#nude-mode).
 
