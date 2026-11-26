@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased
+
+### Kiko Purge VRAM
+
+- Reworked to free memory the way Free VRAM Pixaroma does. Three modes now:
+  `all` (default), `models` and `cache`. Steps run in a fixed order: unload
+  models, collect garbage when `collect_garbage` is on (in every mode), then empty the
+  cache.
+- Old mode names still load and run: `soft` and `aggressive` map to `all`,
+  `models_only` maps to `models`, and `cache_only` maps to `cache`.
+- **A non-zero `memory_threshold_mb` in a saved workflow now means "skip when at
+  least this many MB are free" instead of "purge when this many MB are used".**
+  Set it to `0` to always purge.
+- With nothing wired into `anything`, the node does nothing and says so in the
+  report.
+- New `collect_garbage` switch (on by default) controls the garbage-collection
+  step.
+- New `every_run` switch (on by default). Turn it off to let ComfyUI cache the
+  node so nodes after it do not re-run.
+- A failing step now stops the run with an error, after the node repairs
+  ComfyUI's loaded-model list so later jobs keep working. The traceback is
+  logged.
+- The `models` step drains ComfyUI's loaded-model list one entry at a time, then
+  calls `unload_all_models()` so other packs' hooks still run. Calling
+  `unload_all_models()` alone can fail when one unload frees another model
+  mid-loop and leave ComfyUI unable to start the next job.
+- Out-of-memory errors are re-raised unchanged so ComfyUI still handles them.
+- Behaviour based on Free VRAM Pixaroma from
+  [ComfyUI-Pixaroma](https://github.com/pixaroma/ComfyUI-Pixaroma) by Pixaroma.
+
 ## 1.9.0
 
 ### Model Resolution Picker
