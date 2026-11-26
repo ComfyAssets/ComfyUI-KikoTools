@@ -65,6 +65,28 @@ def test_male_build_matches_logic():
     assert result == (logic.build_hint(logic.MALE, 40, values),)
 
 
+def test_user_makeup_style_shows_and_builds(write_user_file):
+    write_user_file({"makeup": {"Mine": {"look": "my look", "lips": "my lips"}}})
+    choices = CharacterHintFemaleNode.INPUT_TYPES()["required"]["makeup"][0]
+    assert choices[-1] == "Mine"
+    (text,) = CharacterHintFemaleNode().build(30, makeup="Mine")
+    assert "Makeup: wearing my look, and my lips." in text
+
+
+def test_removed_option_leaves_the_list_and_build_raises(write_user_file):
+    write_user_file({"eye_color": {"Green": None}})
+    choices = CharacterHintFemaleNode.INPUT_TYPES()["required"]["eye_color"][0]
+    assert "Green" not in choices
+    with pytest.raises(ValueError, match="eye_color"):
+        CharacterHintFemaleNode().build(30, eye_color="Green")
+
+
+def test_input_types_follow_file_edits(write_user_file):
+    assert "Hawk" not in CharacterHintMaleNode.INPUT_TYPES()["required"]["nose"][0]
+    write_user_file({"nose": {"Hawk": "a hawk nose"}})
+    assert "Hawk" in CharacterHintMaleNode.INPUT_TYPES()["required"]["nose"][0]
+
+
 def test_registered():
     maps = kikotools.NODE_CLASS_MAPPINGS
     names = kikotools.NODE_DISPLAY_NAME_MAPPINGS

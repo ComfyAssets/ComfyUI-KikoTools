@@ -1,7 +1,92 @@
+import copy
+
 import pytest
 
-from kikotools.tools.character_hint import logic
+from kikotools.tools.character_hint import logic, options
 from kikotools.tools.character_hint.options import UNSET
+
+FEMALE_VALUES = {
+    "heritage": "Japanese",
+    "body_type": "Curvy",
+    "breast_size": "Large",
+    "butt_size": "Large",
+    "face_shape": "Round",
+    "eye_color": "Green",
+    "eye_shape": "Hooded",
+    "lip_shape": "Full",
+    "lip_color": "Berry",
+    "makeup": "Soft glam",
+    "hair_color": "Copper",
+    "hair_length": "Chin length",
+    "hair_style": "Bob",
+    "bangs": "Curtain bangs",
+    "skin_tone": "Olive",
+    "freckles": "A few",
+    "beauty_mark": "Left cheek",
+    "tattoo": "Sleeve tattoo",
+    "expression": "Smirking",
+    "nipples": "Pierced",
+    "areola": "Dark",
+}
+
+FEMALE_GOLDEN = (
+    "The character is an adult Japanese woman aged 25. "
+    "Body: a curvy body, large breasts, a large butt. "
+    "Face: a round face, green eyes, hooded eyes, full lips. "
+    "Makeup: wearing soft glam makeup, smoothly blended taupe eyeshadow, "
+    "softly defined eyeliner, fluttery lashes, warm blush, and berry lips. "
+    "Hair: copper hair, chin length hair, her hair in a bob cut, curtain bangs. "
+    "Skin: olive skin, a few freckles, a single beauty mark on the left cheek. "
+    "Tattoos: a sleeve tattoo. "
+    "Expression: a smirking expression. "
+    "Unclothed detail: pierced nipples, dark areolas. "
+    "Extra: has a scar on the chin."
+)
+
+
+def test_golden_female_hint():
+    text = logic.build_hint("woman", 25, FEMALE_VALUES, extra=" has a scar on the chin")
+    assert text == FEMALE_GOLDEN
+
+
+def test_golden_male_hint():
+    values = {
+        "body_type": "Dad bod",
+        "facial_hair": "Goatee",
+        "hair_style": "Man bun",
+        "breast_size": "Large",
+    }
+    assert logic.build_hint("man", 40, values) == (
+        "The character is an adult man aged 40. "
+        "Body: a dad bod. Face: a goatee. Hair: a man bun."
+    )
+
+
+def test_explicit_tables_are_used():
+    tables = copy.deepcopy(options.load_shipped())
+    tables["nose"]["Hawk"] = "a hawk nose"
+    tables["makeup"]["Mine"] = {"look": "my look", "lips": "my lips"}
+    tables["heritage"]["Maori"] = "Maori"
+    values = {"nose": "Hawk", "makeup": "Mine", "heritage": "Maori"}
+    text = logic.build_hint("woman", 30, values, tables=tables)
+    assert "adult Maori woman" in text
+    assert "Face: a hawk nose." in text
+    assert "Makeup: wearing my look, and my lips." in text
+    assert "Hawk" in logic.fields("woman", tables)["nose"]
+
+
+def test_removed_label_raises_naming_field():
+    tables = copy.deepcopy(options.load_shipped())
+    del tables["eye_color"]["Green"]
+    with pytest.raises(ValueError, match="eye_color"):
+        logic.build_hint("woman", 30, {"eye_color": "Green"}, tables=tables)
+
+
+def test_removed_makeup_raises():
+    tables = copy.deepcopy(options.load_shipped())
+    del tables["makeup"]["Soft glam"]
+    with pytest.raises(ValueError, match="makeup"):
+        logic.build_hint("woman", 30, {"makeup": "Soft glam"}, tables=tables)
 
 
 def test_lead_only():

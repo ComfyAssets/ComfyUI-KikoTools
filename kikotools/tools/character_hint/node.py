@@ -3,7 +3,7 @@
 from typing import Any, Dict, Tuple
 
 from ...base.base_node import ComfyAssetsBaseNode
-from . import logic
+from . import logic, options
 from .options import DEFAULT_AGE, MAX_AGE, MIN_AGE, UNSET
 
 
@@ -30,7 +30,7 @@ class _CharacterHintNode(ComfyAssetsBaseNode):
                 },
             )
         }
-        for name, labels in logic.fields(cls.GENDER).items():
+        for name, labels in logic.fields(cls.GENDER, options.tables()).items():
             required[name] = ([UNSET, *labels], {"default": UNSET})
         return {
             "required": required,
@@ -43,7 +43,7 @@ class _CharacterHintNode(ComfyAssetsBaseNode):
         }
 
     def build(self, age: int, extra: str = "", **values: str) -> Tuple[str]:
-        return (logic.build_hint(self.GENDER, age, values, extra),)
+        return (logic.build_hint(self.GENDER, age, values, extra, options.tables()),)
 
 
 class CharacterHintFemaleNode(_CharacterHintNode):
