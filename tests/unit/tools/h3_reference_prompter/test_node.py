@@ -461,8 +461,10 @@ def test_missing_model_validates_then_fails_clearly(monkeypatch):
     assert H3ReferencePrompterNode.VALIDATE_INPUTS("hf: gone") is True
     with pytest.raises(ValueError) as caught:
         run(model=["hf: gone"])
-    assert "hf: gone" in str(caught.value)
-    assert "models/LLM" in str(caught.value)
+    message = str(caught.value)
+    assert "hf: gone" in message
+    assert "models/LLM" in message
+    assert "mmproj" in message and "vision model" in message
     assert "unload" not in h.events
 
 
@@ -483,7 +485,41 @@ def test_backend_freed_unless_keep_loaded(monkeypatch):
     assert "free_hf" in h.events and "free_gguf" in h.events
     h.events.clear()
     run(keep_loaded=[True])
-    assert "free_hf" not in h.events and "free_gguf" not in h.events
+    assert "free_hf" not in h.events
+
+
+@pytest.mark.parametrize(
+    "kind, freed",
+    [
+        ("hf", ["free_gguf"]),
+        ("gguf", ["free_hf"]),
+        ("native", ["free_hf", "free_gguf"]),
+    ],
+)
+def test_other_backends_are_freed_first_even_when_kept(monkeypatch, kind, freed):
+    h = Harness(monkeypatch, kind=kind)
+    h.entry = entry(kind, f"{kind}: m")
+    run(model=[f"{kind}: m"], keep_loaded=[True])
+    before_unload = h.events[: h.events.index("unload")]
+    assert before_unload == freed
+    assert h.events.count("free_hf") + h.events.count("free_gguf") == len(freed)
+
+
+def test_keep_loaded_tooltip_warns_about_memory_management(monkeypatch):
+    monkeypatch.setattr(node_module, "prompter_model_names", lambda: ["hf: a"])
+    tooltip = H3ReferencePrompterNode.INPUT_TYPES()["optional"]["keep_loaded"][1][
+        "tooltip"
+    ]
+    assert "hf:" in tooltip and "outside ComfyUI's memory management" in tooltip
+
+
+def test_raising_describe_tokens_describes_again(monkeypatch):
+    h = Harness(monkeypatch)
+    run(images={"image_1": [img(1)]}, describe_tokens=[512])
+    run(images={"image_1": [img(1)]}, describe_tokens=[512])
+    assert len(h.describes) == 1
+    run(images={"image_1": [img(1)]}, describe_tokens=[1024])
+    assert len(h.describes) == 2
 
 
 def test_backend_freed_after_failure(monkeypatch):

@@ -74,9 +74,10 @@ def item_seed(seed: int, index: int) -> int:
     return (seed + index) % _SEED_MODULUS
 
 
-def image_key(image: torch.Tensor, role: str, model: str) -> str:
+def image_key(image: torch.Tensor, role: str, model: str, tokens: int) -> str:
+    """Notes cache key: picture content, role, model and describe token limit."""
     contiguous = image.detach().to("cpu").contiguous()
-    header = json.dumps([list(contiguous.shape), role, model])
+    header = json.dumps([list(contiguous.shape), role, model, tokens])
     digest = hashlib.sha256(header.encode())
     digest.update(contiguous.reshape(-1).view(torch.uint8).numpy().tobytes())
     return digest.hexdigest()

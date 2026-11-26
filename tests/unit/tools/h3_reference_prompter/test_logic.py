@@ -68,14 +68,15 @@ def test_item_seed_wraps_at_64_bits():
     assert item_seed(2**64 - 1, 1) == 0
 
 
-def test_image_key_changes_with_content_role_model():
+def test_image_key_changes_with_content_role_model_and_tokens():
     base = torch.zeros(1, 4, 4, 3)
     other = torch.ones(1, 4, 4, 3)
-    key = image_key(base, "character", "model-a")
-    assert key == image_key(base.clone(), "character", "model-a")
-    assert key != image_key(other, "character", "model-a")
-    assert key != image_key(base, "outfit", "model-a")
-    assert key != image_key(base, "character", "model-b")
+    key = image_key(base, "character", "model-a", 512)
+    assert key == image_key(base.clone(), "character", "model-a", 512)
+    assert key != image_key(other, "character", "model-a", 512)
+    assert key != image_key(base, "outfit", "model-a", 512)
+    assert key != image_key(base, "character", "model-b", 512)
+    assert key != image_key(base, "character", "model-a", 1024)
 
 
 def test_clean_result_strips_think_block():
