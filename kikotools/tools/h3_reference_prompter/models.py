@@ -19,7 +19,8 @@ HF_ARCHITECTURES = (
     "Gemma4UnifiedForConditionalGeneration",
 )
 
-PREFERRED_DEFAULT = "Qwen3.5-4B"
+# Picker default, most preferred first; then any hf entry, then the first name.
+PREFERRED_DEFAULTS = ("Huihui-Qwen3-VL-8B-Instruct-abliterated", "Qwen3-VL-8B")
 
 
 def _is_recognised(folder: Path) -> bool:
@@ -88,9 +89,10 @@ def find_prompter_model(name: str) -> Optional[ModelEntry]:
 
 
 def default_prompter_model(names: List[str]) -> str:
-    for name in names:
-        if PREFERRED_DEFAULT in name:
-            return name
+    for preferred in PREFERRED_DEFAULTS:
+        for name in names:
+            if preferred in name:
+                return name
     for name in names:
         if name.startswith("hf: "):
             return name

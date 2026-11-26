@@ -180,7 +180,19 @@ def test_find_prompter_model(fake_env):
 @pytest.mark.parametrize(
     "names, expected",
     [
-        (["gguf: a", "hf: b", "hf: Qwen3.5-4B-x"], "hf: Qwen3.5-4B-x"),
+        (
+            [
+                "hf: Qwen-VL/Qwen3-VL-8B-Instruct",
+                "hf: Qwen-VL/Huihui-Qwen3-VL-8B-Instruct-abliterated",
+            ],
+            "hf: Qwen-VL/Huihui-Qwen3-VL-8B-Instruct-abliterated",
+        ),
+        (
+            ["gguf: a", "hf: Qwen3.5-4B-x", "hf: Qwen-VL/Qwen3-VL-8B-Instruct"],
+            "hf: Qwen-VL/Qwen3-VL-8B-Instruct",
+        ),
+        (["gguf: a", "hf: b", "hf: Qwen3.5-4B-x"], "hf: b"),
+        (["gguf: Qwen3-VL-8B-q4.gguf", "hf: b"], "gguf: Qwen3-VL-8B-q4.gguf"),
         (["gguf: a", "hf: b", "hf: c"], "hf: b"),
         (["gguf: a", "native: b"], "gguf: a"),
         ([NONE_FOUND], NONE_FOUND),
