@@ -2159,6 +2159,43 @@ test('prompt enhancer menu copies the system prompt and reports the result', asy
     expect(posted).toEqual(Array(3).fill(['POST', { base_model: 'Flux' }]));
 });
 
+test('H3 Reference Prompter panel shows prompts, steps, copies and toggles notes', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await openHost(page);
+    const id = await createNode(page, 'KikoH3ReferencePrompter');
+    const panel = page.locator('.ca-h3-prompter');
+    await expect(panel).toContainText('Run the workflow to see the written prompt.');
+    const run = message => page.evaluate(({ id, message }) => kikoHost.nodes.get(String(id)).onExecuted(message), { id, message });
+    await run({ h3_prompts: ['<Picture 1> stands tall.', 'Second prompt has five words.'], h3_notes: ['note one', 'note two'] });
+    await expect(panel.locator('.ca-h3-summary')).toHaveText('2 prompts · 9 words');
+    await expect(panel.locator('.ca-h3-text')).toHaveText('<Picture 1> stands tall.');
+    await expect(panel.locator('.ca-h3-position')).toHaveText('1 / 2');
+    await expect(panel.getByRole('button', { name: 'Previous prompt' })).toBeDisabled();
+    await panel.getByRole('button', { name: 'Next prompt' }).click();
+    await expect(panel.locator('.ca-h3-text')).toHaveText('Second prompt has five words.');
+    await expect(panel.getByRole('button', { name: 'Next prompt' })).toBeDisabled();
+    await panel.getByRole('button', { name: 'Copy prompt' }).click();
+    await expect(panel.locator('.ca-h3-status')).toHaveText('Copied');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Second prompt has five words.');
+    const notes = panel.locator('.ca-h3-notes');
+    await expect(notes).not.toHaveAttribute('open', '');
+    await notes.locator('summary').click();
+    await expect(notes.locator('.ca-h3-notes-text')).toHaveText('note two');
+    // A rerun keeps the selection while it is valid and clamps it otherwise.
+    await run({ h3_prompts: ['x y', 'z'], h3_notes: ['', ''] });
+    await expect(panel.locator('.ca-h3-position')).toHaveText('2 / 2');
+    await run({ h3_prompts: ['only one'], h3_notes: [] });
+    await expect(panel.locator('.ca-h3-position')).toBeHidden();
+    await expect(panel.locator('.ca-h3-text')).toHaveText('only one');
+    await expect(notes).toBeHidden();
+    // A rejected clipboard write shows a note instead of throwing.
+    await page.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('denied')) }, configurable: true }); });
+    await panel.getByRole('button', { name: 'Copy prompt' }).click();
+    await expect(panel.locator('.ca-h3-status')).toHaveText('Copy failed; select the text and copy it by hand');
+    await run({});
+    await expect(panel).toContainText('Run the workflow to see the written prompt.');
+});
+
 const refCard = (page, name) => page.locator('.kiko-gallery-card', { has: page.locator(`img[alt="${name}"]`) });
 const refsState = async (request, id) => (await state(request)).selections[String(id)]?.refs?.paths;
 

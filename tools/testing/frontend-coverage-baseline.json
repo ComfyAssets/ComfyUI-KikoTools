@@ -53,6 +53,12 @@
     "functions": 42,
     "statements": 52
   },
+  "h3_reference_prompter.js": {
+    "lines": 90,
+    "branches": 70,
+    "functions": 75,
+    "statements": 90
+  },
   "kikoEmbeddingAutocomplete.js": {
     "lines": 82,
     "branches": 74,
@@ -160,6 +166,12 @@
     "branches": 80,
     "functions": 98,
     "statements": 93
+  },
+  "ui/h3-reference-prompter.js": {
+    "lines": 100,
+    "branches": 95,
+    "functions": 100,
+    "statements": 100
   },
   "ui/prompt-enhancer.js": {
     "lines": 98,
