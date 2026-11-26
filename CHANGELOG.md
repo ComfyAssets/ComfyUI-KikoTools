@@ -2,6 +2,55 @@
 
 ## Unreleased
 
+### H3 Reference Prompter
+
+- New node in 🫶 ComfyAssets/🧠 Prompts. It writes one long MiniMax H3 Image
+  prompt from a short draft and up to three reference pictures (character,
+  outfit, pose or other), using a local vision model.
+- The whole draft is written first, word for word, by the node; the model adds
+  the detail after it and never repeats the draft's sentences. The prompt
+  keeps exactly the draft's tags; after one retry the node stops with an error
+  naming the tags.
+- Two passes: each picture is described once and cached for the session, then
+  the prompt is written.
+- One-per-pose runs give one prompt and one set of notes per item.
+- Transformers models describe all the pictures of a run in one batch and write
+  all the prompts in another; only prompts with wrong tags or no text are
+  retried, again in one batch. Batching needs transformers 5 or newer and runs
+  only for Qwen3-VL and Qwen3.5 folders; other cases run one request at a
+  time. Batched items all use the base seed. GGUF and native models run one
+  call at a time, with the base seed plus the item index. A GGUF model loads
+  twice per run, with and without its `mmproj`.
+- Pictures are scaled down to about 1 MP before they are described.
+- An empty written prompt is retried once, then stops with an error that
+  suggests raising `write_tokens`.
+- Models: transformers folders under `models/LLM` (Qwen3-VL, Qwen3.5, Gemma 4),
+  the Prompt Enhancer's vision text encoders, and GGUF models with an `mmproj`.
+  The picker defaults to Huihui-Qwen3-VL-8B-Instruct-abliterated, then any
+  Qwen3-VL-8B, then the first transformers folder. The 8B uses about 17 GB of
+  VRAM while it runs.
+- ComfyUI's loaded models are freed first with the safe unload from Kiko Purge
+  VRAM; the prompt model is unloaded afterwards unless `keep_loaded` is on. A
+  kept model of another backend is freed when the backend changes. A kept
+  `hf:` model sits outside ComfyUI's memory management.
+- A panel on the node shows each prompt with its word count, previous and next
+  buttons, a copy button and collapsible notes.
+- Example workflow: `h3_reference_prompter_charsheet_test.json`.
+- A blank placeholder picture (a small, uniformly white image, such as
+  KikoCharSheet's Nude costume image) counts as no picture.
+- Roles default to `auto`, which reads the draft's `<Picture N> is the
+  character/outfit/pose.` sentences and falls back to character, outfit, pose;
+  a role picked by hand wins. A KikoCharSheet Nude run no longer describes the
+  pose mannequin as an outfit.
+- A closing list of what must not appear is cut to six items in a row, so a
+  run-on list cannot swell the prompt.
+- Nude mode: a draft that says nude, naked or 裸 always gets the adult age
+  check, whatever the roles; with no outfit picture it also gets a plain,
+  non-sexual description of the unclothed adult body. The run is
+  refused unless the character picture's estimated age is 20 or older and no
+  youth word appears in the notes, the draft or the written part. Never use
+  pictures of real people.
+
 ### Kiko Purge VRAM
 
 - Reworked to free memory the way Free VRAM Pixaroma does. Three modes now:

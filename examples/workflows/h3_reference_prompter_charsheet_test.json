@@ -1,0 +1,778 @@
+{
+  "nodes": [
+    {
+      "id": 1,
+      "type": "CharSheetPortrait",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        720,
+        890
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "state_json",
+          "name": "state_json",
+          "type": "STRING",
+          "widget": {
+            "name": "state_json"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "resize_mode",
+          "name": "resize_mode",
+          "type": "COMBO",
+          "widget": {
+            "name": "resize_mode"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            5
+          ]
+        },
+        {
+          "localized_name": "prompt_en",
+          "name": "prompt_en",
+          "type": "STRING",
+          "links": []
+        },
+        {
+          "localized_name": "prompt_zh",
+          "name": "prompt_zh",
+          "type": "STRING",
+          "links": []
+        },
+        {
+          "localized_name": "id",
+          "name": "id",
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CharSheetPortrait"
+      },
+      "title": "Portrait (the character)",
+      "widgets_values": [
+        "{\"id\": \"f71f980dde3\"}",
+        "crop to size",
+        1024,
+        1280
+      ],
+      "color": "#417505"
+    },
+    {
+      "id": 2,
+      "type": "CharSheetCostume",
+      "pos": [
+        0,
+        970
+      ],
+      "size": [
+        720,
+        954
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "state_json",
+          "name": "state_json",
+          "type": "STRING",
+          "widget": {
+            "name": "state_json"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "resize_mode",
+          "name": "resize_mode",
+          "type": "COMBO",
+          "widget": {
+            "name": "resize_mode"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "include_footwear",
+          "name": "include_footwear",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "include_footwear"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            6
+          ]
+        },
+        {
+          "localized_name": "prompt_en",
+          "name": "prompt_en",
+          "type": "STRING",
+          "links": []
+        },
+        {
+          "localized_name": "prompt_zh",
+          "name": "prompt_zh",
+          "type": "STRING",
+          "links": []
+        },
+        {
+          "localized_name": "id",
+          "name": "id",
+          "type": "STRING",
+          "links": []
+        },
+        {
+          "localized_name": "footwear_en",
+          "name": "footwear_en",
+          "type": "STRING",
+          "links": []
+        },
+        {
+          "localized_name": "footwear_zh",
+          "name": "footwear_zh",
+          "type": "STRING",
+          "links": []
+        },
+        {
+          "localized_name": "outfit_en",
+          "name": "outfit_en",
+          "type": "STRING",
+          "links": [
+            1
+          ]
+        },
+        {
+          "localized_name": "outfit_zh",
+          "name": "outfit_zh",
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CharSheetCostume"
+      },
+      "title": "Costume (the outfit)",
+      "widgets_values": [
+        "{\"id\": \"SPR-0001\", \"view\": \"front\"}",
+        "crop to size",
+        1024,
+        1280,
+        true,
+        2
+      ],
+      "color": "#417505"
+    },
+    {
+      "id": 3,
+      "type": "CharSheetPose",
+      "pos": [
+        0,
+        2004
+      ],
+      "size": [
+        720,
+        950
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "state_json",
+          "name": "state_json",
+          "type": "STRING",
+          "widget": {
+            "name": "state_json"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "resize_mode",
+          "name": "resize_mode",
+          "type": "COMBO",
+          "widget": {
+            "name": "resize_mode"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "poses",
+          "name": "poses",
+          "shape": 6,
+          "type": "IMAGE",
+          "links": [
+            7
+          ]
+        },
+        {
+          "localized_name": "pose_prompts_en",
+          "name": "pose_prompts_en",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            2
+          ]
+        },
+        {
+          "localized_name": "pose_prompts_zh",
+          "name": "pose_prompts_zh",
+          "shape": 6,
+          "type": "STRING",
+          "links": []
+        },
+        {
+          "localized_name": "pose_1",
+          "name": "pose_1",
+          "type": "IMAGE",
+          "links": []
+        },
+        {
+          "localized_name": "pose_2",
+          "name": "pose_2",
+          "type": "IMAGE",
+          "links": []
+        },
+        {
+          "localized_name": "selection",
+          "name": "selection",
+          "type": "CHARSHEET_POSES",
+          "links": []
+        },
+        {
+          "localized_name": "count",
+          "name": "count",
+          "type": "INT",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CharSheetPose"
+      },
+      "title": "Poses (one image per pose)",
+      "widgets_values": [
+        "{\"ids\": [\"full_single_P001_front\", \"full_single_P015_front\", \"full_single_P002_side\"], \"flip\": [], \"use_depth\": false}",
+        "crop to size",
+        1024,
+        1280
+      ],
+      "color": "#417505"
+    },
+    {
+      "id": 4,
+      "type": "StringConcatenate",
+      "pos": [
+        830,
+        0
+      ],
+      "size": [
+        460,
+        200
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string_a",
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": 1
+        },
+        {
+          "localized_name": "string_b",
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 2
+        },
+        {
+          "localized_name": "delimiter",
+          "name": "delimiter",
+          "type": "STRING",
+          "widget": {
+            "name": "delimiter"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "STRING",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate"
+      },
+      "title": "Outfit + pose text",
+      "widgets_values": [
+        "",
+        "",
+        " The pose: "
+      ],
+      "color": "#F5A623"
+    },
+    {
+      "id": 5,
+      "type": "StringConcatenate",
+      "pos": [
+        830,
+        280
+      ],
+      "size": [
+        460,
+        420
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string_a",
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "string_b",
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 3
+        },
+        {
+          "localized_name": "delimiter",
+          "name": "delimiter",
+          "type": "STRING",
+          "widget": {
+            "name": "delimiter"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "STRING",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            4,
+            8
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate"
+      },
+      "title": "Prompt (pose text is added at the end)",
+      "widgets_values": [
+        "<Picture 1> is the character. <Picture 3> is the pose. Draw the character from <Picture 1> in the pose and camera angle of <Picture 3>; the mannequin is only a pose guide, not an appearance reference. Photorealistic studio photograph, real person, natural skin texture, soft even lighting. Full body from head to toe, plain light grey studio background. ",
+        "",
+        ""
+      ],
+      "color": "#417505"
+    },
+    {
+      "id": 6,
+      "type": "KikoH3ReferencePrompter",
+      "title": "H3 Reference Prompter",
+      "pos": [
+        1340,
+        0
+      ],
+      "size": [
+        460,
+        560
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": 4
+        },
+        {
+          "name": "image_1",
+          "type": "IMAGE",
+          "shape": 7,
+          "link": 5
+        },
+        {
+          "name": "image_2",
+          "type": "IMAGE",
+          "shape": 7,
+          "link": 6
+        },
+        {
+          "name": "image_3",
+          "type": "IMAGE",
+          "shape": 7,
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "shape": 6,
+          "links": [
+            9
+          ]
+        },
+        {
+          "name": "notes",
+          "type": "STRING",
+          "shape": 6,
+          "links": [
+            10
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "Node name for S&R": "KikoH3ReferencePrompter"
+      },
+      "widgets_values": [
+        "",
+        "hf: Qwen-VL/Huihui-Qwen3-VL-8B-Instruct-abliterated",
+        "auto",
+        "auto",
+        "auto",
+        42,
+        "fixed",
+        0.7,
+        512,
+        1536,
+        false
+      ]
+    },
+    {
+      "id": 7,
+      "type": "DisplayText",
+      "title": "Draft (short prompt)",
+      "pos": [
+        830,
+        760
+      ],
+      "size": [
+        460,
+        360
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "Node name for S&R": "DisplayText"
+      },
+      "widgets_values": [
+        null
+      ]
+    },
+    {
+      "id": 8,
+      "type": "DisplayText",
+      "title": "H3 prompt (what the prompter wrote)",
+      "pos": [
+        1860,
+        0
+      ],
+      "size": [
+        700,
+        900
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "Node name for S&R": "DisplayText"
+      },
+      "widgets_values": [
+        null
+      ]
+    },
+    {
+      "id": 9,
+      "type": "DisplayText",
+      "title": "Notes (what the model saw)",
+      "pos": [
+        1860,
+        960
+      ],
+      "size": [
+        700,
+        700
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "properties": {
+        "cnr_id": "kikotools",
+        "Node name for S&R": "DisplayText"
+      },
+      "widgets_values": [
+        null
+      ]
+    },
+    {
+      "id": 10,
+      "type": "MarkdownNote",
+      "title": "How to use",
+      "pos": [
+        1340,
+        620
+      ],
+      "size": [
+        460,
+        460
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "## H3 Reference Prompter test (no image)\n\nThe prompter reads the portrait, the costume and each pose with a local vision model and rewrites the short prompt into a long H3 prompt. The short prompt is kept word for word at the start; the model adds the detail after it. Roles are `auto`.\n\n**Nude** (18+ mode): the costume picture is a blank placeholder and the prompter describes the unclothed adult body. It refuses unless the portrait's estimated age is 20 or older. Never use an uploaded photo of a real person.\n\nThe three Display Text nodes show the short prompt, the H3 prompt and what the model saw."
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      6,
+      4,
+      0,
+      "STRING"
+    ],
+    [
+      2,
+      3,
+      1,
+      4,
+      1,
+      "STRING"
+    ],
+    [
+      3,
+      4,
+      0,
+      5,
+      1,
+      "STRING"
+    ],
+    [
+      4,
+      5,
+      0,
+      6,
+      0,
+      "STRING"
+    ],
+    [
+      5,
+      1,
+      0,
+      6,
+      1,
+      "IMAGE"
+    ],
+    [
+      6,
+      2,
+      0,
+      6,
+      2,
+      "IMAGE"
+    ],
+    [
+      7,
+      3,
+      0,
+      6,
+      3,
+      "IMAGE"
+    ],
+    [
+      8,
+      5,
+      0,
+      7,
+      0,
+      "STRING"
+    ],
+    [
+      9,
+      6,
+      0,
+      8,
+      0,
+      "STRING"
+    ],
+    [
+      10,
+      6,
+      1,
+      9,
+      0,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.55,
+      "offset": [
+        40,
+        40
+      ]
+    }
+  },
+  "version": 0.4,
+  "last_link_id": 10,
+  "last_node_id": 10
+}

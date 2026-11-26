@@ -104,6 +104,7 @@ switching, workflow persistence and cleanup. See the retained
 | [📂 Local Image Loader](#-local-image-loader) | Gallery that loads a local image, a folder path, or ordered refs for MiniMax H3 | 💾 Images |
 | [🌐 Model Downloader](#-model-downloader) | Download models from CivitAI, HuggingFace, and custom URLs | 🛠️ Utils |
 | [🧠 Kiko Prompt Enhancer](#-kiko-prompt-enhancer) | Rewrite a short prompt in a base model's style with the loaded text encoder | 🧠 Prompts |
+| [🫶 H3 Reference Prompter](#-h3-reference-prompter) | Write one long MiniMax H3 prompt from a short draft and up to three reference pictures | 🧠 Prompts |
 | [⏱️ Workflow Timer](#️-workflow-timer) | Real-time execution timer with customizable display | 🛠️ Utils |
 | [🗂️ Project File Path](#️-project-file-path) | Build safe, organized save prefixes like `MyProject/images/image` | 🛠️ Utils |
 
@@ -611,6 +612,25 @@ The image is the first frame ...
 
 Example workflow: [prompt_enhancer_example.json](examples/workflows/prompt_enhancer_example.json)
 
+#### 🫶 H3 Reference Prompter
+Turns a short draft and up to three reference pictures (character, outfit, pose) into one long prompt for MiniMax H3 Image, using a local vision model. No network access. Full guide: [h3_reference_prompter.md](examples/documentation/h3_reference_prompter.md).
+
+- **Inputs**: `prompt` (the draft), `model`, `role_1` to `role_3`, `seed`, and optional `image_1` to `image_3`
+- **Picture tags**: `image_N` is always `<Picture N>`, and slots are never renumbered. The whole draft is written at the start of the prompt word for word; the model adds the detail after it and never repeats the draft's sentences. The prompt keeps exactly the tags the draft has: if the model adds a tag the draft does not have, the node retries once, then stops with an error naming it
+- **Roles**: `auto` (default), `character`, `outfit`, `pose` or `other`. `auto` reads the draft's `<Picture N> is the character/outfit/pose.` sentences; a slot the draft does not name falls back to `image_1` character, `image_2` outfit, `image_3` pose. A role picked by hand wins
+- **Nude mode**: when the draft says `nude`, `naked` or `裸`, the adult age check runs whatever the roles are; with no outfit picture, the outfit part also becomes a plain, non-sexual description of the unclothed adult body. The run is refused unless a character picture is connected and its estimated age is 20 or older (a picture whose estimate could be under 20 is refused), and a youth word (teen, child, kid, minor, underage and the like) in the notes, the draft or the written part stops it. The word "girl" is never checked. Never use pictures of real people, and never combine an uploaded portrait with Nude. See [Nude mode](examples/documentation/h3_reference_prompter.md#nude-mode)
+- **Two passes**: each picture is described once (cached for the ComfyUI session), then the prompt is written from the draft and those notes. Transformers models describe all the pictures of a run in one batch and write all the prompts in another. Batching needs transformers 5 or newer, and only Qwen3-VL and Qwen3.5 folders run batched; other cases run one request at a time. Pictures are scaled to about 1 MP for description
+- **model**: `hf: <folder>` (a transformers folder under `models/LLM` whose `config.json` lists a Qwen3-VL, Qwen3.5 or Gemma 4 vision architecture), `native: <file>` (the Prompt Enhancer's vision text encoders) or `gguf: <file>` (a GGUF model with an `mmproj`). A GGUF model loads twice per run (with and without its `mmproj`). A GGUF model that fails to load stops with a message to use a transformers folder instead
+- **Recommended model**: [Huihui-Qwen3-VL-8B-Instruct-abliterated](https://huggingface.co/huihui-ai/Huihui-Qwen3-VL-8B-Instruct-abliterated) in `models/LLM/Qwen-VL/<folder>/`. The picker defaults to it, then to any Qwen3-VL-8B, then to the first `hf:` folder. It uses about 17 GB of VRAM while it runs; ComfyUI's models are freed first. Qwen3.5-4B and Gemma 4 folders work too
+- **Advanced**: `temperature` (0.7), `describe_tokens` (512), `write_tokens` (1536), `keep_loaded` (off)
+- **Outputs**: `prompt` and `notes`, both lists. Notes are the per-picture descriptions
+- **One per pose**: when `prompt` and `image_3` arrive as lists, each item gets its own prompt and notes. Single values are used for every item
+- **Seeds**: one batched call samples with one seed, so with a transformers model every item uses the base seed and a run still repeats exactly. GGUF and native models run one call at a time, and each item's seed is the base seed plus the item index
+- **Memory**: before the model loads, ComfyUI's loaded models are freed with the same safe unload as Kiko Purge VRAM. Afterwards the prompt model is unloaded unless `keep_loaded` is on. A kept model of another backend is freed when the backend changes. A kept `hf:` model sits outside ComfyUI's memory management
+- **Panel**: shows each prompt with its word count, previous and next buttons, a copy button and collapsible notes
+
+Example workflow: [h3_reference_prompter_charsheet_test.json](examples/workflows/h3_reference_prompter_charsheet_test.json). It uses the [KikoCharSheet](https://github.com/ComfyAssets/ComfyUI-KikoCharSheet) pickers and shows the draft, the prompt and the notes in Display Text nodes. It does not draw an image.
+
 #### ⏱️ Workflow Timer
 Real-time execution timer that displays workflow duration with millisecond precision.
 
@@ -1027,6 +1047,7 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Model Downloader** | Download models from CivitAI, HuggingFace, and custom URLs | ✅ Complete | [Docs](#-model-downloader) |
 | **Workflow Timer** | Real-time execution timer with customizable display | ✅ Complete | [Docs](#️-workflow-timer) |
 | **Kiko Prompt Enhancer** | Rewrite a short prompt in a base model's preferred style with a local LLM | ✅ Complete | [Docs](#-kiko-prompt-enhancer) |
+| **H3 Reference Prompter** | Write one long MiniMax H3 prompt from a draft and reference pictures | ✅ Complete | [Docs](examples/documentation/h3_reference_prompter.md) |
 | **Model Recommended Settings** | Steps, CFG, sampler and scheduler from a model's Civitai info | ✅ Complete | [Docs](#-model-recommended-settings) |
 | **Checkpoint Folder Iterator** | One checkpoint or diffusion model per queued run, from a folder | ✅ Complete | [Docs](#-checkpoint-folder-iterator) |
 | **Model Compare Sheet** | Labeled grid of a model sweep, one tile per run | ✅ Complete | [Docs](#-model-compare-sheet) |
