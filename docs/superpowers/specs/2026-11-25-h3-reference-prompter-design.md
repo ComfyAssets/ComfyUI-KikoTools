@@ -199,3 +199,19 @@ labelled `<Picture 1>`, `<Picture 2>`, … in input order.
   `config.json` architectures) and how its chat template is applied per family.
 - Generation defaults (temperature, token limits per pass).
 - Test fakes for the model backends.
+
+## Amendments after live testing
+
+- **The whole draft leads the prompt (supersedes Goal 2's parts 1 and 8).** The
+  node writes the user's whole draft word for word at the start of the prompt,
+  and the model writes only the detail after it (subject, outfit, pose, camera,
+  lighting, background, closing list). Sentences the model repeats from the
+  draft are dropped. In live H3 image tests the model kept leaving out the
+  draft's view and pose name, so H3 drew the wrong view; writing the draft
+  first fixed it. The tag check still runs on the full prompt; since the draft
+  is always present, only tags the model adds can fail it.
+- **Default model.** Huihui-Qwen3-VL-8B-Instruct-abliterated, chosen by the
+  maintainer after side-by-side image tests; Qwen3.5-4B and Gemma 4 remain
+  supported.
+- **Batching.** Transformers models describe and write in batches (Qwen3-VL and
+  Qwen3.5 only; others one at a time), so items in a batch share the base seed.
