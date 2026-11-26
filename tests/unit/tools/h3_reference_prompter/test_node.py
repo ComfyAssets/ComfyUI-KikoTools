@@ -89,7 +89,12 @@ class Harness:
 
 
 def img(value=0.0, batch=1):
-    return torch.full((batch, 4, 4, 3), value)
+    # Scaled down so no test picture is white enough to count as a placeholder.
+    return torch.full((batch, 4, 4, 3), value / 10)
+
+
+def white(side=64):
+    return torch.ones((1, side, side, 3))
 
 
 def run(prompt=None, images=None, seed=5, **extra):
@@ -956,3 +961,50 @@ def test_batch_checks_youth_words_only_for_the_nude_item(monkeypatch):
         NUDE_LEAD + "\n\n" + BODY,
         plain + "\n\nA girl.",
     ]
+
+
+def test_placeholder_outfit_picture_is_no_picture_in_a_nude_run(monkeypatch):
+    h = nude_harness(monkeypatch)
+    out = run_nude(h, images={"image_1": [img(1)], "image_2": [white()]})
+    assert out["result"][0] == [NUDE_LEAD + "\n\n" + BODY]
+    assert [c["system"] for c in h.describes] == [describe_system("character")]
+    (writer,) = h.writers
+    assert nude_block((22, 28)) in writer["prompt"]
+    assert note_labels(out) == ["<Picture 1> (character)"]
+
+
+def test_placeholder_does_not_stop_the_age_check(monkeypatch):
+    h = nude_harness(monkeypatch, character="A woman.\nEstimated age: 17 to 23 years.")
+    with pytest.raises(ValueError, match="17 to 23 years for image_1"):
+        run_nude(h, images={"image_1": [img(1)], "image_2": [white()]})
+    assert h.writers == []
+
+
+def test_placeholder_batch_does_not_trip_the_batch_check(monkeypatch):
+    h = nude_harness(monkeypatch)
+    batch = torch.ones((2, 64, 64, 3))
+    out = run_nude(h, images={"image_1": [img(1)], "image_2": [batch]})
+    assert note_labels(out) == ["<Picture 1> (character)"]
+
+
+def test_placeholder_is_dropped_per_item_in_a_list(monkeypatch):
+    h = nude_harness(monkeypatch)
+    out = run_nude(
+        h,
+        prompt=[NUDE_DRAFT, NUDE_DRAFT],
+        images={"image_1": [img(1)], "image_2": [white(), img(2)]},
+    )
+    assert note_labels(out, 0) == ["<Picture 1> (character)"]
+    assert note_labels(out, 1) == ["<Picture 1> (character)", "<Picture 2> (pose)"]
+
+
+def test_only_a_placeholder_and_no_draft_has_nothing_to_write(monkeypatch):
+    Harness(monkeypatch)
+    with pytest.raises(ValueError, match="nothing to write from"):
+        run(prompt=[""], images={"image_1": [white()]})
+
+
+def test_a_normal_picture_in_the_same_slot_is_still_described(monkeypatch):
+    h = nude_harness(monkeypatch)
+    run_nude(h, images={"image_1": [img(1)], "image_2": [img(2)]})
+    assert len(h.describes) == 2

@@ -19,6 +19,7 @@ from kikotools.tools.h3_reference_prompter.logic import (
     find_youth_word,
     image_key,
     is_nude,
+    is_placeholder,
     item_seed,
     pair_items,
     parse_age_estimate,
@@ -457,3 +458,24 @@ def test_check_adult_does_not_check_girl_in_the_notes():
 )
 def test_says_nude_matches_english_and_chinese(draft, expected):
     assert says_nude(draft) is expected
+
+
+@pytest.mark.parametrize(
+    "image, expected",
+    [
+        (torch.ones((1, 64, 64, 3)), True),
+        (torch.full((1, 128, 96, 3), 0.98), True),
+        (torch.ones((1, 512, 512, 3)), False),
+        (torch.ones((1, 64, 129, 3)), False),
+        (torch.full((1, 64, 64, 3), 0.5), False),
+        (torch.full((1, 64, 64, 3), 0.97), False),
+    ],
+)
+def test_is_placeholder_needs_a_small_uniformly_white_image(image, expected):
+    assert is_placeholder(image) is expected
+
+
+def test_is_placeholder_rejects_an_image_with_one_dark_pixel():
+    image = torch.ones((1, 64, 64, 3))
+    image[0, 10, 10, 0] = 0.2
+    assert is_placeholder(image) is False

@@ -29,6 +29,7 @@ from .logic import (
     find_youth_word,
     image_key,
     says_nude,
+    is_placeholder,
     item_seed,
     pair_items,
     resolve_roles,
@@ -89,6 +90,13 @@ def _resolve_model(name: str) -> ModelEntry:
             "a GGUF also needs its mmproj file next to it."
         )
     return entry
+
+
+def _without_placeholders(column: Optional[List[Any]]) -> Optional[List[Any]]:
+    """The column with each blank placeholder picture replaced by None."""
+    if column is None:
+        return None
+    return [None if is_placeholder(image) else image for image in column]
 
 
 def _check_batches(items: List[Dict[str, Any]]) -> None:
@@ -538,7 +546,14 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
     ) -> Dict[str, Any]:
         if not prompt:
             raise ValueError("no prompt: connect or type a draft prompt")
-        images = {"image_1": image_1, "image_2": image_2, "image_3": image_3}
+        images = {
+            name: _without_placeholders(column)
+            for name, column in (
+                ("image_1", image_1),
+                ("image_2", image_2),
+                ("image_3", image_3),
+            )
+        }
         _check_something_to_write(prompt, images)
         model_name = model[0]
         keep = bool(keep_loaded[0]) if keep_loaded else False

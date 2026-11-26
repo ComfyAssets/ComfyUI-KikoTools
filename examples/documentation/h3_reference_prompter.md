@@ -61,6 +61,8 @@ The pose description never describes the mannequin's own look (surface, colour, 
 
 KikoCharSheet's 18+ mode has a costume with no picture, Nude. It writes "The character's outfit: completely nude, wearing no clothing and no footwear." into the draft and sends no outfit picture.
 
+A blank placeholder picture (a small, uniformly white image, such as KikoCharSheet's Nude costume image) counts as no picture: it is not described and does not count for roles or nude detection.
+
 **Detection.** Two checks look at each item's draft:
 
 - **Age check and word check:** they run whenever the draft contains `nude` or `naked` (whole word, any case) or the Chinese `裸`, whatever the roles and pictures are. The draft is copied into the prompt, so its nude wording reaches the image model either way. A workflow with fixed roles, or a draft such as "nude lipstick" with an outfit picture, is checked too.

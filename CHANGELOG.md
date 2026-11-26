@@ -36,6 +36,8 @@
 - A panel on the node shows each prompt with its word count, previous and next
   buttons, a copy button and collapsible notes.
 - Example workflow: `h3_reference_prompter_charsheet_test.json`.
+- A blank placeholder picture (a small, uniformly white image, such as
+  KikoCharSheet's Nude costume image) counts as no picture.
 - Roles default to `auto`, which reads the draft's `<Picture N> is the
   character/outfit/pose.` sentences and falls back to character, outfit, pose;
   a role picked by hand wins. A KikoCharSheet Nude run no longer describes the

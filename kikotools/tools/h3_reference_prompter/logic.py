@@ -156,6 +156,23 @@ def pair_items(**columns: List[Any]) -> List[Dict[str, Any]]:
     return items
 
 
+PLACEHOLDER_MAX_SIDE = 128
+PLACEHOLDER_MIN_VALUE = 0.98
+
+
+def is_placeholder(image: torch.Tensor) -> bool:
+    """True for a small, uniformly white IMAGE that stands for "no picture".
+
+    KikoCharSheet sends a blank 64x64 white image where a costume has no picture
+    (the Nude costume). Size is read from a ComfyUI (batch, height, width, channels)
+    tensor.
+    """
+    height, width = image.shape[1], image.shape[2]
+    if height > PLACEHOLDER_MAX_SIDE or width > PLACEHOLDER_MAX_SIDE:
+        return False
+    return bool((image >= PLACEHOLDER_MIN_VALUE).all())
+
+
 def item_seed(seed: int, index: int) -> int:
     return (seed + index) % _SEED_MODULUS
 
