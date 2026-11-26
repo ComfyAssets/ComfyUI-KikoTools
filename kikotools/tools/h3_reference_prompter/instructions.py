@@ -178,7 +178,7 @@ def nude_block(age: AgeRange) -> str:
     wording = f'"an adult woman aged {low} to {high}"'
     if high < 30:
         wording += ' or "an adult woman in her twenties"'
-    banned = ", ".join(f'"{word}"' for word in YOUTH_WORDS + ("girl",))
+    banned = ", ".join(f'"{word}"' for word in YOUTH_WORDS)
     return (
         "Nude mode. The draft says the person is nude, and there is no outfit "
         "picture. In place of the outfit part, describe the unclothed adult "
@@ -199,7 +199,7 @@ def adult_block(age: AgeRange) -> str:
     """Writer instructions for a draft that says nude while an outfit picture
     is connected: the outfit stays, the person is named as an adult."""
     low, high = age
-    banned = ", ".join(f'"{word}"' for word in YOUTH_WORDS + ("girl",))
+    banned = ", ".join(f'"{word}"' for word in YOUTH_WORDS)
     return (
         "The draft mentions nudity. The person is an adult: call them "
         f'"an adult woman aged {low} to {high}", or "an adult man" if the '

@@ -76,11 +76,11 @@ A blank placeholder picture (a small, uniformly white image, such as KikoCharShe
 - the estimate is missing or cannot be read;
 - the lower bound is under 20, so a picture whose estimate could be under 20 is refused;
 - the character notes use a youth word: teen, teenage, teenager, adolescent, schoolgirl, child, childlike, kid, minor, underage or loli (whole words, any case, plurals included, so "late teens" counts);
-- the draft uses one of those words or "girl".
+- the draft uses one of those words.
 
 The error says that nude prompts need an adult character picture whose estimated age is 20 or older, and gives the estimate it found. Nothing is written for any item; like other errors, ComfyUI's model list is repaired and the prompt model is freed.
 
-**Output check.** After writing, the model's part (not the draft) must not contain a youth word, "girl" or "girls". A hit is retried once, together with any tag problem, with a message naming the word. If the word is still there, the run stops with an error. Outside nude mode, "girl" is not checked.
+**Output check.** After writing, the model's part (not the draft) must not contain a youth word. A hit is retried once, together with any tag problem, with a message naming the word. If the word is still there, the run stops with an error. Outside nude mode, nothing is checked. The word "girl" is never checked.
 
 The age estimate comes from the vision model and can be wrong. The check refuses doubtful pictures; it does not prove anyone's age.
 

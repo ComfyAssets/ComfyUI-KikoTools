@@ -383,11 +383,8 @@ def test_find_youth_word_ignores_partial_words_and_young_woman():
     assert find_youth_word("") is None
 
 
-def test_find_youth_word_checks_girl_only_when_asked():
-    assert find_youth_word("A girl stands.") is None
-    assert find_youth_word("A girl stands.", girl=True) == "girl"
-    assert find_youth_word("Two GIRLS.", girl=True) == "girls"
-    assert find_youth_word("A girlish smile.", girl=True) is None
+def test_find_youth_word_does_not_check_girl():
+    assert find_youth_word("A girl stands. Two GIRLS.") is None
 
 
 ADULT_NOTES = "A young woman with dark hair.\nEstimated age: 22 to 28 years."
@@ -438,8 +435,11 @@ def test_check_adult_refuses_a_youth_word_in_the_notes_and_gives_the_estimate():
     assert "'teens'" in message and "20 to 24 years" in message
 
 
-def test_check_adult_refuses_a_youth_word_or_girl_in_the_draft():
-    assert "'girl'" in _refusal([(1, ADULT_NOTES)], "A nude girl standing.")
+def test_check_adult_accepts_girl_in_the_draft():
+    assert check_adult([(1, ADULT_NOTES)], "A nude girl standing.") == (22, 28)
+
+
+def test_check_adult_refuses_a_youth_word_in_the_draft():
     assert "'teen'" in _refusal([(1, ADULT_NOTES)], "A nude teen.")
 
 

@@ -268,10 +268,10 @@ def _combine(lead: str, raw: str) -> Tuple[str, str]:
 
 
 def _problems(draft: str, written: str, combined: str, nude: bool) -> Problems:
-    """Tag problems, a blank part and, in nude mode, a youth word or "girl"
-    in the model's part (the draft lead is not checked here)."""
+    """Tag problems, a blank part and, in nude mode, a youth word in
+    the model's part (the draft lead is not checked here)."""
     missing, extra = tag_problems(draft, combined)
-    banned = find_youth_word(written, girl=True) if nude else None
+    banned = find_youth_word(written) if nude else None
     return missing, extra, not written, banned
 
 

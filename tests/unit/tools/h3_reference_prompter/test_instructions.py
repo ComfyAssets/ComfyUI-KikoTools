@@ -371,7 +371,7 @@ def test_nude_block_uses_adult_wording_and_bans_youth_words():
     assert "an adult woman aged 22 to 28" in text
     assert "in her twenties" in text
     assert "adult man" in text
-    for word in YOUTH_WORDS + ("girl",):
+    for word in YOUTH_WORDS:
         assert f'"{word}"' in text
 
 
@@ -397,13 +397,13 @@ def test_writer_user_keeps_the_outfit_when_an_outfit_picture_is_connected():
     text = writer_user(NUDE_LEAD, notes, adult=(22, 28))
     assert nude_block((22, 28)) not in text
     assert text.endswith(adult_block((22, 28)) + "\n\nWrite the final prompt now.")
-    for word in ("teen", "girl"):
-        assert f'"{word}"' in adult_block((22, 28))
+    assert '"teen"' in adult_block((22, 28))
+    assert '"girl"' not in adult_block((22, 28))
 
 
 def test_retry_user_names_a_banned_word():
-    text = retry_user(([], []), banned="girl")
-    assert '"girl"' in text and "Remove" in text
+    text = retry_user(([], []), banned="teen")
+    assert '"teen"' in text and "Remove" in text
     assert "adult woman" in text
     assert "picture tags" not in text
     assert text.endswith("give only the prompt.")

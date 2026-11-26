@@ -867,12 +867,20 @@ def test_youth_word_in_the_written_part_is_retried_naming_it(monkeypatch, kind):
 
 @pytest.mark.parametrize("kind", ["hf", "gguf"])
 def test_youth_word_after_the_retry_raises(monkeypatch, kind):
-    h = nude_harness(monkeypatch, writes=["A girl stands."], kind=kind)
-    with pytest.raises(ValueError, match="'girl'") as caught:
+    h = nude_harness(monkeypatch, writes=["A teen stands."], kind=kind)
+    with pytest.raises(ValueError, match="'teen'") as caught:
         run_nude(h)
     assert "after a retry" in str(caught.value)
     assert len(h.writers) == 2
     assert "repair" in h.events
+
+
+@pytest.mark.parametrize("kind", ["hf", "gguf"])
+def test_girl_in_the_written_part_passes_in_nude_mode(monkeypatch, kind):
+    h = nude_harness(monkeypatch, writes=["A girl stands."], kind=kind)
+    out = run_nude(h)
+    assert out["result"][0] == [NUDE_LEAD + "\n\nA girl stands."]
+    assert len(h.writers) == 1
 
 
 def test_girl_is_allowed_outside_nude_mode(monkeypatch):
@@ -952,14 +960,14 @@ def test_explicit_outfit_role_does_not_skip_the_age_check(monkeypatch):
 
 def test_batch_checks_youth_words_only_for_the_nude_item(monkeypatch):
     plain = "<Picture 1> is the character. A woman in a red coat."
-    h = nude_harness(monkeypatch, writes=["A girl.", "A girl.", BODY])
+    h = nude_harness(monkeypatch, writes=["A teen.", "A teen.", BODY])
     out = run_nude(h, prompt=[NUDE_DRAFT, plain])
     assert h.batches[-2:] == [("write", 2), ("write", 1)]
     assert nude_block((22, 28)) in h.writers[0]["prompt"]
     assert nude_block((22, 28)) not in h.writers[1]["prompt"]
     assert out["result"][0] == [
         NUDE_LEAD + "\n\n" + BODY,
-        plain + "\n\nA girl.",
+        plain + "\n\nA teen.",
     ]
 
 

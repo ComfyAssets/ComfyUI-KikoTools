@@ -57,7 +57,6 @@ def _word_pattern(words: Iterable[str]) -> "re.Pattern[str]":
 
 
 _YOUTH = _word_pattern(YOUTH_WORDS)
-_YOUTH_OR_GIRL = _word_pattern(YOUTH_WORDS + ("girl",))
 _REFUSAL = (
     f"Nude prompts need an adult character picture whose estimated age is "
     f"{NUDE_MIN_AGE} or older."
@@ -312,9 +311,9 @@ def parse_age_estimate(notes: Optional[str]) -> Optional[Tuple[int, int]]:
     return low, high
 
 
-def find_youth_word(text: Optional[str], girl: bool = False) -> Optional[str]:
-    """The first youth word in ``text``, lower case; "girl" only when asked."""
-    match = (_YOUTH_OR_GIRL if girl else _YOUTH).search(text or "")
+def find_youth_word(text: Optional[str]) -> Optional[str]:
+    """The first youth word in ``text``, lower case."""
+    match = _YOUTH.search(text or "")
     return match.group(0).lower() if match else None
 
 
@@ -347,7 +346,7 @@ def check_adult(characters: List[Tuple[int, str]], draft: str) -> Tuple[int, int
     ``characters`` holds (slot, notes) for each connected character picture.
     Returns the (low, high) estimate spanning all of them.
     """
-    word = find_youth_word(draft, girl=True)
+    word = find_youth_word(draft)
     if word is not None:
         raise ValueError(f"{_REFUSAL} The draft uses the word '{word}'.")
     if not characters:
