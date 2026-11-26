@@ -430,7 +430,9 @@ def test_writer_user_puts_the_hint_after_the_notes():
 def test_writer_user_tells_the_writer_to_drop_traits_the_hint_negates():
     notes = [(1, "character", "Dark hair.")]
     text = writer_user("Draft.", notes, hint=HINT)
-    assert "no tattoos, no freckles, no bangs, no glasses or no facial hair" in text
+    assert 'starts with "no"' in text
+    assert "never write" in text and "does not mention" in text
+    assert "no bangs" not in text and "no glasses" not in text
     assert "leave that trait out of the prompt" in text
     assert "say plainly that the person has none" in text
 

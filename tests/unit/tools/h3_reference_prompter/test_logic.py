@@ -2,6 +2,7 @@ import pytest
 import torch
 
 from kikotools.tools.h3_reference_prompter.logic import (
+    hint_says_nude,
     AUTO,
     DEFAULT_ROLES,
     NUDE_MIN_AGE,
@@ -703,3 +704,31 @@ def test_hint_lead_collapses_whitespace():
 def test_hint_lead_that_becomes_empty_is_empty():
     assert hint_lead("<Picture 1>", True) == ""
     assert hint_lead("Unclothed detail: x.", False) == ""
+
+
+@pytest.mark.parametrize(
+    "hint",
+    [
+        "Makeup: wearing soft glam makeup, and satin nude lips.",
+        "Face: nude-pink lips.",
+        "Makeup: glossy nude-pink lips. Face: Nude pink lips.",
+        "Makeup: matte nude lipstick.",
+        "",
+        None,
+    ],
+)
+def test_hint_says_nude_ignores_lip_colours(hint):
+    assert hint_says_nude(hint) is False
+
+
+@pytest.mark.parametrize(
+    "hint",
+    [
+        "Extra: nude.",
+        "She is naked, with satin nude lips.",
+        "Makeup: nude lips. Extra: fully nude.",
+        "裸",
+    ],
+)
+def test_hint_says_nude_still_sees_real_nude_wording(hint):
+    assert hint_says_nude(hint) is True

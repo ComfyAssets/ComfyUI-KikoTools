@@ -42,6 +42,8 @@ YOUTH_WORDS: Tuple[str, ...] = (
     "loli",
 )
 _NUDE = re.compile(r"\b(?:nude|naked)\b|裸", re.IGNORECASE)
+# "nude lips", "nude-pink lips", "nude lipstick": a colour, not a state of dress.
+_NUDE_LIP_COLOUR = re.compile(r"\bnude(?:[- ][a-z]+)?[- ]lip\w*", re.IGNORECASE)
 _AGE_LINE = re.compile(
     r"estimated\s+age\s*:\s*(\d+)\s*(?:to|-|–)\s*(\d+)\s*years?", re.IGNORECASE
 )
@@ -313,6 +315,15 @@ def says_nude(draft: Optional[str]) -> bool:
     return bool(_NUDE.search(draft or ""))
 
 
+def hint_says_nude(hint: Optional[str]) -> bool:
+    """The character hint says nude or naked, apart from lip colours.
+
+    The Character Hint nodes write phrases such as "satin nude lips", so a
+    lip colour must not turn on the adult age check or nude mode.
+    """
+    return says_nude(_NUDE_LIP_COLOUR.sub(" ", hint or ""))
+
+
 def is_nude(draft: Optional[str], connected_roles: Iterable[str]) -> bool:
     """The draft says nude and no connected picture is the outfit: the writer
     describes the unclothed body in place of an outfit."""
@@ -387,7 +398,7 @@ def body_is_nude(
     """Body mode of an item: the draft or the character hint says nude and no
     connected picture (one with notes) is the outfit."""
     roles = [role for _, role, text in notes if text is not None]
-    return is_nude(lead, roles) or is_nude(hint, roles)
+    return "outfit" not in roles and (says_nude(lead) or hint_says_nude(hint))
 
 
 def find_minor_age(text: Optional[str]) -> Optional[int]:

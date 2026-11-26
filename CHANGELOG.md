@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- H3 Reference Prompter: a character hint whose makeup or lip colour says
+  "nude lips" (Soft glam, Natural, Dewy and other styles) no longer turns on
+  the nude age check and nude mode. In 1.11.0 such a hint could refuse a
+  clothed draft whose character picture reads as under 20.
+- H3 Reference Prompter: the writer no longer adds "no bangs", "no glasses"
+  and similar to the prompt for traits the hint never ruled out.
+
 ## 1.11.0
 
 ### Added

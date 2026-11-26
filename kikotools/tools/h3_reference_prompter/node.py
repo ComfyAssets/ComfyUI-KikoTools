@@ -34,6 +34,7 @@ from .logic import (
     item_seed,
     pair_items,
     resolve_roles,
+    hint_says_nude,
     says_nude,
     tag_problems,
 )
@@ -250,7 +251,7 @@ def _adult_range(item: Item, notes: List[Note]) -> Optional[AgeRange]:
     Raises ValueError when such an item has no adult character picture. The
     check runs whatever the roles are, even with an outfit picture connected.
     """
-    if not (says_nude(item["prompt"]) or says_nude(item["hint"])):
+    if not (says_nude(item["prompt"]) or hint_says_nude(item["hint"])):
         return None
     characters = [
         (slot, text)

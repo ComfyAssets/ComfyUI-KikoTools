@@ -1217,3 +1217,29 @@ def test_nude_hint_with_an_adult_age_gets_the_nude_block(monkeypatch):
     hint = "The character is an adult woman aged 25. Extra: nude."
     run(prompt=[CLOTHED_DRAFT], character_hint=[hint])
     assert nude_block((25, 25)) in h.writers[0]["prompt"]
+
+
+SOFT_GLAM = (
+    "The character is an adult woman aged 28. Makeup: wearing soft glam makeup, "
+    "warm blush, and satin nude lips."
+)
+
+
+def test_nude_lips_in_the_hint_do_not_turn_on_the_adult_check(monkeypatch):
+    h = nude_harness(monkeypatch, character="A girl.\nEstimated age: 17 to 24 years.")
+    run(
+        prompt=["A woman, standing."],
+        model=[h.entry.name],
+        images={"image_1": [img(1)]},
+        character_hint=[SOFT_GLAM],
+        **AUTO_ROLES,
+    )
+    (writer,) = h.writers
+    assert "Nude mode" not in writer["prompt"]
+
+
+def test_nude_lips_keep_the_unclothed_detail_out(monkeypatch):
+    h = Harness(monkeypatch)
+    hint = SOFT_GLAM + " Unclothed detail: pierced nipples."
+    run(prompt=[CLOTHED_DRAFT], character_hint=[hint])
+    assert "Unclothed detail" not in h.writers[0]["prompt"]
