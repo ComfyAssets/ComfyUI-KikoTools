@@ -1,4 +1,8 @@
 {
+  "id": "0057be6e-e0e8-44e1-9ef2-875791baf9f8",
+  "revision": 0,
+  "last_node_id": 12,
+  "last_link_id": 12,
   "nodes": [
     {
       "id": 1,
@@ -12,7 +16,7 @@
         890
       ],
       "flags": {},
-      "order": 1,
+      "order": 0,
       "mode": 0,
       "inputs": [
         {
@@ -80,16 +84,22 @@
           "links": []
         }
       ],
+      "title": "Portrait (the character)",
       "properties": {
         "Node name for S&R": "CharSheetPortrait"
       },
-      "title": "Portrait (the character)",
       "widgets_values": [
         "{\"id\": \"f71f980dde3\"}",
         "crop to size",
         1024,
         1280
       ],
+      "widgets_values_named": {
+        "state_json": "{\"id\": \"f71f980dde3\"}",
+        "resize_mode": "crop to size",
+        "width": 1024,
+        "height": 1280
+      },
       "color": "#417505"
     },
     {
@@ -101,10 +111,10 @@
       ],
       "size": [
         720,
-        954
+        1018
       ],
       "flags": {},
-      "order": 2,
+      "order": 1,
       "mode": 0,
       "inputs": [
         {
@@ -150,6 +160,16 @@
           "type": "BOOLEAN",
           "widget": {
             "name": "include_footwear"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "outfit_picture",
+          "name": "outfit_picture",
+          "shape": 7,
+          "type": "INT",
+          "widget": {
+            "name": "outfit_picture"
           },
           "link": null
         }
@@ -208,10 +228,10 @@
           "links": []
         }
       ],
+      "title": "Costume (the outfit)",
       "properties": {
         "Node name for S&R": "CharSheetCostume"
       },
-      "title": "Costume (the outfit)",
       "widgets_values": [
         "{\"id\": \"SPR-0001\", \"view\": \"front\"}",
         "crop to size",
@@ -220,6 +240,14 @@
         true,
         2
       ],
+      "widgets_values_named": {
+        "state_json": "{\"id\": \"SPR-0001\", \"view\": \"front\"}",
+        "resize_mode": "crop to size",
+        "width": 1024,
+        "height": 1280,
+        "include_footwear": true,
+        "outfit_picture": 2
+      },
       "color": "#417505"
     },
     {
@@ -234,7 +262,7 @@
         950
       ],
       "flags": {},
-      "order": 3,
+      "order": 2,
       "mode": 0,
       "inputs": [
         {
@@ -325,16 +353,22 @@
           "links": []
         }
       ],
+      "title": "Poses (one image per pose)",
       "properties": {
         "Node name for S&R": "CharSheetPose"
       },
-      "title": "Poses (one image per pose)",
       "widgets_values": [
         "{\"ids\": [\"full_single_P001_front\", \"full_single_P015_front\", \"full_single_P002_side\"], \"flip\": [], \"use_depth\": false}",
         "crop to size",
         1024,
         1280
       ],
+      "widgets_values_named": {
+        "state_json": "{\"ids\": [\"full_single_P001_front\", \"full_single_P015_front\", \"full_single_P002_side\"], \"flip\": [], \"use_depth\": false}",
+        "resize_mode": "crop to size",
+        "width": 1024,
+        "height": 1280
+      },
       "color": "#417505"
     },
     {
@@ -349,7 +383,7 @@
         200
       ],
       "flags": {},
-      "order": 4,
+      "order": 6,
       "mode": 0,
       "inputs": [
         {
@@ -390,15 +424,20 @@
           ]
         }
       ],
+      "title": "Outfit + pose text",
       "properties": {
         "Node name for S&R": "StringConcatenate"
       },
-      "title": "Outfit + pose text",
       "widgets_values": [
         "",
         "",
         " The pose: "
       ],
+      "widgets_values_named": {
+        "string_a": "",
+        "string_b": "",
+        "delimiter": " The pose: "
+      },
       "color": "#F5A623"
     },
     {
@@ -413,7 +452,7 @@
         420
       ],
       "flags": {},
-      "order": 5,
+      "order": 7,
       "mode": 0,
       "inputs": [
         {
@@ -455,21 +494,25 @@
           ]
         }
       ],
+      "title": "Prompt (pose text is added at the end)",
       "properties": {
         "Node name for S&R": "StringConcatenate"
       },
-      "title": "Prompt (pose text is added at the end)",
       "widgets_values": [
         "<Picture 1> is the character. <Picture 3> is the pose. Draw the character from <Picture 1> in the pose and camera angle of <Picture 3>; the mannequin is only a pose guide, not an appearance reference. Photorealistic studio photograph, real person, natural skin texture, soft even lighting. Full body from head to toe, plain light grey studio background. ",
         "",
         ""
       ],
+      "widgets_values_named": {
+        "string_a": "<Picture 1> is the character. <Picture 3> is the pose. Draw the character from <Picture 1> in the pose and camera angle of <Picture 3>; the mannequin is only a pose guide, not an appearance reference. Photorealistic studio photograph, real person, natural skin texture, soft even lighting. Full body from head to toe, plain light grey studio background. ",
+        "string_b": "",
+        "delimiter": ""
+      },
       "color": "#417505"
     },
     {
       "id": 6,
       "type": "KikoH3ReferencePrompter",
-      "title": "H3 Reference Prompter",
       "pos": [
         1340,
         0
@@ -479,60 +522,154 @@
         560
       ],
       "flags": {},
-      "order": 6,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
+          "localized_name": "prompt",
           "name": "prompt",
           "type": "STRING",
-          "widget": {
-            "name": "prompt"
-          },
           "link": 4
         },
         {
+          "localized_name": "image_1",
           "name": "image_1",
-          "type": "IMAGE",
           "shape": 7,
+          "type": "IMAGE",
           "link": 5
         },
         {
+          "localized_name": "image_2",
           "name": "image_2",
-          "type": "IMAGE",
           "shape": 7,
+          "type": "IMAGE",
           "link": 6
         },
         {
+          "localized_name": "image_3",
           "name": "image_3",
-          "type": "IMAGE",
           "shape": 7,
+          "type": "IMAGE",
           "link": 7
+        },
+        {
+          "localized_name": "character_hint",
+          "name": "character_hint",
+          "shape": 7,
+          "type": "STRING",
+          "link": 11
+        },
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "COMBO",
+          "widget": {
+            "name": "model"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "role_1",
+          "name": "role_1",
+          "type": "COMBO",
+          "widget": {
+            "name": "role_1"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "role_2",
+          "name": "role_2",
+          "type": "COMBO",
+          "widget": {
+            "name": "role_2"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "role_3",
+          "name": "role_3",
+          "type": "COMBO",
+          "widget": {
+            "name": "role_3"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "seed",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "temperature",
+          "name": "temperature",
+          "shape": 7,
+          "type": "FLOAT",
+          "widget": {
+            "name": "temperature"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "describe_tokens",
+          "name": "describe_tokens",
+          "shape": 7,
+          "type": "INT",
+          "widget": {
+            "name": "describe_tokens"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "write_tokens",
+          "name": "write_tokens",
+          "shape": 7,
+          "type": "INT",
+          "widget": {
+            "name": "write_tokens"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "keep_loaded",
+          "name": "keep_loaded",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "keep_loaded"
+          },
+          "link": null
         }
       ],
       "outputs": [
         {
+          "localized_name": "prompt",
           "name": "prompt",
-          "type": "STRING",
           "shape": 6,
+          "type": "STRING",
           "links": [
             9
           ]
         },
         {
+          "localized_name": "notes",
           "name": "notes",
-          "type": "STRING",
           "shape": 6,
+          "type": "STRING",
           "links": [
             10
           ]
         }
       ],
       "properties": {
-        "cnr_id": "kikotools",
-        "Node name for S&R": "KikoH3ReferencePrompter"
+        "Node name for S&R": "KikoH3ReferencePrompter",
+        "cnr_id": "kikotools"
       },
       "widgets_values": [
-        "",
         "hf: Qwen-VL/Huihui-Qwen3-VL-8B-Instruct-abliterated",
         "auto",
         "auto",
@@ -543,12 +680,23 @@
         512,
         1536,
         false
-      ]
+      ],
+      "widgets_values_named": {
+        "model": "",
+        "role_1": "hf: Qwen-VL/Huihui-Qwen3-VL-8B-Instruct-abliterated",
+        "role_2": "auto",
+        "role_3": "auto",
+        "seed": "auto",
+        "control_after_generate": 42,
+        "temperature": "fixed",
+        "describe_tokens": 0.7,
+        "write_tokens": 512,
+        "keep_loaded": 1536
+      }
     },
     {
       "id": 7,
       "type": "DisplayText",
-      "title": "Draft (short prompt)",
       "pos": [
         830,
         760
@@ -558,10 +706,11 @@
         360
       ],
       "flags": {},
-      "order": 7,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
+          "localized_name": "text",
           "name": "text",
           "type": "STRING",
           "link": 8
@@ -569,23 +718,37 @@
       ],
       "outputs": [
         {
+          "localized_name": "text",
           "name": "text",
           "type": "STRING",
           "links": []
         }
       ],
+      "title": "Draft (short prompt)",
       "properties": {
-        "cnr_id": "kikotools",
-        "Node name for S&R": "DisplayText"
+        "Node name for S&R": "DisplayText",
+        "cnr_id": "kikotools"
       },
       "widgets_values": [
-        null
-      ]
+        ""
+      ],
+      "widgets_values_named": {
+        "kiko_display_output": ""
+      },
+      "kikoDisplay": {
+        "version": 1,
+        "text": "Text will appear here after execution..."
+      },
+      "extensions": {
+        "kikoDisplay": {
+          "version": 1,
+          "text": "Text will appear here after execution..."
+        }
+      }
     },
     {
       "id": 8,
       "type": "DisplayText",
-      "title": "H3 prompt (what the prompter wrote)",
       "pos": [
         1860,
         0
@@ -595,10 +758,11 @@
         900
       ],
       "flags": {},
-      "order": 8,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
+          "localized_name": "text",
           "name": "text",
           "type": "STRING",
           "link": 9
@@ -606,23 +770,37 @@
       ],
       "outputs": [
         {
+          "localized_name": "text",
           "name": "text",
           "type": "STRING",
           "links": []
         }
       ],
+      "title": "H3 prompt (what the prompter wrote)",
       "properties": {
-        "cnr_id": "kikotools",
-        "Node name for S&R": "DisplayText"
+        "Node name for S&R": "DisplayText",
+        "cnr_id": "kikotools"
       },
       "widgets_values": [
-        null
-      ]
+        ""
+      ],
+      "widgets_values_named": {
+        "kiko_display_output": ""
+      },
+      "kikoDisplay": {
+        "version": 1,
+        "text": "Text will appear here after execution..."
+      },
+      "extensions": {
+        "kikoDisplay": {
+          "version": 1,
+          "text": "Text will appear here after execution..."
+        }
+      }
     },
     {
       "id": 9,
       "type": "DisplayText",
-      "title": "Notes (what the model saw)",
       "pos": [
         1860,
         960
@@ -632,10 +810,11 @@
         700
       ],
       "flags": {},
-      "order": 9,
+      "order": 11,
       "mode": 0,
       "inputs": [
         {
+          "localized_name": "text",
           "name": "text",
           "type": "STRING",
           "link": 10
@@ -643,23 +822,37 @@
       ],
       "outputs": [
         {
+          "localized_name": "text",
           "name": "text",
           "type": "STRING",
           "links": []
         }
       ],
+      "title": "Notes (what the model saw)",
       "properties": {
-        "cnr_id": "kikotools",
-        "Node name for S&R": "DisplayText"
+        "Node name for S&R": "DisplayText",
+        "cnr_id": "kikotools"
       },
       "widgets_values": [
-        null
-      ]
+        ""
+      ],
+      "widgets_values_named": {
+        "kiko_display_output": ""
+      },
+      "kikoDisplay": {
+        "version": 1,
+        "text": "Text will appear here after execution..."
+      },
+      "extensions": {
+        "kikoDisplay": {
+          "version": 1,
+          "text": "Text will appear here after execution..."
+        }
+      }
     },
     {
       "id": 10,
       "type": "MarkdownNote",
-      "title": "How to use",
       "pos": [
         1340,
         620
@@ -669,14 +862,481 @@
         460
       ],
       "flags": {},
-      "order": 0,
+      "order": 3,
       "mode": 0,
       "inputs": [],
       "outputs": [],
+      "title": "How to use",
       "properties": {},
       "widgets_values": [
-        "## H3 Reference Prompter test (no image)\n\nThe prompter reads the portrait, the costume and each pose with a local vision model and rewrites the short prompt into a long H3 prompt. The short prompt is kept word for word at the start; the model adds the detail after it. Roles are `auto`.\n\n**Nude** (18+ mode): the costume picture is a blank placeholder and the prompter describes the unclothed adult body. It refuses unless the portrait's estimated age is 20 or older. Never use an uploaded photo of a real person.\n\nThe three Display Text nodes show the short prompt, the H3 prompt and what the model saw."
-      ]
+        "## H3 Reference Prompter test (no image)\n\nThe prompter reads the portrait, the costume and each pose with a local vision model and rewrites the short prompt into a long H3 prompt. The short prompt is kept word for word at the start; the model adds the detail after it. Roles are `auto`.\n\n**Nude** (18+ mode): the costume picture is a blank placeholder and the prompter describes the unclothed adult body. It refuses unless the portrait's estimated age is 20 or older. Never use an uploaded photo of a real person.\n\nThe three Display Text nodes show the short prompt, the H3 prompt and what the model saw.\n\n### Character hint\n\nThe **Character Hint (Female)** node feeds the prompter's `character_hint` input. Its traits win over the portrait: here it asks for green eyes, a copper bob with curtain bangs, soft glam makeup and a few freckles. Set every field back to `-` (or disconnect it) to follow the portrait only. The hint text is shown in the \"Character hint\" box."
+      ],
+      "widgets_values_named": {
+        "text": "## H3 Reference Prompter test (no image)\n\nThe prompter reads the portrait, the costume and each pose with a local vision model and rewrites the short prompt into a long H3 prompt. The short prompt is kept word for word at the start; the model adds the detail after it. Roles are `auto`.\n\n**Nude** (18+ mode): the costume picture is a blank placeholder and the prompter describes the unclothed adult body. It refuses unless the portrait's estimated age is 20 or older. Never use an uploaded photo of a real person.\n\nThe three Display Text nodes show the short prompt, the H3 prompt and what the model saw.\n\n### Character hint\n\nThe **Character Hint (Female)** node feeds the prompter's `character_hint` input. Its traits win over the portrait: here it asks for green eyes, a copper bob with curtain bangs, soft glam makeup and a few freckles. Set every field back to `-` (or disconnect it) to follow the portrait only. The hint text is shown in the \"Character hint\" box."
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 11,
+      "type": "KikoCharacterHintFemale",
+      "pos": [
+        830,
+        1180
+      ],
+      "size": [
+        400,
+        880
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "age",
+          "name": "age",
+          "type": "INT",
+          "widget": {
+            "name": "age"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "heritage",
+          "name": "heritage",
+          "type": "COMBO",
+          "widget": {
+            "name": "heritage"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "body_type",
+          "name": "body_type",
+          "type": "COMBO",
+          "widget": {
+            "name": "body_type"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "breast_size",
+          "name": "breast_size",
+          "type": "COMBO",
+          "widget": {
+            "name": "breast_size"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "butt_size",
+          "name": "butt_size",
+          "type": "COMBO",
+          "widget": {
+            "name": "butt_size"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "face_shape",
+          "name": "face_shape",
+          "type": "COMBO",
+          "widget": {
+            "name": "face_shape"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "facial_structure",
+          "name": "facial_structure",
+          "type": "COMBO",
+          "widget": {
+            "name": "facial_structure"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "eye_color",
+          "name": "eye_color",
+          "type": "COMBO",
+          "widget": {
+            "name": "eye_color"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "eye_shape",
+          "name": "eye_shape",
+          "type": "COMBO",
+          "widget": {
+            "name": "eye_shape"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "eye_detail",
+          "name": "eye_detail",
+          "type": "COMBO",
+          "widget": {
+            "name": "eye_detail"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "eyebrows",
+          "name": "eyebrows",
+          "type": "COMBO",
+          "widget": {
+            "name": "eyebrows"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "nose",
+          "name": "nose",
+          "type": "COMBO",
+          "widget": {
+            "name": "nose"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "lip_shape",
+          "name": "lip_shape",
+          "type": "COMBO",
+          "widget": {
+            "name": "lip_shape"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "lip_color",
+          "name": "lip_color",
+          "type": "COMBO",
+          "widget": {
+            "name": "lip_color"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "makeup",
+          "name": "makeup",
+          "type": "COMBO",
+          "widget": {
+            "name": "makeup"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "eyewear",
+          "name": "eyewear",
+          "type": "COMBO",
+          "widget": {
+            "name": "eyewear"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "hair_color",
+          "name": "hair_color",
+          "type": "COMBO",
+          "widget": {
+            "name": "hair_color"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "hair_texture",
+          "name": "hair_texture",
+          "type": "COMBO",
+          "widget": {
+            "name": "hair_texture"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "hair_length",
+          "name": "hair_length",
+          "type": "COMBO",
+          "widget": {
+            "name": "hair_length"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "hair_style",
+          "name": "hair_style",
+          "type": "COMBO",
+          "widget": {
+            "name": "hair_style"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "bangs",
+          "name": "bangs",
+          "type": "COMBO",
+          "widget": {
+            "name": "bangs"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "skin_tone",
+          "name": "skin_tone",
+          "type": "COMBO",
+          "widget": {
+            "name": "skin_tone"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "tan",
+          "name": "tan",
+          "type": "COMBO",
+          "widget": {
+            "name": "tan"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "freckles",
+          "name": "freckles",
+          "type": "COMBO",
+          "widget": {
+            "name": "freckles"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "acne",
+          "name": "acne",
+          "type": "COMBO",
+          "widget": {
+            "name": "acne"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "beauty_mark",
+          "name": "beauty_mark",
+          "type": "COMBO",
+          "widget": {
+            "name": "beauty_mark"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "dimples",
+          "name": "dimples",
+          "type": "COMBO",
+          "widget": {
+            "name": "dimples"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "tattoo",
+          "name": "tattoo",
+          "type": "COMBO",
+          "widget": {
+            "name": "tattoo"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "expression",
+          "name": "expression",
+          "type": "COMBO",
+          "widget": {
+            "name": "expression"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "head_angle",
+          "name": "head_angle",
+          "type": "COMBO",
+          "widget": {
+            "name": "head_angle"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "gaze",
+          "name": "gaze",
+          "type": "COMBO",
+          "widget": {
+            "name": "gaze"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "nipples",
+          "name": "nipples",
+          "type": "COMBO",
+          "widget": {
+            "name": "nipples"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "areola",
+          "name": "areola",
+          "type": "COMBO",
+          "widget": {
+            "name": "areola"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "extra",
+          "name": "extra",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "extra"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "hint",
+          "name": "hint",
+          "type": "STRING",
+          "links": [
+            11,
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KikoCharacterHintFemale"
+      },
+      "widgets_values": [
+        28,
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "Green",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "Soft glam",
+        "-",
+        "Copper",
+        "-",
+        "Chin length",
+        "Bob",
+        "Curtain bangs",
+        "-",
+        "-",
+        "A few",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        ""
+      ],
+      "widgets_values_named": {
+        "age": 28,
+        "heritage": "-",
+        "body_type": "-",
+        "breast_size": "-",
+        "butt_size": "-",
+        "face_shape": "-",
+        "facial_structure": "-",
+        "eye_color": "Green",
+        "eye_shape": "-",
+        "eye_detail": "-",
+        "eyebrows": "-",
+        "nose": "-",
+        "lip_shape": "-",
+        "lip_color": "-",
+        "makeup": "Soft glam",
+        "eyewear": "-",
+        "hair_color": "Copper",
+        "hair_texture": "-",
+        "hair_length": "Chin length",
+        "hair_style": "Bob",
+        "bangs": "Curtain bangs",
+        "skin_tone": "-",
+        "tan": "-",
+        "freckles": "A few",
+        "acne": "-",
+        "beauty_mark": "-",
+        "dimples": "-",
+        "tattoo": "-",
+        "expression": "-",
+        "head_angle": "-",
+        "gaze": "-",
+        "nipples": "-",
+        "areola": "-",
+        "extra": ""
+      }
+    },
+    {
+      "id": 12,
+      "type": "DisplayText",
+      "pos": [
+        1340,
+        1120
+      ],
+      "size": [
+        460,
+        320
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "title": "Character hint",
+      "properties": {
+        "Node name for S&R": "DisplayText"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "widgets_values_named": {
+        "kiko_display_output": ""
+      },
+      "kikoDisplay": {
+        "version": 1,
+        "text": "Text will appear here after execution..."
+      },
+      "extensions": {
+        "kikoDisplay": {
+          "version": 1,
+          "text": "Text will appear here after execution..."
+        }
+      }
     }
   ],
   "links": [
@@ -759,6 +1419,22 @@
       9,
       0,
       "STRING"
+    ],
+    [
+      11,
+      11,
+      0,
+      6,
+      4,
+      "STRING"
+    ],
+    [
+      12,
+      11,
+      0,
+      12,
+      0,
+      "STRING"
     ]
   ],
   "groups": [],
@@ -772,7 +1448,5 @@
       ]
     }
   },
-  "version": 0.4,
-  "last_link_id": 10,
-  "last_node_id": 10
+  "version": 0.4
 }
