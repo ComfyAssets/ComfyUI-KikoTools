@@ -6,7 +6,9 @@ long MiniMax H3 Image prompt from the user's draft and those notes.
 
 from typing import List, Optional, Tuple
 
-from .logic import ROLES, find_tags
+from .logic import ROLES, YOUTH_WORDS, find_tags
+
+AgeRange = Tuple[int, int]
 
 _DESCRIBE_COMMON = (
     "You look at one reference picture and write factual notes about it. "
@@ -25,7 +27,12 @@ _DESCRIBE_ROLE = {
         "to one side), any distinctive marks such as freckles or moles, and "
         "the expression. Say exactly what the mouth does: closed, a closed "
         "smile, or a wide smile with the teeth showing. Say each trait once. "
-        "Do not describe the clothing, the background or the lighting."
+        "Do not describe the clothing, the background or the lighting. "
+        "Finish the notes with one last line in exactly this form, with "
+        "nothing after it: Estimated age: N to M years. N and M are whole "
+        "numbers: the youngest and the oldest the person could be, judged "
+        "only from what you see. When the person could look younger than "
+        "your first guess, give that lower number."
     ),
     "outfit": (
         "This picture shows the outfit. Go through every garment from top "
@@ -164,8 +171,39 @@ def writer_system() -> str:
     return _WRITER_SYSTEM
 
 
-def writer_user(lead: str, notes: List[Tuple[int, str, Optional[str]]]) -> str:
-    """User message: the written lead (whole draft) and per-picture notes."""
+def nude_block(age: AgeRange) -> str:
+    """Extra writer instructions for a nude item whose character passed the
+    adult check with the (low, high) estimated age."""
+    low, high = age
+    wording = f'"an adult woman aged {low} to {high}"'
+    if high < 30:
+        wording += ' or "an adult woman in her twenties"'
+    banned = ", ".join(f'"{word}"' for word in YOUTH_WORDS + ("girl",))
+    return (
+        "Nude mode. The draft says the person is nude, and there is no outfit "
+        "picture. In place of the outfit part, describe the unclothed adult "
+        "body plainly: the build, the proportions, and the skin tone and skin "
+        "texture, carrying on from the character notes, with natural adult "
+        "anatomy. Write it in the register of a figure-drawing or photography "
+        "reference: calm, factual and neutral. No sexual acts, no sexual "
+        "poses, and no language about arousal or with an explicit focus on "
+        "any part of the body; describe the pose only as a body position. "
+        f"Call the person {wording}. If the character notes say the person "
+        f'is a man, write "an adult man aged {low} to {high}" instead. Never '
+        f"use these words: {banned}. No clothing, no footwear and no "
+        "accessories, unless the draft names them."
+    )
+
+
+def writer_user(
+    lead: str,
+    notes: List[Tuple[int, str, Optional[str]]],
+    adult: Optional[AgeRange] = None,
+) -> str:
+    """User message: the written lead (whole draft) and per-picture notes.
+
+    ``adult`` is the checked age range of a nude item; it adds nude_block.
+    """
     in_draft = find_tags(lead)
     lines = []
     for slot, role, text in sorted(notes, key=lambda note: note[0]):
@@ -193,14 +231,27 @@ def writer_user(lead: str, notes: List[Tuple[int, str, Optional[str]]]) -> str:
             "detail that follows it:\n" + lead
         )
     blocks.append(notes_block)
+    if adult is not None:
+        blocks.append(nude_block(adult))
     blocks.append("Write the final prompt now.")
     return "\n\n".join(blocks)
 
 
-def retry_user(problems: Tuple[List[int], List[int]], blank: bool = False) -> str:
-    """Short correction for an empty reply and for missing and extra tags."""
+def retry_user(
+    problems: Tuple[List[int], List[int]],
+    blank: bool = False,
+    banned: Optional[str] = None,
+) -> str:
+    """Short correction for an empty reply, missing and extra tags, and a
+    word a nude prompt must not use."""
     missing, extra = problems
     parts = []
+    if banned:
+        parts.append(
+            f'Your last prompt used the word "{banned}". Remove the word '
+            f'"{banned}" and call the person an adult woman, or an adult man '
+            "if the character notes say the person is a man."
+        )
     if blank:
         parts.append(
             "Your last reply was empty or stopped before the prompt began. "

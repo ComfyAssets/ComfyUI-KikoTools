@@ -7,11 +7,16 @@ import pytest
 from kikotools.tools.h3_reference_prompter.instructions import (
     describe_system,
     describe_user,
+    nude_block,
     retry_user,
     writer_system,
     writer_user,
 )
-from kikotools.tools.h3_reference_prompter.logic import ROLES
+from kikotools.tools.h3_reference_prompter.logic import (
+    ROLES,
+    YOUTH_WORDS,
+    parse_age_estimate,
+)
 
 DRAFT = (
     "<Picture 1> is the character. <Picture 2> is the outfit. "
@@ -326,3 +331,69 @@ def test_writer_pose_follows_the_drafts_view_and_accessories_stay_in_place():
     assert "The draft's view and position win over the notes." in text
     assert "a hat is on the head" in text
     assert "Never write that an item floats or hovers" in text
+
+
+def test_character_describer_always_ends_with_the_age_line():
+    text = describe_system("character")
+    assert "Estimated age: N to M years." in text
+    assert "whole numbers" in text and "last line" in text
+    assert parse_age_estimate("Estimated age: N to M years.") is None
+
+
+@pytest.mark.parametrize("role", ["outfit", "pose", "other"])
+def test_other_describers_do_not_ask_for_an_age(role):
+    assert "Estimated age" not in describe_system(role)
+
+
+def test_nude_block_describes_the_unclothed_adult_body():
+    text = nude_block((22, 28))
+    lowered = text.lower()
+    assert "the draft says the person is nude" in lowered
+    assert "no outfit picture" in lowered
+    assert "in place of the outfit part" in lowered
+    for word in ("build", "proportions", "skin tone", "texture", "adult anatomy"):
+        assert word in lowered
+    assert "figure" in lowered and "photography reference" in lowered
+
+
+def test_nude_block_forbids_sexual_content_and_clothing():
+    lowered = nude_block((22, 28)).lower()
+    assert "no sexual acts" in lowered
+    assert "no sexual poses" in lowered
+    assert "arousal" in lowered and "explicit" in lowered
+    assert "no clothing, no footwear and no accessories" in lowered
+    assert "unless the draft names them" in lowered
+
+
+def test_nude_block_uses_adult_wording_and_bans_youth_words():
+    text = nude_block((22, 28))
+    assert "an adult woman aged 22 to 28" in text
+    assert "in her twenties" in text
+    assert "adult man" in text
+    for word in YOUTH_WORDS + ("girl",):
+        assert f'"{word}"' in text
+
+
+def test_nude_block_offers_in_her_twenties_only_for_a_twenties_range():
+    assert "in her twenties" not in nude_block((31, 38))
+    assert "an adult woman aged 31 to 38" in nude_block((31, 38))
+
+
+def test_writer_user_adds_the_nude_block_before_the_closing_line():
+    plain = writer_user(LEAD, [(1, "character", "Dark hair.")])
+    nude = writer_user(LEAD, [(1, "character", "Dark hair.")], adult=(22, 28))
+    assert nude_block((22, 28)) not in plain
+    assert nude.endswith(nude_block((22, 28)) + "\n\nWrite the final prompt now.")
+    assert nude.replace(nude_block((22, 28)) + "\n\n", "") == plain
+
+
+def test_retry_user_names_a_banned_word():
+    text = retry_user(([], []), banned="girl")
+    assert '"girl"' in text and "Remove" in text
+    assert "adult woman" in text
+    assert "picture tags" not in text
+    assert text.endswith("give only the prompt.")
+
+
+def test_retry_user_without_banned_word_is_unchanged():
+    assert "Remove the word" not in retry_user(([], [4]))

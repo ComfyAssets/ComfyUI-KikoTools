@@ -3,7 +3,7 @@
 import hashlib
 import json
 import re
-from typing import Any, Dict, List, Sequence, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 import torch
 
@@ -23,6 +23,45 @@ _ROLE_SENTENCE = re.compile(
     re.IGNORECASE,
 )
 _ZH_ROLES = {"人物": "character", "服装": "outfit", "姿势": "pose"}
+
+# Nude mode: the draft says nude or naked and no outfit picture is connected.
+NUDE_MIN_AGE = 20
+YOUTH_WORDS: Tuple[str, ...] = (
+    "teen",
+    "teenage",
+    "teenager",
+    "adolescent",
+    "schoolgirl",
+    "child",
+    "childlike",
+    "kid",
+    "minor",
+    "underage",
+    "loli",
+)
+_NUDE = re.compile(r"\b(?:nude|naked)\b", re.IGNORECASE)
+_AGE_LINE = re.compile(
+    r"estimated\s+age\s*:\s*(\d+)\s*(?:to|-|–)\s*(\d+)\s*years?", re.IGNORECASE
+)
+
+
+# Forms the plain words plus an "s" do not reach.
+_EXTRA_YOUTH_FORMS = ("children", "teenaged")
+
+
+def _word_pattern(words: Iterable[str]) -> "re.Pattern[str]":
+    """Whole words in any case, each with an optional plural (teen, teens)."""
+    names = "|".join(sorted(words, key=len, reverse=True))
+    extra = "|".join(_EXTRA_YOUTH_FORMS)
+    return re.compile(rf"\b(?:{extra}|(?:{names})s?)\b", re.IGNORECASE)
+
+
+_YOUTH = _word_pattern(YOUTH_WORDS)
+_YOUTH_OR_GIRL = _word_pattern(YOUTH_WORDS + ("girl",))
+_REFUSAL = (
+    f"Nude prompts need an adult character picture whose estimated age is "
+    f"{NUDE_MIN_AGE} or older."
+)
 
 _TAG = re.compile(r"<\s*Picture\s+(\d+)\s*>")
 _PREAMBLE_LINE = re.compile(
@@ -190,3 +229,61 @@ def clean_result(text: str) -> str:
     bare = split_thinking(text)
     bare = _PREAMBLE_LINE.sub("", bare, count=1)
     return drop_repeats(clean_output(bare))
+
+
+def is_nude(draft: Optional[str], connected_roles: Iterable[str]) -> bool:
+    """The draft says nude or naked and no connected picture is the outfit."""
+    return bool(_NUDE.search(draft or "")) and "outfit" not in connected_roles
+
+
+def parse_age_estimate(notes: Optional[str]) -> Optional[Tuple[int, int]]:
+    """(low, high) from the last "Estimated age: N to M years." line, or None."""
+    found = _AGE_LINE.findall(notes or "")
+    if not found:
+        return None
+    low, high = sorted(int(number) for number in found[-1])
+    return low, high
+
+
+def find_youth_word(text: Optional[str], girl: bool = False) -> Optional[str]:
+    """The first youth word in ``text``, lower case; "girl" only when asked."""
+    match = (_YOUTH_OR_GIRL if girl else _YOUTH).search(text or "")
+    return match.group(0).lower() if match else None
+
+
+def _years(estimate: Tuple[int, int]) -> str:
+    return f"{estimate[0]} to {estimate[1]} years"
+
+
+def _check_character(slot: int, notes: str) -> Tuple[int, int]:
+    estimate = parse_age_estimate(notes)
+    if estimate is None:
+        raise ValueError(
+            f"{_REFUSAL} The describer gave no age estimate for image_{slot}."
+        )
+    word = find_youth_word(notes)
+    if word is not None:
+        raise ValueError(
+            f"{_REFUSAL} The notes for image_{slot} use the word '{word}' "
+            f"(estimate: {_years(estimate)})."
+        )
+    if estimate[0] < NUDE_MIN_AGE:
+        raise ValueError(
+            f"{_REFUSAL} The describer estimated {_years(estimate)} for image_{slot}."
+        )
+    return estimate
+
+
+def check_adult(characters: List[Tuple[int, str]], draft: str) -> Tuple[int, int]:
+    """Refuse a nude item unless every character picture reads as an adult.
+
+    ``characters`` holds (slot, notes) for each connected character picture.
+    Returns the (low, high) estimate spanning all of them.
+    """
+    word = find_youth_word(draft, girl=True)
+    if word is not None:
+        raise ValueError(f"{_REFUSAL} The draft uses the word '{word}'.")
+    if not characters:
+        raise ValueError(f"{_REFUSAL} No character picture is connected.")
+    estimates = [_check_character(slot, notes) for slot, notes in characters]
+    return min(low for low, _ in estimates), max(high for _, high in estimates)

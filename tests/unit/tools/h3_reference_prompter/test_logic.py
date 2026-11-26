@@ -4,17 +4,23 @@ import torch
 from kikotools.tools.h3_reference_prompter.logic import (
     AUTO,
     DEFAULT_ROLES,
+    NUDE_MIN_AGE,
     ROLE_CHOICES,
     ROLES,
     SLOTS,
+    YOUTH_WORDS,
+    check_adult,
     clean_result,
     draft_lead,
     drop_echoes,
     drop_repeats,
     find_tags,
+    find_youth_word,
     image_key,
+    is_nude,
     item_seed,
     pair_items,
+    parse_age_estimate,
     resolve_roles,
     tag_problems,
 )
@@ -293,3 +299,147 @@ def test_resolve_roles_reads_the_chinese_picture_sentences():
 def test_resolve_roles_ignores_slots_beyond_three():
     draft = "<Picture 4> is the outfit. <Picture 2> is the pose."
     assert resolve_roles(draft, ALL_AUTO) == ("character", "pose", "pose")
+
+
+def test_nude_constants():
+    assert NUDE_MIN_AGE == 20
+    assert YOUTH_WORDS == (
+        "teen",
+        "teenage",
+        "teenager",
+        "adolescent",
+        "schoolgirl",
+        "child",
+        "childlike",
+        "kid",
+        "minor",
+        "underage",
+        "loli",
+    )
+
+
+def test_is_nude_for_the_charsheet_nude_draft_without_an_outfit_picture():
+    assert is_nude(NUDE_DRAFT, ["character", "pose"]) is True
+
+
+@pytest.mark.parametrize("word", ["Nude", "NAKED", "naked"])
+def test_is_nude_matches_either_word_in_any_case(word):
+    assert is_nude(f"A woman, {word}, standing.", []) is True
+
+
+def test_is_nude_is_off_when_an_outfit_picture_is_connected():
+    assert is_nude(NUDE_DRAFT, ["character", "outfit", "pose"]) is False
+
+
+@pytest.mark.parametrize("draft", ["nudes and nudity", "a denuded hill", "", None])
+def test_is_nude_needs_the_whole_word(draft):
+    assert is_nude(draft, []) is False
+
+
+@pytest.mark.parametrize(
+    "notes, expected",
+    [
+        ("Dark hair.\nEstimated age: 22 to 28 years.", (22, 28)),
+        ("estimated AGE:  25 to 30 years", (25, 30)),
+        ("Estimated age: 30 to 25 years.", (25, 30)),
+        ("Estimated age: 18 to 24 years. Estimated age: 26 to 30 years.", (26, 30)),
+        ("Estimated age: 22-28 years.", (22, 28)),
+    ],
+)
+def test_parse_age_estimate_reads_the_last_estimate_line(notes, expected):
+    assert parse_age_estimate(notes) == expected
+
+
+@pytest.mark.parametrize(
+    "notes",
+    ["", None, "She looks about 25.", "Estimated age: twenty to thirty years."],
+)
+def test_parse_age_estimate_missing_or_unparsable_is_none(notes):
+    assert parse_age_estimate(notes) is None
+
+
+@pytest.mark.parametrize(
+    "text, word",
+    [
+        ("She is in her late teens.", "teens"),
+        ("A Teenager with dark hair.", "teenager"),
+        ("childlike features", "childlike"),
+        ("UNDERAGE", "underage"),
+        ("a pre-teen look", "teen"),
+        ("two kids", "kids"),
+        ("Three Children.", "children"),
+        ("a teenaged look", "teenaged"),
+    ],
+)
+def test_find_youth_word_matches_whole_words_in_any_case(text, word):
+    assert find_youth_word(text) == word
+
+
+def test_find_youth_word_ignores_partial_words_and_young_woman():
+    assert find_youth_word("A young woman, canteen, kidney, minority.") is None
+    assert find_youth_word("") is None
+
+
+def test_find_youth_word_checks_girl_only_when_asked():
+    assert find_youth_word("A girl stands.") is None
+    assert find_youth_word("A girl stands.", girl=True) == "girl"
+    assert find_youth_word("Two GIRLS.", girl=True) == "girls"
+    assert find_youth_word("A girlish smile.", girl=True) is None
+
+
+ADULT_NOTES = "A young woman with dark hair.\nEstimated age: 22 to 28 years."
+
+
+def test_check_adult_returns_the_estimate():
+    assert check_adult([(1, ADULT_NOTES)], NUDE_DRAFT) == (22, 28)
+
+
+def test_check_adult_spans_every_character_picture():
+    second = "A woman.\nEstimated age: 25 to 34 years."
+    assert check_adult([(1, ADULT_NOTES), (3, second)], NUDE_DRAFT) == (22, 34)
+
+
+def _refusal(notes, draft=NUDE_DRAFT):
+    with pytest.raises(ValueError) as caught:
+        check_adult(notes, draft)
+    message = str(caught.value)
+    assert message.startswith(
+        "Nude prompts need an adult character picture whose estimated age is "
+        "20 or older."
+    )
+    return message
+
+
+def test_check_adult_refuses_without_a_character_picture():
+    assert "No character picture is connected" in _refusal([])
+
+
+def test_check_adult_refuses_a_missing_estimate():
+    message = _refusal([(1, "A woman with dark hair.")])
+    assert "no age estimate for image_1" in message
+
+
+def test_check_adult_refuses_a_lower_bound_under_20():
+    message = _refusal([(2, "A woman.\nEstimated age: 19 to 25 years.")])
+    assert "19 to 25 years for image_2" in message
+
+
+def test_check_adult_accepts_a_lower_bound_of_exactly_20():
+    notes = [(1, "A woman.\nEstimated age: 20 to 26 years.")]
+    assert check_adult(notes, NUDE_DRAFT) == (20, 26)
+
+
+def test_check_adult_refuses_a_youth_word_in_the_notes_and_gives_the_estimate():
+    notes = [(1, "She is in her late teens.\nEstimated age: 20 to 24 years.")]
+    message = _refusal(notes)
+    assert "'teens'" in message and "20 to 24 years" in message
+
+
+def test_check_adult_refuses_a_youth_word_or_girl_in_the_draft():
+    assert "'girl'" in _refusal([(1, ADULT_NOTES)], "A nude girl standing.")
+    assert "'teen'" in _refusal([(1, ADULT_NOTES)], "A nude teen.")
+
+
+def test_check_adult_does_not_check_girl_in_the_notes():
+    notes = [(1, "A girl-next-door look.\nEstimated age: 24 to 30 years.")]
+    assert check_adult(notes, NUDE_DRAFT) == (24, 30)

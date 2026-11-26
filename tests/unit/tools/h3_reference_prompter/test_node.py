@@ -6,6 +6,7 @@ from kikotools.tools.h3_reference_prompter import node as node_module
 from kikotools.tools.h3_reference_prompter.instructions import (
     describe_system,
     describe_user,
+    nude_block,
     retry_user,
     writer_user,
 )
@@ -31,6 +32,7 @@ class Harness:
         self.writes = list(writes or [BODY])
         self.entry = entry(kind)
         self.clip_loads = 0
+        self.describe_reply = None
         node_module._NOTES_CACHE.clear()
         monkeypatch.setattr(node_module, "_generate", self.generate)
         monkeypatch.setattr(node_module, "_generate_batch", self.generate_batch)
@@ -61,6 +63,8 @@ class Harness:
             dict(system=system, prompt=prompt, image=image, seed=seed, clip=clip)
         )
         if image is not None:
+            if self.describe_reply is not None:
+                return self.describe_reply(system)
             return "notes " + system[:10]
         return self.writes.pop(0) if len(self.writes) > 1 else self.writes[0]
 
@@ -737,7 +741,7 @@ def note_labels(out, index=0):
 
 
 def test_auto_roles_follow_the_drafts_picture_sentences(monkeypatch):
-    h = Harness(monkeypatch)
+    h = nude_harness(monkeypatch)
     out = run(
         prompt=[NUDE_DRAFT],
         images={"image_1": [img(1)], "image_2": [img(2)]},
@@ -770,23 +774,27 @@ def test_auto_roles_fall_back_to_slot_defaults(monkeypatch):
 
 
 def test_explicit_role_wins_over_the_drafts_sentence(monkeypatch):
-    h = Harness(monkeypatch)
+    h = nude_harness(monkeypatch)
     out = run(
         prompt=[NUDE_DRAFT],
-        images={"image_2": [img(2)]},
+        images={"image_1": [img(1)], "image_2": [img(2)]},
         role_1=["auto"],
         role_2=["other"],
         role_3=["auto"],
     )
-    assert [c["system"] for c in h.describes] == [describe_system("other")]
-    assert note_labels(out) == ["<Picture 2> (other)"]
+    assert [c["system"] for c in h.describes] == [
+        describe_system("character"),
+        describe_system("other"),
+    ]
+    assert note_labels(out) == ["<Picture 1> (character)", "<Picture 2> (other)"]
 
 
 def test_auto_roles_resolve_per_item_and_cache_by_resolved_role(monkeypatch):
     h = Harness(monkeypatch)
     three = "<Picture 1> is the character. <Picture 2> is the outfit."
+    dressed = NUDE_DRAFT.replace("completely nude", "a red coat")
     out = run(
-        prompt=[NUDE_DRAFT, three],
+        prompt=[dressed, three],
         images={"image_2": [img(2)]},
         **AUTO_ROLES,
     )
@@ -800,3 +808,129 @@ def test_auto_roles_resolve_per_item_and_cache_by_resolved_role(monkeypatch):
         for role in ("pose", "outfit")
     }
     assert set(node_module._NOTES_CACHE) == keys
+
+
+ADULT_NOTES = "A young woman with dark hair.\nEstimated age: 22 to 28 years."
+NUDE_LEAD = node_module.draft_lead(NUDE_DRAFT)
+
+
+def nude_harness(monkeypatch, character=ADULT_NOTES, writes=None, kind="hf"):
+    h = Harness(monkeypatch, writes=writes, kind=kind)
+    if kind != "hf":
+        h.entry = entry(kind, f"{kind}: m")
+
+    def reply(system):
+        if system == describe_system("character"):
+            return character
+        return "Standing, weight on the left leg."
+
+    h.describe_reply = reply
+    return h
+
+
+def run_nude(h, prompt=None, images=None):
+    pictures = images or {"image_1": [img(1)], "image_2": [img(2)]}
+    return run(
+        prompt=prompt or [NUDE_DRAFT],
+        model=[h.entry.name],
+        images=pictures,
+        **AUTO_ROLES,
+    )
+
+
+@pytest.mark.parametrize("kind", ["hf", "gguf"])
+def test_clean_nude_run_adds_the_nude_block_and_passes(monkeypatch, kind):
+    h = nude_harness(monkeypatch, kind=kind)
+    out = run_nude(h)
+    assert out["result"][0] == [NUDE_LEAD + "\n\n" + BODY]
+    (writer,) = h.writers
+    assert nude_block((22, 28)) in writer["prompt"]
+    assert "Estimated age: 22 to 28 years." in out["result"][1][0]
+
+
+@pytest.mark.parametrize("kind", ["hf", "gguf"])
+def test_youth_word_in_the_written_part_is_retried_naming_it(monkeypatch, kind):
+    bad = "She is an adult woman, not a teen, standing."
+    h = nude_harness(monkeypatch, writes=[bad, BODY], kind=kind)
+    out = run_nude(h)
+    assert out["result"][0] == [NUDE_LEAD + "\n\n" + BODY]
+    first, second = h.writers
+    assert "Your previous prompt:\n" + bad in second["prompt"]
+    assert second["prompt"].endswith(retry_user(([], []), banned="teen"))
+
+
+@pytest.mark.parametrize("kind", ["hf", "gguf"])
+def test_youth_word_after_the_retry_raises(monkeypatch, kind):
+    h = nude_harness(monkeypatch, writes=["A girl stands."], kind=kind)
+    with pytest.raises(ValueError, match="'girl'") as caught:
+        run_nude(h)
+    assert "after a retry" in str(caught.value)
+    assert len(h.writers) == 2
+    assert "repair" in h.events
+
+
+def test_girl_is_allowed_outside_nude_mode(monkeypatch):
+    h = Harness(monkeypatch, writes=["A girl stands in a red coat."])
+    out = run(prompt=["a girl in a red coat"], images={"image_1": [img(1)]})
+    assert out["result"][0] == ["a girl in a red coat\n\nA girl stands in a red coat."]
+    assert len(h.writers) == 1
+    assert nude_block((22, 28)) not in h.writers[0]["prompt"]
+
+
+def test_nude_needs_a_character_picture(monkeypatch):
+    h = nude_harness(monkeypatch)
+    with pytest.raises(ValueError, match="No character picture is connected"):
+        run_nude(h, images={"image_2": [img(2)]})
+    assert h.writers == []
+    assert "repair" in h.events
+
+
+@pytest.mark.parametrize(
+    "character, found",
+    [
+        ("A woman with dark hair.", "no age estimate for image_1"),
+        ("A woman.\nEstimated age: 17 to 23 years.", "17 to 23 years for image_1"),
+        ("A teenager.\nEstimated age: 20 to 25 years.", "'teenager'"),
+    ],
+)
+def test_nude_refuses_before_writing(monkeypatch, character, found):
+    h = nude_harness(monkeypatch, character=character)
+    with pytest.raises(ValueError) as caught:
+        run_nude(h)
+    message = str(caught.value)
+    assert "estimated age is 20 or older" in message and found in message
+    assert h.writers == []
+    assert "repair" in h.events and "free_hf" in h.events
+
+
+def test_one_refused_item_fails_the_whole_run(monkeypatch):
+    h = nude_harness(monkeypatch)
+    young = "<Picture 1> is the character. <Picture 2> is the pose. A nude teen."
+    with pytest.raises(ValueError, match="'teen'"):
+        run_nude(h, prompt=[NUDE_DRAFT, young])
+    assert h.writers == []
+
+
+def test_outfit_picture_turns_nude_mode_off(monkeypatch):
+    draft = DRAFT + " Nude lipstick."
+    h = Harness(monkeypatch, writes=["A girl in a coat."])
+    out = run(
+        prompt=[draft],
+        images={"image_1": [img(1)], "image_2": [img(2)], "image_3": [img(3)]},
+        **AUTO_ROLES,
+    )
+    assert out["result"][0] == [draft + "\n\nA girl in a coat."]
+    assert nude_block((22, 28)) not in h.writers[0]["prompt"]
+
+
+def test_batch_checks_youth_words_only_for_the_nude_item(monkeypatch):
+    plain = "<Picture 1> is the character. A woman in a red coat."
+    h = nude_harness(monkeypatch, writes=["A girl.", "A girl.", BODY])
+    out = run_nude(h, prompt=[NUDE_DRAFT, plain])
+    assert h.batches[-2:] == [("write", 2), ("write", 1)]
+    assert nude_block((22, 28)) in h.writers[0]["prompt"]
+    assert nude_block((22, 28)) not in h.writers[1]["prompt"]
+    assert out["result"][0] == [
+        NUDE_LEAD + "\n\n" + BODY,
+        plain + "\n\nA girl.",
+    ]

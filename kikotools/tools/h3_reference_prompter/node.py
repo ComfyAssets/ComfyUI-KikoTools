@@ -11,6 +11,7 @@ from ..prompt_enhancer.models import ModelEntry
 from ..prompt_enhancer.native_backend import generate_native, load_native
 from .hf_backend import Request, free_hf, generate_hf, generate_hf_batch
 from .instructions import (
+    AgeRange,
     describe_system,
     describe_user,
     retry_user,
@@ -21,10 +22,13 @@ from .logic import (
     AUTO,
     ROLE_CHOICES,
     SLOTS,
+    check_adult,
     clean_result,
     draft_lead,
     drop_echoes,
+    find_youth_word,
     image_key,
+    is_nude,
     item_seed,
     pair_items,
     resolve_roles,
@@ -228,8 +232,24 @@ def _notes_text(notes: List[Note]) -> str:
     )
 
 
-# (missing tags, extra tags, blank written part) for one written prompt
-Problems = Tuple[List[int], List[int], bool]
+def _adult_range(item: Item, notes: List[Note]) -> Optional[AgeRange]:
+    """The checked age range of a nude item; None when the item is not nude.
+
+    Raises ValueError when a nude item has no adult character picture.
+    """
+    connected = [role for _, role, text in notes if text is not None]
+    if not is_nude(item["prompt"], connected):
+        return None
+    characters = [
+        (slot, text)
+        for slot, role, text in notes
+        if role == "character" and text is not None
+    ]
+    return check_adult(characters, item["prompt"] or "")
+
+
+# (missing tags, extra tags, blank written part, banned word) per written prompt
+Problems = Tuple[List[int], List[int], bool, Optional[str]]
 
 
 def _combine(lead: str, raw: str) -> Tuple[str, str]:
@@ -239,20 +259,24 @@ def _combine(lead: str, raw: str) -> Tuple[str, str]:
     return written, "\n\n".join(parts).rstrip()
 
 
-def _problems(draft: str, written: str, combined: str) -> Problems:
+def _problems(draft: str, written: str, combined: str, nude: bool) -> Problems:
+    """Tag problems, a blank part and, in nude mode, a youth word or "girl"
+    in the model's part (the draft lead is not checked here)."""
     missing, extra = tag_problems(draft, combined)
-    return missing, extra, not written
+    banned = find_youth_word(written, girl=True) if nude else None
+    return missing, extra, not written, banned
 
 
 def _has_problem(problems: Problems) -> bool:
-    missing, extra, blank = problems
-    return bool(missing or extra or blank)
+    missing, extra, blank, banned = problems
+    return bool(missing or extra or blank or banned)
 
 
 def _retry_message(message: str, written: str, problems: Problems) -> str:
-    missing, extra, blank = problems
+    missing, extra, blank, banned = problems
     previous = f"\n\nYour previous prompt:\n{written}" if written else ""
-    return f"{message}{previous}\n\n{retry_user((missing, extra), blank=blank)}"
+    retry = retry_user((missing, extra), blank=blank, banned=banned)
+    return f"{message}{previous}\n\n{retry}"
 
 
 def _tag_error(missing: List[int], extra: List[int]) -> ValueError:
@@ -268,39 +292,57 @@ def _tag_error(missing: List[int], extra: List[int]) -> ValueError:
 
 
 def _raise_if_failed(problems: Problems, model: str) -> None:
-    missing, extra, blank = problems
+    missing, extra, blank, banned = problems
     if blank:
         raise ValueError(
             f"{model} wrote no prompt text after a retry (the reply was empty, "
             "or cut off inside its thinking). Raise write_tokens or pick "
             "another model."
         )
+    if banned:
+        raise ValueError(
+            f"{model} still used the word '{banned}' in a nude prompt after a "
+            "retry; a nude prompt must describe an adult. No prompt was written."
+        )
     if missing or extra:
         raise _tag_error(missing, extra)
 
 
-def _write_one(run: _Run, draft: str, notes: List[Note], seed: int, tokens: int) -> str:
+def _write_one(
+    run: _Run,
+    draft: str,
+    notes: List[Note],
+    adult: Optional[AgeRange],
+    seed: int,
+    tokens: int,
+) -> str:
     lead = draft_lead(draft)
-    message = writer_user(lead, notes)
+    message = writer_user(lead, notes, adult)
+    nude = adult is not None
 
     def attempt(text: str) -> Tuple[str, str]:
         return _combine(lead, run.generate(writer_system(), text, None, seed, tokens))
 
     written, combined = attempt(message)
-    problems = _problems(draft, written, combined)
+    problems = _problems(draft, written, combined, nude)
     if not _has_problem(problems):
         return combined
     written, combined = attempt(_retry_message(message, written, problems))
-    _raise_if_failed(_problems(draft, written, combined), run.entry.name)
+    _raise_if_failed(_problems(draft, written, combined, nude), run.entry.name)
     return combined
 
 
 def _write_batch(
-    run: _Run, drafts: List[str], notes: List[List[Note]], seed: int, tokens: int
+    run: _Run,
+    drafts: List[str],
+    notes: List[List[Note]],
+    adults: List[Optional[AgeRange]],
+    seed: int,
+    tokens: int,
 ) -> List[str]:
     """Write every draft in one batch, then retry the failing ones in one more."""
     leads = [draft_lead(draft) for draft in drafts]
-    messages = [writer_user(lead, n) for lead, n in zip(leads, notes)]
+    messages = [writer_user(*args) for args in zip(leads, notes, adults)]
 
     def attempt(indices: List[int], texts: List[str]) -> List[Tuple[str, str]]:
         raws = run.generate_batch(
@@ -309,7 +351,7 @@ def _write_batch(
         return [_combine(leads[i], raw) for i, raw in zip(indices, raws)]
 
     def problems_of(index: int, result: Tuple[str, str]) -> Problems:
-        return _problems(drafts[index], *result)
+        return _problems(drafts[index], *result, adults[index] is not None)
 
     results = attempt(list(range(len(drafts))), messages)
     problems = [problems_of(i, result) for i, result in enumerate(results)]
@@ -324,14 +366,19 @@ def _write_batch(
 
 
 def _write_all(
-    run: _Run, items: List[Item], notes: List[List[Note]], base_seed: int, tokens: int
+    run: _Run,
+    items: List[Item],
+    notes: List[List[Note]],
+    adults: List[Optional[AgeRange]],
+    base_seed: int,
+    tokens: int,
 ) -> List[str]:
     drafts = [item["prompt"] for item in items]
     if run.batched:
-        return _write_batch(run, drafts, notes, base_seed, tokens)
+        return _write_batch(run, drafts, notes, adults, base_seed, tokens)
     return [
-        _write_one(run, draft, item_notes, item_seed(base_seed, index), tokens)
-        for index, (draft, item_notes) in enumerate(zip(drafts, notes))
+        _write_one(run, *args, item_seed(base_seed, index), tokens)
+        for index, args in enumerate(zip(drafts, notes, adults))
     ]
 
 
@@ -342,7 +389,9 @@ def _run_items(
     model_name, base_seed, describe_max, write_max = settings
     _describe_all(run, items, model_name, base_seed, describe_max)
     notes = [_item_notes(item, model_name, describe_max) for item in items]
-    written = _write_all(run, items, notes, base_seed, write_max)
+    # Every nude item passes the adult check before anything is written.
+    adults = [_adult_range(item, n) for item, n in zip(items, notes)]
+    written = _write_all(run, items, notes, adults, base_seed, write_max)
     return [(text, _notes_text(n)) for text, n in zip(written, notes)]
 
 
@@ -390,6 +439,36 @@ def _repair_quietly() -> None:
         logger.exception("repair_loaded_models failed after a prompter error")
 
 
+def _optional_inputs() -> Dict[str, Any]:
+    """Picture slots and the advanced tuning widgets."""
+    optional: Dict[str, Any] = {
+        f"image_{slot}": ("IMAGE", {"tooltip": f"Reference for <Picture {slot}>"})
+        for slot in range(1, SLOTS + 1)
+    }
+    optional["temperature"] = (
+        "FLOAT",
+        {"default": 0.7, "min": 0.01, "max": 2.0, "step": 0.01, "advanced": True},
+    )
+    optional["describe_tokens"] = (
+        "INT",
+        {"default": 512, "min": 64, "max": 4096, "advanced": True},
+    )
+    optional["write_tokens"] = (
+        "INT",
+        {"default": 1536, "min": 256, "max": 8192, "advanced": True},
+    )
+    optional["keep_loaded"] = (
+        "BOOLEAN",
+        {
+            "default": False,
+            "advanced": True,
+            "tooltip": "Keep the prompt model loaded for the next run. A "
+            "kept hf: model sits outside ComfyUI's memory management.",
+        },
+    )
+    return optional
+
+
 class H3ReferencePrompterNode(ComfyAssetsBaseNode):
     """Write one MiniMax H3 Image prompt from a draft and reference pictures."""
 
@@ -426,32 +505,7 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
             "INT",
             {"default": 0, "min": 0, "max": _SEED_MAX, "control_after_generate": True},
         )
-        optional: Dict[str, Any] = {
-            f"image_{slot}": ("IMAGE", {"tooltip": f"Reference for <Picture {slot}>"})
-            for slot in range(1, SLOTS + 1)
-        }
-        optional["temperature"] = (
-            "FLOAT",
-            {"default": 0.7, "min": 0.01, "max": 2.0, "step": 0.01, "advanced": True},
-        )
-        optional["describe_tokens"] = (
-            "INT",
-            {"default": 512, "min": 64, "max": 4096, "advanced": True},
-        )
-        optional["write_tokens"] = (
-            "INT",
-            {"default": 1536, "min": 256, "max": 8192, "advanced": True},
-        )
-        optional["keep_loaded"] = (
-            "BOOLEAN",
-            {
-                "default": False,
-                "advanced": True,
-                "tooltip": "Keep the prompt model loaded for the next run. A "
-                "kept hf: model sits outside ComfyUI's memory management.",
-            },
-        )
-        return {"required": required, "optional": optional}
+        return {"required": required, "optional": _optional_inputs()}
 
     INPUT_IS_LIST = True
     RETURN_TYPES = ("STRING", "STRING")
