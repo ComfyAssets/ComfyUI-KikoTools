@@ -115,7 +115,8 @@ def test_input_types_and_metadata(monkeypatch):
     monkeypatch.setattr(node_module, "prompter_model_names", lambda: ["hf: a"])
     types = H3ReferencePrompterNode.INPUT_TYPES()
     required, optional = types["required"], types["optional"]
-    assert required["prompt"][1]["multiline"] is True
+    assert required["prompt"][1]["forceInput"] is True
+    assert "multiline" not in required["prompt"][1]
     assert required["model"][0] == ["hf: a"]
     assert [required[f"role_{n}"][1]["default"] for n in (1, 2, 3)] == ["auto"] * 3
     assert required["role_1"][0] == ["auto", "character", "outfit", "pose", "other"]

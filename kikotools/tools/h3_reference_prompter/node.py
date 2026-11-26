@@ -487,8 +487,7 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
             "prompt": (
                 "STRING",
                 {
-                    "multiline": True,
-                    "default": "",
+                    "forceInput": True,
                     "tooltip": "Short draft; <Picture 1> to <Picture 3> tags are kept exactly",
                 },
             ),

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- H3 Reference Prompter: the prompt box no longer squashes to one line after a
+  run, and the node can be resized. A new result grows the node so about 320 px
+  of prompt shows, the prompt box never gets smaller than 120 px, and a taller
+  node gives the prompt box more room, in both the classic and the Nodes 2.0
+  renderer.
+- H3 Reference Prompter: the draft `prompt` is an input socket only, with no
+  text box on the node, so the node no longer keeps a blank area for a box that
+  is hidden once the draft is connected. Connect a text node to it. Workflows
+  saved with 1.10.0 load with every setting in place.
+
 ## 1.10.0
 
 ### H3 Reference Prompter

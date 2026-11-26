@@ -14,7 +14,7 @@ The whole draft is written at the start of the prompt, word for word, one line p
 
 | Input | Notes |
 |-------|-------|
-| `prompt` | The draft. Tags `<Picture 1>` to `<Picture 3>` are kept exactly |
+| `prompt` | The draft, as an input socket: connect a text node, such as the KikoCharSheet prompt. Tags `<Picture 1>` to `<Picture 3>` are kept exactly |
 | `model` | The vision model, see [Models](#models) |
 | `role_1`, `role_2`, `role_3` | What each picture shows: `auto` (default), `character`, `outfit`, `pose` or `other`. See [Roles](#roles) |
 | `seed` | Base seed |

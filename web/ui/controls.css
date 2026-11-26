@@ -246,13 +246,14 @@
 .ca-image-browser .ca-refs-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .ca-image-browser .kiko-ref-badge { position: absolute; inset-block-start: 4px; inset-inline-start: 4px; min-inline-size: 20px; padding: 1px 6px; border-radius: 10px; background: var(--ca-focus); color: #fff; font-size: 12px; font-weight: 600; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
 
-.ca-h3-prompter { box-sizing: border-box; inline-size: 100%; min-inline-size: 0; display: flex; flex-direction: column; gap: 8px; padding: 8px; overflow-x: hidden; }
+.ca-h3-prompter { box-sizing: border-box; inline-size: 100%; block-size: 100%; min-inline-size: 0; display: flex; flex-direction: column; gap: 8px; padding: 8px; overflow-x: hidden; }
 .ca-h3-prompter [hidden] { display: none; }
+.ca-h3-prompter > * { flex: none; }
 .ca-h3-empty, .ca-h3-status { margin: 0; font-size: 12px; color: var(--ca-muted); overflow-wrap: anywhere; }
 .ca-h3-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .ca-h3-summary { font-size: 12px; color: var(--ca-muted); }
 .ca-h3-nav { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
 .ca-h3-text, .ca-h3-notes-text { margin: 0; padding: 8px; background: var(--ca-field); border: 1px solid var(--ca-line); border-radius: 5px; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; cursor: text; }
-.ca-h3-text { max-block-size: 260px; overflow-y: auto; }
+.ca-h3-prompter > .ca-h3-text { flex: 1 1 320px; min-block-size: 120px; overflow-y: auto; }
 .ca-h3-notes summary { cursor: pointer; font-size: 12px; color: var(--ca-muted); }
 .ca-h3-notes-text { margin-block-start: 6px; max-block-size: 140px; overflow-y: auto; font-size: 12px; }
