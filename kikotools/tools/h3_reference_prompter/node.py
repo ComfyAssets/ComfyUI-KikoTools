@@ -253,7 +253,7 @@ def _adult_range(item: Item, notes: List[Note]) -> Optional[AgeRange]:
         for slot, role, text in notes
         if role == "character" and text is not None
     ]
-    return check_adult(characters, item["prompt"] or "")
+    return check_adult(characters, item["prompt"] or "", item["hint"])
 
 
 # (missing tags, extra tags, blank written part, banned word) per written prompt
@@ -321,11 +321,12 @@ def _write_one(
     draft: str,
     notes: List[Note],
     adult: Optional[AgeRange],
+    hint: str,
     seed: int,
     tokens: int,
 ) -> str:
     lead = draft_lead(draft)
-    message = writer_user(lead, notes, adult)
+    message = writer_user(lead, notes, adult, hint)
     nude = adult is not None
 
     def attempt(text: str) -> Tuple[str, str]:
@@ -345,12 +346,13 @@ def _write_batch(
     drafts: List[str],
     notes: List[List[Note]],
     adults: List[Optional[AgeRange]],
+    hints: List[str],
     seed: int,
     tokens: int,
 ) -> List[str]:
     """Write every draft in one batch, then retry the failing ones in one more."""
     leads = [draft_lead(draft) for draft in drafts]
-    messages = [writer_user(*args) for args in zip(leads, notes, adults)]
+    messages = [writer_user(*args) for args in zip(leads, notes, adults, hints)]
 
     def attempt(indices: List[int], texts: List[str]) -> List[Tuple[str, str]]:
         raws = run.generate_batch(
@@ -382,11 +384,12 @@ def _write_all(
     tokens: int,
 ) -> List[str]:
     drafts = [item["prompt"] for item in items]
+    hints = [item["hint"] for item in items]
     if run.batched:
-        return _write_batch(run, drafts, notes, adults, base_seed, tokens)
+        return _write_batch(run, drafts, notes, adults, hints, base_seed, tokens)
     return [
         _write_one(run, *args, item_seed(base_seed, index), tokens)
-        for index, args in enumerate(zip(drafts, notes, adults))
+        for index, args in enumerate(zip(drafts, notes, adults, hints))
     ]
 
 
@@ -453,6 +456,14 @@ def _optional_inputs() -> Dict[str, Any]:
         f"image_{slot}": ("IMAGE", {"tooltip": f"Reference for <Picture {slot}>"})
         for slot in range(1, SLOTS + 1)
     }
+    optional["character_hint"] = (
+        "STRING",
+        {
+            "forceInput": True,
+            "tooltip": "Traits from a Character Hint node; they win over the "
+            "character picture",
+        },
+    )
     optional["temperature"] = (
         "FLOAT",
         {"default": 0.7, "min": 0.01, "max": 2.0, "step": 0.01, "advanced": True},
@@ -538,6 +549,7 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
         image_1: Optional[List[Any]] = None,
         image_2: Optional[List[Any]] = None,
         image_3: Optional[List[Any]] = None,
+        character_hint: Optional[List[str]] = None,
         temperature: Optional[List[float]] = None,
         describe_tokens: Optional[List[int]] = None,
         write_tokens: Optional[List[int]] = None,
@@ -562,7 +574,10 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
             describe_tokens[0] if describe_tokens else 512,
             write_tokens[0] if write_tokens else 1536,
         )
-        items = pair_items(prompt=prompt, **{k: v or [] for k, v in images.items()})
+        hints = [(text or "").strip() for text in character_hint or []] or [""]
+        items = pair_items(
+            prompt=prompt, hint=hints, **{k: v or [] for k, v in images.items()}
+        )
         entry = _resolve_model(model_name)
         _check_batches(items)
         run = _Run(entry, temperature[0] if temperature else 0.7)

@@ -411,3 +411,56 @@ def test_retry_user_names_a_banned_word():
 
 def test_retry_user_without_banned_word_is_unchanged():
     assert "Remove the word" not in retry_user(([], [4]))
+
+
+HINT = (
+    "The character is an adult woman aged 25. Body: a curvy body. "
+    "Unclothed detail: pierced nipples. Extra: has a scar."
+)
+
+
+def test_writer_user_puts_the_hint_after_the_notes():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("Draft.", notes, hint=HINT)
+    assert text.index("Dark hair.") < text.index(HINT.split(" Unclothed")[0])
+    assert "the hint wins" in text or "hint wins" in text
+    assert text.endswith("Write the final prompt now.")
+
+
+@pytest.mark.parametrize("blank", ["", "   ", "\n"])
+def test_writer_user_treats_a_blank_hint_as_no_hint(blank):
+    notes = [(1, "character", "Dark hair.")]
+    assert writer_user("Draft.", notes, hint=blank) == writer_user("Draft.", notes)
+
+
+def test_writer_user_drops_unclothed_detail_for_a_clothed_item():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("Draft.", notes, hint=HINT)
+    assert "Unclothed detail" not in text
+    assert "Extra: has a scar." in text
+
+
+def test_writer_user_keeps_unclothed_detail_for_a_nude_item():
+    notes = [(1, "character", "Dark hair.")]
+    text = writer_user("The woman is nude.", notes, adult=(25, 25), hint=HINT)
+    assert "Unclothed detail: pierced nipples." in text
+    assert text.index("Unclothed detail") < text.index("Nude mode")
+
+
+def test_writer_user_drops_unclothed_detail_when_an_outfit_is_connected():
+    notes = [(1, "character", "Dark hair."), (2, "outfit", "A red coat.")]
+    text = writer_user("The woman is nude.", notes, adult=(25, 25), hint=HINT)
+    assert "Unclothed detail" not in text
+
+
+def test_nude_block_with_one_age_says_aged_n_only():
+    text = nude_block((25, 25))
+    assert "aged 25" in text
+    assert "25 to 25" not in text
+    assert "twenties" not in text
+    assert "character notes or the character hint say" in text
+
+
+def test_adult_block_with_one_age_says_aged_n_only():
+    assert "25 to 25" not in adult_block((25, 25))
+    assert "aged 25" in adult_block((25, 25))

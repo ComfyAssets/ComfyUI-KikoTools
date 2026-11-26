@@ -9,6 +9,7 @@ from kikotools.tools.h3_reference_prompter.logic import (
     ROLES,
     SLOTS,
     YOUTH_WORDS,
+    HINT_MIN_AGE,
     check_adult,
     clean_result,
     draft_lead,
@@ -18,6 +19,8 @@ from kikotools.tools.h3_reference_prompter.logic import (
     drop_repeats,
     find_tags,
     find_youth_word,
+    parse_hint_age,
+    strip_unclothed,
     image_key,
     is_nude,
     is_placeholder,
@@ -507,3 +510,66 @@ def test_clean_result_caps_negatives():
 def test_cap_negatives_drops_blank_lines_after_the_cut():
     text = "\n\n".join(f"No problem {n}." for n in range(1, 10))
     assert cap_negatives(text) == "\n\n".join(f"No problem {n}." for n in range(1, 7))
+
+
+HINT_25 = "The character is an adult woman aged 25."
+CHILD_NOTES = "A girl.\nEstimated age: 15 to 19 years."
+OLDER_NOTES = "A woman.\nEstimated age: 30 to 45 years."
+
+
+def test_hint_min_age_is_eighteen():
+    assert HINT_MIN_AGE == 18
+
+
+@pytest.mark.parametrize(
+    "hint, expected",
+    [
+        ("The character is an adult woman aged 25.", 25),
+        ("Aged 30", 30),
+        ("ages well", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_parse_hint_age(hint, expected):
+    assert parse_hint_age(hint) == expected
+
+
+def test_strip_unclothed_removes_the_sentence():
+    text = "A. Unclothed detail: x, y. Extra: z."
+    assert strip_unclothed(text) == "A. Extra: z."
+
+
+def test_strip_unclothed_leaves_other_text_alone():
+    assert strip_unclothed("A. Extra: z.") == "A. Extra: z."
+
+
+def test_check_adult_without_pictures_uses_the_hint_age():
+    assert check_adult([], "nude", HINT_25) == (25, 25)
+
+
+@pytest.mark.parametrize(
+    "hint", ["The character is an adult woman aged 17.", "A woman with green eyes.", ""]
+)
+def test_check_adult_without_pictures_refuses_a_missing_or_young_hint_age(hint):
+    with pytest.raises(ValueError, match="character hint gives no adult age"):
+        check_adult([], "nude", hint)
+
+
+def test_check_adult_refuses_a_youth_word_in_the_hint():
+    with pytest.raises(ValueError, match="character hint uses the word 'teen'"):
+        check_adult([], "nude", "A teen aged 25.")
+
+
+def test_check_adult_keeps_refusing_a_young_picture_whatever_the_hint_says():
+    with pytest.raises(ValueError):
+        check_adult([(1, CHILD_NOTES)], "nude", "The character is aged 30.")
+
+
+def test_check_adult_uses_the_hint_age_when_the_picture_passes():
+    assert check_adult([(1, OLDER_NOTES)], "nude", "aged 25") == (25, 25)
+    assert check_adult([(1, OLDER_NOTES)], "nude") == (30, 45)
+
+
+def test_check_adult_ignores_a_hint_age_under_eighteen_with_a_picture():
+    assert check_adult([(1, OLDER_NOTES)], "nude", "aged 17") == (30, 45)

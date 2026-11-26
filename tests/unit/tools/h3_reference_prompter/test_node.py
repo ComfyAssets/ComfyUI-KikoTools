@@ -1017,3 +1017,76 @@ def test_a_normal_picture_in_the_same_slot_is_still_described(monkeypatch):
     h = nude_harness(monkeypatch)
     run_nude(h, images={"image_1": [img(1)], "image_2": [img(2)]})
     assert len(h.describes) == 2
+
+
+HINT_25 = "The character is an adult woman aged 25. Unclothed detail: a tattoo."
+PLAIN_NUDE = "A woman, nude, standing in a studio."
+
+
+def test_character_hint_is_a_forced_string_input(monkeypatch):
+    monkeypatch.setattr(node_module, "prompter_model_names", lambda: ["hf: a"])
+    optional = H3ReferencePrompterNode.INPUT_TYPES()["optional"]
+    kind, options = optional["character_hint"]
+    assert kind == "STRING" and options["forceInput"] is True
+
+
+def test_nude_draft_with_no_pictures_passes_on_a_hint_age(monkeypatch):
+    h = Harness(monkeypatch)
+    run(prompt=[PLAIN_NUDE], character_hint=[HINT_25])
+    (writer,) = h.writers
+    assert "The character is an adult woman aged 25." in writer["prompt"]
+    assert "Unclothed detail: a tattoo." in writer["prompt"]
+    assert nude_block((25, 25)) in writer["prompt"]
+
+
+def test_nude_draft_with_no_pictures_and_no_hint_is_refused(monkeypatch):
+    Harness(monkeypatch)
+    with pytest.raises(ValueError, match="No character picture"):
+        run(prompt=[PLAIN_NUDE])
+
+
+def test_blank_hint_behaves_like_no_hint(monkeypatch):
+    h = Harness(monkeypatch)
+    run(prompt=["A woman, standing."], character_hint=["  "])
+    h2 = Harness(monkeypatch)
+    run(prompt=["A woman, standing."])
+    assert h.writers[0]["prompt"] == h2.writers[0]["prompt"]
+
+
+def test_clothed_item_loses_the_unclothed_detail(monkeypatch):
+    h = Harness(monkeypatch)
+    run(prompt=["A woman in a coat."], character_hint=[HINT_25])
+    assert "Unclothed detail" not in h.writers[0]["prompt"]
+    assert "aged 25" in h.writers[0]["prompt"]
+
+
+def test_a_list_of_hints_pairs_with_the_prompts(monkeypatch):
+    h = Harness(monkeypatch)
+    run(prompt=["First.", "Second."], character_hint=["Hint one.", "Hint two."])
+    texts = [w["prompt"] for w in h.writers]
+    assert "Hint one." in texts[0] and "Hint two." not in texts[0]
+    assert "Hint two." in texts[1]
+
+
+def test_one_hint_applies_to_every_prompt(monkeypatch):
+    h = Harness(monkeypatch)
+    run(prompt=["First.", "Second."], character_hint=["Shared hint."])
+    assert all("Shared hint." in w["prompt"] for w in h.writers)
+
+
+def test_hint_list_of_another_length_raises(monkeypatch):
+    Harness(monkeypatch)
+    with pytest.raises(ValueError, match="share one length"):
+        run(prompt=["A.", "B.", "C."], character_hint=["x", "y"])
+
+
+def test_hint_age_never_rescues_a_young_picture(monkeypatch):
+    h = nude_harness(monkeypatch, character="A girl.\nEstimated age: 15 to 19 years.")
+    with pytest.raises(ValueError, match="estimated"):
+        run(
+            prompt=[NUDE_DRAFT],
+            model=[h.entry.name],
+            images={"image_1": [img(1)], "image_2": [img(2)]},
+            character_hint=["The character is an adult woman aged 30."],
+            **AUTO_ROLES,
+        )
