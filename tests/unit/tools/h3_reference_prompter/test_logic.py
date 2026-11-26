@@ -6,13 +6,13 @@ from kikotools.tools.h3_reference_prompter.logic import (
     ROLES,
     SLOTS,
     clean_result,
+    draft_lead,
     drop_echoes,
     drop_repeats,
     find_tags,
     image_key,
     item_seed,
     pair_items,
-    split_reference_sentences,
     tag_problems,
 )
 
@@ -146,52 +146,49 @@ LIVE_DRAFT = (
 )
 
 
-def test_split_reference_sentences_separates_tag_sentences_verbatim():
-    reference, rest = split_reference_sentences(LIVE_DRAFT)
-    assert reference == (
-        "<Picture 1> is the character. <Picture 2> is the outfit. "
-        "<Picture 3> is the pose. Draw the character from <Picture 1> in the "
-        "pose and camera angle of <Picture 3>; the mannequin is only a pose "
-        "guide, not an appearance reference. Dress the character in the "
-        "complete outfit from <Picture 2>, copying every garment, colour and "
-        "material exactly from that picture."
-    )
-    assert rest == (
-        "Include the footwear shown in the outfit picture, worn on both feet. "
-        "The pose: Front view, pose: Leaning-back sit, one knee raised "
-        "(Sitting). Photorealistic studio photograph, real person, natural "
-        "skin texture, soft even lighting. Full body from head to toe, plain "
-        "light grey studio background."
+def test_draft_lead_keeps_the_whole_live_draft_verbatim_without_the_stray_period():
+    assert draft_lead(LIVE_DRAFT) == LIVE_DRAFT
+
+
+def test_draft_lead_drops_a_stray_lone_period():
+    draft = "<Picture 1> is her. . Soft light. Full body."
+    assert draft_lead(draft) == "<Picture 1> is her. Soft light. Full body."
+
+
+def test_draft_lead_semicolon_does_not_end_a_sentence():
+    assert draft_lead("Use <Picture 1>; wear a hat. Smile") == (
+        "Use <Picture 1>; wear a hat. Smile"
     )
 
 
-def test_split_reference_sentences_semicolon_does_not_end_a_sentence():
-    reference, rest = split_reference_sentences("Use <Picture 1>; wear a hat. Smile")
-    assert reference == "Use <Picture 1>; wear a hat."
-    assert rest == "Smile"
+def test_draft_lead_blank_draft_is_empty():
+    assert draft_lead("   \n ") == ""
+    assert draft_lead("") == ""
 
 
-def test_split_reference_sentences_without_tags_returns_stripped_draft():
-    assert split_reference_sentences("  a woman standing. Soft light.  ") == (
-        "",
-        "a woman standing. Soft light.",
+def test_draft_lead_keeps_lines_and_skips_empty_ones():
+    draft = (
+        "<Picture 1> is her.   <Picture 2> is the coat.\n"
+        "\n"
+        "  Photorealistic. \n"
+        " . \n"
+        "Full body."
+    )
+    assert draft_lead(draft) == (
+        "<Picture 1> is her. <Picture 2> is the coat.\nPhotorealistic.\nFull body."
     )
 
 
-def test_split_reference_sentences_drops_stray_lone_period():
-    reference, rest = split_reference_sentences("<Picture 1> is her. . Soft light.")
-    assert reference == "<Picture 1> is her."
-    assert rest == "Soft light."
+def test_draft_lead_keeps_sentences_without_tags_in_order():
+    assert draft_lead("  a woman standing. Soft light.  ") == (
+        "a woman standing. Soft light."
+    )
 
 
-def test_split_reference_sentences_empty_draft():
-    assert split_reference_sentences("   ") == ("", "")
-
-
-def test_split_reference_sentences_question_and_bang_end_sentences():
-    reference, rest = split_reference_sentences("Who? <Picture 2> wins! Done")
-    assert reference == "<Picture 2> wins!"
-    assert rest == "Who? Done"
+@pytest.mark.parametrize("title", ["Dr.", "Mr.", "Mrs.", "St."])
+def test_draft_lead_keeps_titles_inside_a_sentence(title):
+    draft = f"{title} Kim wears <Picture 1>. Soft light."
+    assert draft_lead(draft) == draft
 
 
 def test_drop_echoes_removes_sentences_equal_to_a_reference_sentence():
@@ -213,40 +210,6 @@ def test_drop_echoes_keeps_partial_matches():
     assert drop_echoes(text, "<Picture 1> is her.") == text
 
 
-def test_split_reference_sentences_splits_at_line_breaks():
-    reference, rest = split_reference_sentences("<Picture 1> is her\nSoft light")
-    assert (reference, rest) == ("<Picture 1> is her", "Soft light")
-
-
-def test_split_reference_sentences_keeps_the_drafts_line_breaks():
-    draft = (
-        "<Picture 1> is her. <Picture 2> is the coat.\n"
-        "Photorealistic.\n\n"
-        "<Picture 3> is the pose. Full body."
-    )
-    reference, rest = split_reference_sentences(draft)
-    assert reference == (
-        "<Picture 1> is her. <Picture 2> is the coat.\n<Picture 3> is the pose."
-    )
-    assert rest == "Photorealistic.\nFull body."
-
-
-@pytest.mark.parametrize("title", ["Dr.", "Mr.", "Mrs.", "St."])
-def test_split_reference_sentences_keeps_short_titles_inside_a_sentence(title):
-    draft = f"{title} Kim wears <Picture 1>. Soft light."
-    reference, rest = split_reference_sentences(draft)
-    assert reference == f"{title} Kim wears <Picture 1>."
-    assert rest == "Soft light."
-
-
-def test_split_reference_sentences_still_splits_after_longer_or_lowercase_words():
-    reference, rest = split_reference_sentences(
-        "It is red. <Picture 1> is Bold. Next one."
-    )
-    assert reference == "<Picture 1> is Bold."
-    assert rest == "It is red. Next one."
-
-
 def test_drop_echoes_reads_multi_line_references():
     reference = "<Picture 1> is her.\nDr. Kim wears <Picture 2>."
     written = "Dr. Kim wears <Picture 2>. She stands."
@@ -259,7 +222,13 @@ def test_drop_echoes_does_not_split_a_title_off_the_written_part():
     )
 
 
-def test_short_name_still_ends_a_sentence():
-    reference, rest = split_reference_sentences("<Picture 1> is Tom. He waves.")
-    assert reference == "<Picture 1> is Tom."
-    assert rest == "He waves."
+def test_draft_lead_still_splits_after_longer_or_lowercase_words():
+    assert draft_lead("It is red. <Picture 1> is Bold. Next one.") == (
+        "It is red. <Picture 1> is Bold. Next one."
+    )
+
+
+def test_drop_echoes_drops_any_repeated_draft_sentence():
+    lead = "Side view, sitting. Photorealistic photograph."
+    written = "Side view, sitting. She waves. Photorealistic  photograph."
+    assert drop_echoes(written, lead) == "She waves."

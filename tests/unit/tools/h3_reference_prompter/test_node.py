@@ -267,7 +267,7 @@ def test_gguf_retries_each_item_before_writing_the_next(monkeypatch):
 def test_plain_draft_without_tags(monkeypatch):
     h = Harness(monkeypatch, writes=["A woman stands."])
     out = run(prompt=["a woman standing"], images={"image_1": [img(1)]})
-    assert out["result"][0] == ["A woman stands."]
+    assert out["result"][0] == ["a woman standing\n\nA woman stands."]
     assert len(h.writers) == 1
 
 
@@ -306,28 +306,29 @@ def test_extra_tag_error_names_extra(monkeypatch):
 
 
 def test_missing_tag_error_names_missing(monkeypatch):
-    # Only reachable if the program-written reference ever lost a tag.
-    monkeypatch.setattr(
-        node_module, "split_reference_sentences", lambda draft: ("", draft)
-    )
+    # Only reachable if the program-written lead ever lost a tag.
+    monkeypatch.setattr(node_module, "draft_lead", lambda draft: "")
     h = Harness(monkeypatch, writes=["Body only."] * 2)
     with pytest.raises(ValueError, match=r"missing <Picture 1>"):
         run(prompt=["<Picture 1> alone"])
     assert len(h.writers) == 2
 
 
-def test_output_starts_with_the_drafts_reference_sentences_verbatim(monkeypatch):
+def test_output_starts_with_the_whole_draft_verbatim(monkeypatch):
     draft = (
         "<Picture 1> is the character. Draw her in <Picture 3>; keep it calm. "
-        "Photorealistic photograph. Full body."
+        "Side view, sitting. . Photorealistic photograph."
     )
-    h = Harness(monkeypatch, writes=["She stands."])
+    h = Harness(monkeypatch, writes=["She sits. Side view, sitting. Calm."])
     out = run(prompt=[draft])
-    reference = "<Picture 1> is the character. Draw her in <Picture 3>; keep it calm."
-    assert out["result"][0] == [reference + "\n\nShe stands."]
+    lead = (
+        "<Picture 1> is the character. Draw her in <Picture 3>; keep it calm. "
+        "Side view, sitting. Photorealistic photograph."
+    )
+    assert out["result"][0] == [lead + "\n\nShe sits. Calm."]
     sent = h.writers[0]["prompt"]
-    assert "Photorealistic photograph. Full body." in sent
-    assert "already written; do not repeat" in sent
+    assert lead in sent
+    assert "word for word" in sent
 
 
 def test_model_output_echoing_a_tag_sentence_drops_the_echo(monkeypatch):
@@ -397,7 +398,7 @@ def test_hf_batch_still_blank_raises(monkeypatch):
 def test_combined_prompt_has_no_trailing_whitespace(monkeypatch):
     Harness(monkeypatch, writes=["End line.  \nEnd line."])
     out = run(prompt=["a woman standing"])
-    assert out["result"][0] == ["End line."]
+    assert out["result"][0] == ["a woman standing\n\nEnd line."]
 
 
 def test_blank_drafts_without_pictures_raise_before_unload(monkeypatch):
@@ -579,7 +580,6 @@ def test_writer_message_uses_notes(monkeypatch):
     run(images={"image_1": [img(1)]})
     expected = writer_user(
         DRAFT,
-        "",
         [
             (
                 1,
@@ -714,10 +714,10 @@ def test_native_errors_pass_through_unwrapped_and_repair(monkeypatch):
     assert "repair" in h.events
 
 
-def test_multi_line_draft_keeps_its_reference_lines(monkeypatch):
+def test_multi_line_draft_keeps_all_its_lines(monkeypatch):
     draft = "<Picture 1> is her.\nSoft light.\n<Picture 2> is the coat."
     Harness(monkeypatch, writes=["<Picture 2> is the coat. She stands."])
     out = run(prompt=[draft])
     assert out["result"][0] == [
-        "<Picture 1> is her.\n<Picture 2> is the coat.\n\nShe stands."
+        "<Picture 1> is her.\nSoft light.\n<Picture 2> is the coat.\n\nShe stands."
     ]

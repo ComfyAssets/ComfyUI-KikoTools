@@ -49,28 +49,23 @@ def _sentences(line: str) -> List[str]:
     return pieces
 
 
-def split_reference_sentences(draft: str) -> Tuple[str, str]:
-    """Split a draft into (sentences naming a picture, all other sentences).
+def draft_lead(draft: str) -> str:
+    """The draft's sentences in their original order, word for word.
 
-    Sentences end at ., ! or ? and at line breaks. Sentences keep their exact
-    words and order; those that shared a line are joined by a space and lines
-    by a line break. Fragments with no letter or digit (a stray lone period)
-    and empty lines are dropped.
+    Sentences end at ., ! or ? and at line breaks. Sentences that shared a
+    line are joined by a space and lines by a line break. Fragments with no
+    letter or digit (a stray lone period) and empty lines are dropped.
     """
-    reference: List[str] = []
-    rest: List[str] = []
+    lines: List[str] = []
     for line in draft.strip().split("\n"):
-        line_reference: List[str] = []
-        line_rest: List[str] = []
-        for sentence in _sentences(line.strip()):
-            sentence = sentence.strip()
-            if not re.search(r"\w", sentence):
-                continue
-            (line_reference if find_tags(sentence) else line_rest).append(sentence)
-        for kept, part in ((line_reference, reference), (line_rest, rest)):
-            if kept:
-                part.append(" ".join(kept))
-    return "\n".join(reference), "\n".join(rest)
+        kept = [
+            sentence.strip()
+            for sentence in _sentences(line.strip())
+            if re.search(r"\w", sentence)
+        ]
+        if kept:
+            lines.append(" ".join(kept))
+    return "\n".join(lines)
 
 
 def pair_items(**columns: List[Any]) -> List[Dict[str, Any]]:
@@ -135,15 +130,13 @@ def drop_repeats(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip("\n")
 
 
-def drop_echoes(written: str, reference: str) -> str:
-    """Drop sentences of ``written`` that repeat a reference sentence.
+def drop_echoes(written: str, lead: str) -> str:
+    """Drop sentences of ``written`` that repeat any sentence of ``lead``.
 
     Matching ignores case and spacing; lines left empty are removed.
     """
     echoes = {
-        _squash(sentence)
-        for line in reference.split("\n")
-        for sentence in _sentences(line)
+        _squash(sentence) for line in lead.split("\n") for sentence in _sentences(line)
     } - {""}
     if not echoes:
         return written

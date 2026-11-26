@@ -20,10 +20,10 @@ DRAFT = (
     "photograph. The pose: Low angle view, pose: Leaning-back sit (Sitting)"
 )
 
-REFERENCE = (
-    "<Picture 1> is the character. <Picture 2> is the outfit. <Picture 3> is the pose."
+LEAD = (
+    "<Picture 1> is the character. <Picture 2> is the outfit. <Picture 3> is the pose.\n"
+    "Photorealistic studio photograph. The pose: Side view, Leaning-back sit."
 )
-REST = "Photorealistic studio photograph. The pose: Leaning-back sit."
 
 SECTIONS = (
     "subject",
@@ -32,7 +32,6 @@ SECTIONS = (
     "camera",
     "lighting",
     "background",
-    "style",
     "closing list",
 )
 
@@ -103,7 +102,7 @@ def test_describe_user_rejects_unknown_role():
 def test_writer_system_lists_sections_in_order():
     text = writer_system().lower()
     items = re.findall(r"^([1-9])\. (.*)$", text, re.MULTILINE)
-    assert [number for number, _ in items] == list("12345678")
+    assert [number for number, _ in items] == list("1234567")
     for (_, line), name in zip(items, SECTIONS):
         assert name in line
     assert "250" in text and "450" in text
@@ -127,8 +126,8 @@ def test_writer_user_labels_notes_by_tag():
         (2, "outfit", "A red wool coat."),
         (3, "pose", None),
     ]
-    text = writer_user(REFERENCE, REST, notes)
-    assert REFERENCE in text and REST in text
+    text = writer_user(LEAD, notes)
+    assert LEAD in text
     assert "Notes for <Picture 2> (outfit): A red wool coat." in text
     assert "<Picture 3> (pose)" in text
     assert "no picture" in text.lower()
@@ -136,13 +135,13 @@ def test_writer_user_labels_notes_by_tag():
 
 def test_writer_user_marks_slot_missing_from_draft_as_context_only():
     notes = [(2, "outfit", "A red wool coat.")]
-    text = writer_user("Plain draft with <Picture 1> only.", "", notes)
+    text = writer_user("Plain draft with <Picture 1> only.", notes)
     assert "do not write its tag" in text.lower()
     assert "context only" in text.lower()
 
 
 def test_writer_user_tagged_slot_is_not_context_only():
-    text = writer_user(REFERENCE, REST, [(2, "outfit", "A red wool coat.")])
+    text = writer_user(LEAD, [(2, "outfit", "A red wool coat.")])
     assert "context only" not in text.lower()
 
 
@@ -178,7 +177,6 @@ def test_retry_user_without_blank_does_not_say_empty():
 
 def test_writer_system_has_fallbacks():
     text = writer_system().lower()
-    assert "no style sentence, skip" in text
     assert "lighting and the background from the draft first" in text
     assert "plain, neutral choice" in text
     assert "invent nothing" in text
@@ -189,13 +187,13 @@ def test_describe_user_forbids_tags():
 
 
 def test_writer_user_skips_empty_slot_not_in_draft():
-    text = writer_user("Only <Picture 1> here.", "", [(3, "pose", None)])
+    text = writer_user("Only <Picture 1> here.", [(3, "pose", None)])
     assert "<Picture 3>" not in text
     assert "No notes." in text
 
 
 def test_writer_user_keeps_empty_slot_in_draft():
-    text = writer_user(REFERENCE, REST, [(3, "pose", None)])
+    text = writer_user(LEAD, [(3, "pose", None)])
     assert "Notes for <Picture 3> (pose): no picture" in text
 
 
@@ -205,43 +203,45 @@ def test_writer_system_forbids_labels_with_examples():
     assert "plain paragraphs" in lowered
     assert "never write part numbers, part names or labels" in lowered
     assert '"The subject:"' in text
-    assert '"The style sentence from the draft:"' in text
+    assert '"The camera:"' in text
 
 
-def test_writer_system_says_reference_sentences_are_already_written():
+def test_writer_system_says_the_whole_draft_is_already_written():
     lowered = " ".join(writer_system().lower().split())
-    assert "are already written by the program" in lowered
+    assert "whole draft is already written word for word" in lowered
+    assert "never repeat or rewrite its sentences" in lowered
     assert "start directly with the subject" in lowered
-    assert "never repeat or rewrite them" in lowered
     assert "unless you repeat one of the draft's tags" in lowered
-    assert "style sentence" in lowered
-    assert "no style sentence, skip" in lowered
+    assert "reference sentences" not in lowered
 
 
-def test_writer_system_has_no_reference_copy_part():
+def test_writer_system_has_no_style_sentence_part():
     lowered = writer_system().lower()
-    assert "copy only the draft's sentences" not in lowered
-    assert "1. the reference sentences" not in lowered
+    assert "no style sentence" not in lowered
+    assert "the style sentence from the draft:" not in lowered
+    assert "taken from the draft's remaining sentences" not in lowered
 
 
-def test_writer_user_shows_reference_and_rest_separately():
-    text = writer_user(REFERENCE, REST, [])
-    ref_at = text.index(REFERENCE)
-    rest_at = text.index(REST)
-    assert "already written; do not repeat" in text[: ref_at + len(REFERENCE) + 80]
-    assert "follow these; keep the style sentence" in text[ref_at : rest_at + 1]
-    assert ref_at < rest_at
+def test_writer_system_word_target_covers_only_the_models_part():
+    lowered = " ".join(writer_system().lower().split())
+    assert "250 to 450 words" in lowered
+    assert "your part" in lowered
 
 
-def test_writer_user_without_reference_has_no_reference_block():
-    text = writer_user("", "a woman standing.", [])
+def test_writer_user_shows_the_lead_under_a_heading():
+    text = writer_user(LEAD, [])
+    heading = text[: text.index(LEAD)].lower()
+    assert "whole draft" in heading
+    assert "word for word" in heading
+    assert "do not repeat or rewrite" in heading
+    assert "detail that follows" in heading
+
+
+def test_writer_user_without_a_lead_has_no_lead_block():
+    text = writer_user("", [(1, "character", "A woman.")])
     assert "already written" not in text
-    assert "a woman standing." in text
-
-
-def test_writer_user_with_no_remaining_sentences_says_none():
-    text = writer_user(REFERENCE, "", [])
-    assert "(none)" in text
+    assert "Notes for <Picture 1> (character), context only: A woman." in text
+    assert "Write the final prompt now." in text
 
 
 def test_writer_system_closing_list_is_short_distinct_and_last():
@@ -316,9 +316,13 @@ def test_outfit_describer_never_lets_items_float():
     )
 
 
-def test_writer_keeps_the_draft_pose_name_and_puts_accessories_in_place():
-    text = writer_system()
-    assert "Begin it with the draft's view and pose name, word for word" in text
+def test_writer_pose_follows_the_drafts_view_and_accessories_stay_in_place():
+    text = " ".join(writer_system().split())
+    assert "Begin it with the draft's view" not in text
+    assert "in the view and position the draft names" in text
+    assert "where the weight rests" in text
+    assert "The notes only add detail to the pose the draft names" in text
+    assert "Keep the pose name from the draft" not in text
     assert "The draft's view and position win over the notes." in text
     assert "a hat is on the head" in text
     assert "Never write that an item floats or hovers" in text

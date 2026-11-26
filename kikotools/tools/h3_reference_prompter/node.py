@@ -22,11 +22,11 @@ from .logic import (
     ROLES,
     SLOTS,
     clean_result,
+    draft_lead,
     drop_echoes,
     image_key,
     item_seed,
     pair_items,
-    split_reference_sentences,
     tag_problems,
 )
 from .models import (
@@ -226,10 +226,10 @@ def _notes_text(notes: List[Note]) -> str:
 Problems = Tuple[List[int], List[int], bool]
 
 
-def _combine(reference: str, raw: str) -> Tuple[str, str]:
+def _combine(lead: str, raw: str) -> Tuple[str, str]:
     """(written, combined): the cleaned model text, and the full prompt."""
-    written = drop_echoes(clean_result(raw), reference)
-    parts = [part for part in (reference, written) if part]
+    written = drop_echoes(clean_result(raw), lead)
+    parts = [part for part in (lead, written) if part]
     return written, "\n\n".join(parts).rstrip()
 
 
@@ -274,13 +274,11 @@ def _raise_if_failed(problems: Problems, model: str) -> None:
 
 
 def _write_one(run: _Run, draft: str, notes: List[Note], seed: int, tokens: int) -> str:
-    reference, rest = split_reference_sentences(draft)
-    message = writer_user(reference, rest, notes)
+    lead = draft_lead(draft)
+    message = writer_user(lead, notes)
 
     def attempt(text: str) -> Tuple[str, str]:
-        return _combine(
-            reference, run.generate(writer_system(), text, None, seed, tokens)
-        )
+        return _combine(lead, run.generate(writer_system(), text, None, seed, tokens))
 
     written, combined = attempt(message)
     problems = _problems(draft, written, combined)
@@ -295,14 +293,14 @@ def _write_batch(
     run: _Run, drafts: List[str], notes: List[List[Note]], seed: int, tokens: int
 ) -> List[str]:
     """Write every draft in one batch, then retry the failing ones in one more."""
-    references = [split_reference_sentences(draft) for draft in drafts]
-    messages = [writer_user(ref, rest, n) for (ref, rest), n in zip(references, notes)]
+    leads = [draft_lead(draft) for draft in drafts]
+    messages = [writer_user(lead, n) for lead, n in zip(leads, notes)]
 
     def attempt(indices: List[int], texts: List[str]) -> List[Tuple[str, str]]:
         raws = run.generate_batch(
             [(writer_system(), t, None) for t in texts], seed, tokens
         )
-        return [_combine(references[i][0], raw) for i, raw in zip(indices, raws)]
+        return [_combine(leads[i], raw) for i, raw in zip(indices, raws)]
 
     def problems_of(index: int, result: Tuple[str, str]) -> Problems:
         return _problems(drafts[index], *result)

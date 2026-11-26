@@ -79,13 +79,13 @@ English, in full sentences, as one prompt of 250 to 450 words. Never write a \
 keyword list. Do not open with a string of art-medium words. Give only the prompt: no \
 greeting, no title, no explanation, no quotes.
 
-The reference sentences (the draft's sentences that name a picture) are \
-already written by the program and put before your text. Never repeat or \
-rewrite them. Start directly with the subject.
+The user's whole draft is already written word for word before your text. \
+Never repeat or rewrite its sentences. Start directly with the subject. The \
+word target above is for your part only.
 
 Write these parts in this order, as plain paragraphs. Never write part \
 numbers, part names or labels in the prompt: do not write lines such as \
-"The subject:" or "The style sentence from the draft:". Just write the \
+"The subject:" or "The camera:". Just write the \
 sentences.
 1. The subject, from the head down to the hands: age and build, face, \
 hair, clothing in one line, expression, then each hand. Later in the \
@@ -94,19 +94,15 @@ about something else; never write a separate summary such as \
 "Same description:".
 2. The outfit, garment by garment, with the colour, the specific material \
 and the surface detail of each one (weave, sheen, stitching, wear).
-3. The pose. Begin it with the draft's view and pose name, word for word \
-(for example "Side view, one hand supporting, legs extended diagonally \
-forward, sitting"), then add what each hand does, what each foot does, and \
-where the weight rests. The draft's view and position win over the notes.
+3. The pose, described in the view and position the draft names: what each \
+hand does, what each foot does, and where the weight rests. The draft's view \
+and position win over the notes.
 4. The camera: the height, the side, the distance, the direction it points, \
 and how the frame is cropped.
 5. The lighting, in its own sentence: where the light comes from, how hard or \
 soft it is, and what it touches.
 6. The background, with its colour and material.
-7. The style sentence, taken from the draft's remaining sentences and kept as \
-the user wrote it. If the \
-draft has no style sentence, skip this part and do not make one up.
-8. A short closing list of what must not appear: three to six lines, one \
+7. A short closing list of what must not appear: three to six lines, one \
 problem per line, each line about a different problem, each a short \
 sentence such as "No extra fingers or limbs." and "No other people." Never \
 repeat a line. Nothing comes after the closing list: stop there.
@@ -116,8 +112,8 @@ Rules:
 point at a picture, exactly as written. Never write a tag that is not in the \
 draft. If the draft has no tags, write none.
 - The draft wins. If the draft and the notes disagree, follow the draft. If \
-the draft says to leave something out, leave it out. Keep the pose name from \
-the draft and use the notes to add detail to it.
+the draft says to leave something out, leave it out. The notes only add \
+detail to the pose the draft names.
 - A mannequin or model in a pose picture is only a position guide. Never \
 describe its look: no surface, no colour, no build, no face. The character \
 picture decides how the person looks.
@@ -168,11 +164,9 @@ def writer_system() -> str:
     return _WRITER_SYSTEM
 
 
-def writer_user(
-    reference: str, rest: str, notes: List[Tuple[int, str, Optional[str]]]
-) -> str:
-    """User message: reference sentences, remaining draft, per-picture notes."""
-    in_draft = find_tags(reference)
+def writer_user(lead: str, notes: List[Tuple[int, str, Optional[str]]]) -> str:
+    """User message: the written lead (whole draft) and per-picture notes."""
+    in_draft = find_tags(lead)
     lines = []
     for slot, role, text in sorted(notes, key=lambda note: note[0]):
         label = f"<Picture {slot}> ({role})"
@@ -192,14 +186,12 @@ def writer_user(
             )
     notes_block = "\n".join(lines) if lines else "No notes."
     blocks = []
-    if reference:
+    if lead:
         blocks.append(
-            "Reference sentences (already written; do not repeat):\n" + reference
+            "The whole draft is already written word for word at the start "
+            "of the prompt. Do not repeat or rewrite it. Your job is the "
+            "detail that follows it:\n" + lead
         )
-    blocks.append(
-        "Remaining draft sentences (follow these; keep the style sentence):\n"
-        + (rest or "(none)")
-    )
     blocks.append(notes_block)
     blocks.append("Write the final prompt now.")
     return "\n\n".join(blocks)
