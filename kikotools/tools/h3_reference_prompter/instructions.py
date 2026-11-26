@@ -257,7 +257,7 @@ def writer_user(
     ``hint`` is character hint text; blank adds nothing. Its "Unclothed
     detail:" sentence stays only when the item is in nude mode.
     """
-    body = body_is_nude(lead, notes)
+    body = body_is_nude(lead, notes, hint)
     in_draft = find_tags(lead)
     lines = []
     for slot, role, text in sorted(notes, key=lambda note: note[0]):

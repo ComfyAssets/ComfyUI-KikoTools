@@ -381,10 +381,13 @@ def hint_lead(hint: Optional[str], nude: bool) -> str:
     return " ".join(_TAG.sub(" ", text).split())
 
 
-def body_is_nude(lead: str, notes: Iterable[Tuple[int, str, Optional[str]]]) -> bool:
-    """Body mode of an item: the draft says nude and no connected picture
-    (one with notes) is the outfit."""
-    return is_nude(lead, [role for _, role, text in notes if text is not None])
+def body_is_nude(
+    lead: str, notes: Iterable[Tuple[int, str, Optional[str]]], hint: str = ""
+) -> bool:
+    """Body mode of an item: the draft or the character hint says nude and no
+    connected picture (one with notes) is the outfit."""
+    roles = [role for _, role, text in notes if text is not None]
+    return is_nude(lead, roles) or is_nude(hint, roles)
 
 
 def find_minor_age(text: Optional[str]) -> Optional[int]:

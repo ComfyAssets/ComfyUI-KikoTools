@@ -1181,3 +1181,39 @@ def test_no_hint_prompt_is_unchanged(monkeypatch):
     Harness(monkeypatch)
     out = run(prompt=["A woman in a coat."])
     assert out["result"][0] == ["A woman in a coat.\n\n" + BODY]
+
+
+CLOTHED_DRAFT = "A studio portrait."
+
+
+def test_nude_wording_in_the_hint_runs_the_adult_check(monkeypatch):
+    Harness(monkeypatch)
+    hint = "The character is an adult woman aged 25. Extra: nude, aged 16."
+    with pytest.raises(ValueError, match="states an age of 16"):
+        run(prompt=[CLOTHED_DRAFT], character_hint=[hint])
+
+
+def test_nude_hint_without_an_adult_age_is_refused(monkeypatch):
+    Harness(monkeypatch)
+    with pytest.raises(ValueError, match="No character picture"):
+        run(prompt=[CLOTHED_DRAFT], character_hint=["She is naked."])
+
+
+def test_nude_hint_with_a_young_picture_is_refused(monkeypatch):
+    h = nude_harness(monkeypatch, character="A girl.\nEstimated age: 15 to 19 years.")
+    hint = "The character is an adult woman aged 30. Extra: nude."
+    with pytest.raises(ValueError, match="estimated 15 to 19"):
+        run(
+            prompt=["A woman, standing."],
+            model=[h.entry.name],
+            images={"image_1": [img(1)]},
+            character_hint=[hint],
+            **AUTO_ROLES,
+        )
+
+
+def test_nude_hint_with_an_adult_age_gets_the_nude_block(monkeypatch):
+    h = Harness(monkeypatch)
+    hint = "The character is an adult woman aged 25. Extra: nude."
+    run(prompt=[CLOTHED_DRAFT], character_hint=[hint])
+    assert nude_block((25, 25)) in h.writers[0]["prompt"]

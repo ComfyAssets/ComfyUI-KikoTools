@@ -243,12 +243,14 @@ def _notes_text(notes: List[Note]) -> str:
 
 
 def _adult_range(item: Item, notes: List[Note]) -> Optional[AgeRange]:
-    """The checked age range of an item whose draft says nude; else None.
+    """The checked age range of an item whose draft or character hint says
+    nude; else None.
 
+    The hint counts because it is written into the prompt word for word.
     Raises ValueError when such an item has no adult character picture. The
     check runs whatever the roles are, even with an outfit picture connected.
     """
-    if not says_nude(item["prompt"]):
+    if not (says_nude(item["prompt"]) or says_nude(item["hint"])):
         return None
     characters = [
         (slot, text)
@@ -332,7 +334,7 @@ def _write_one(
     tokens: int,
 ) -> str:
     lead = draft_lead(draft)
-    details = hint_lead(hint, body_is_nude(lead, notes))
+    details = hint_lead(hint, body_is_nude(lead, notes, hint))
     message = writer_user(lead, notes, adult, hint)
     nude = adult is not None
 
@@ -361,7 +363,7 @@ def _write_batch(
     """Write every draft in one batch, then retry the failing ones in one more."""
     leads = [draft_lead(draft) for draft in drafts]
     details = [
-        hint_lead(hint, body_is_nude(lead, item_notes))
+        hint_lead(hint, body_is_nude(lead, item_notes, hint))
         for lead, item_notes, hint in zip(leads, notes, hints)
     ]
     messages = [writer_user(*args) for args in zip(leads, notes, adults, hints)]

@@ -35,7 +35,7 @@ The traits in the hint win over the character picture's notes. The picture fills
 
 The hint is written into the final prompt word for word after the draft (picture tags removed), then the writer's detail follows. So every selected trait reaches the image model, and the writer adds detail around it without repeating it. The "No ..." options (no tattoos, no freckles, no bangs, no glasses, clean shaven) drop a trait the picture has, and a "Pose:" part wins over the pose notes for the head and eyes only.
 
-The "Unclothed detail:" sentence of the hint is removed unless the item is in nude mode (the draft says nude or naked and no outfit picture is connected). See [Age check](#nude-mode) for how the hint's age is used.
+The "Unclothed detail:" sentence of the hint is removed unless the item is in nude mode (the draft or the hint says nude or naked and no outfit picture is connected). See [Age check](#nude-mode) for how the hint's age is used.
 
 ## Roles
 
@@ -76,7 +76,7 @@ A blank placeholder picture (a small, uniformly white image, such as KikoCharShe
 
 **Detection.** Two checks look at each item's draft:
 
-- **Age check and word check:** they run whenever the draft contains `nude` or `naked` (whole word, any case) or the Chinese `裸`, whatever the roles and pictures are. The draft is copied into the prompt, so its nude wording reaches the image model either way. A workflow with fixed roles, or a draft such as "nude lipstick" with an outfit picture, is checked too.
+- **Age check and word check:** they run whenever the draft or the character hint contains `nude` or `naked` (whole word, any case) or the Chinese `裸`, whatever the roles and pictures are. Both are copied into the prompt, so their nude wording reaches the image model either way. A workflow with fixed roles, or a draft such as "nude lipstick" with an outfit picture, is checked too.
 - **Body section:** it is written only when, in addition, no connected picture has the outfit role. With an outfit picture, the outfit is described as usual and the writer is only told the person is an adult.
 
 **Body section.** In nude mode the writer gets one more instruction block. In place of the outfit part, it describes the unclothed adult body plainly: build, proportions, skin tone and skin texture following the character notes, and natural adult anatomy, in the register of a figure-drawing or photography reference. It writes no sexual acts, no sexual poses and no arousal or explicit-focus language, and adds no clothing, footwear or accessories unless the draft names them. The person is called an adult woman aged N to M (one age, such as "aged 25", when the hint gives it) (or "in her twenties" when the range lies there), or an adult man when the character notes describe a man. All other writer rules still apply.
