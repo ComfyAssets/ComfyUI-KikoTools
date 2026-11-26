@@ -257,3 +257,9 @@ def test_drop_echoes_does_not_split_a_title_off_the_written_part():
     assert drop_echoes("Dr. Lee waves.", "Dr. Kim wears <Picture 2>.") == (
         "Dr. Lee waves."
     )
+
+
+def test_short_name_still_ends_a_sentence():
+    reference, rest = split_reference_sentences("<Picture 1> is Tom. He waves.")
+    assert reference == "<Picture 1> is Tom."
+    assert rest == "He waves."

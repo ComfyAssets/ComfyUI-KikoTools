@@ -21,7 +21,7 @@ _PREAMBLE_LINE = re.compile(
 )
 _SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+")
 # A single capitalised word of up to three letters (Dr., Mr., Mrs., St.).
-_TITLE_END = re.compile(r"(?:^|\s)[A-Z][a-z]{0,2}\.$")
+_TITLE_END = re.compile(r"(?:^|\s)(?:Dr|Mr|Mrs|Ms|Mx|St|Jr|Sr|Prof)\.$")
 _SEED_MODULUS = 2**64
 
 
