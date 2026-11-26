@@ -6,6 +6,7 @@ from kikotools.tools.h3_reference_prompter.logic import (
     ROLES,
     SLOTS,
     clean_result,
+    drop_repeats,
     find_tags,
     image_key,
     item_seed,
@@ -89,3 +90,40 @@ def test_clean_result_strips_prompt_label_on_same_line():
 
 def test_clean_result_strips_code_fence_with_language():
     assert clean_result("```text\nA woman stands.\n```") == "A woman stands."
+
+
+def test_drop_repeats_collapses_the_runaway_closing_list():
+    text = "No extra fingers.\n" + "No other people.\n" * 100
+    assert drop_repeats(text) == "No extra fingers.\nNo other people."
+
+
+def test_drop_repeats_drops_repeated_line_ignoring_case_and_spacing():
+    text = "No other  people.\nA hand.\nno OTHER people.\n"
+    assert drop_repeats(text) == "No other  people.\nA hand."
+
+
+def test_drop_repeats_drops_repeated_sentence_in_one_line():
+    text = "She smiles. No other people. She waves. no other people.  She smiles."
+    assert drop_repeats(text) == "She smiles. No other people. She waves."
+
+
+def test_drop_repeats_keeps_blank_line_paragraph_breaks():
+    text = "One line.\n\nTwo line.\n\nOne line.\n\nThree line."
+    assert drop_repeats(text) == "One line.\n\nTwo line.\n\nThree line."
+
+
+def test_drop_repeats_keeps_first_draft_sentence_and_its_tags():
+    text = "<Picture 1> is the character. She stands. <Picture 1> is the " "character."
+    result = drop_repeats(text)
+    assert result == "<Picture 1> is the character. She stands."
+    assert find_tags(result) == {1}
+
+
+def test_drop_repeats_leaves_clean_text_untouched():
+    text = "  Indented line. Second sentence.\n\nNext paragraph."
+    assert drop_repeats(text) == text
+
+
+def test_clean_result_drops_repeats_at_the_end():
+    raw = "<think>x</think>\nShe stands.\n" + "No other people.\n" * 5
+    assert clean_result(raw) == "She stands.\nNo other people."

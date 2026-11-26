@@ -19,6 +19,7 @@ _PREAMBLE_LINE = re.compile(
     r"|(?:(?:final|enhanced|revised) )?prompt[ \t]*:[ \t]*)",
     re.IGNORECASE,
 )
+_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+")
 _SEED_MODULUS = 2**64
 
 
@@ -65,7 +66,35 @@ def image_key(image: torch.Tensor, role: str, model: str) -> str:
     return digest.hexdigest()
 
 
+def _squash(text: str) -> str:
+    return " ".join(text.split()).lower()
+
+
+def drop_repeats(text: str) -> str:
+    """Drop lines and sentences that repeat earlier ones; the first stays."""
+    seen_lines: Set[str] = set()
+    out: List[str] = []
+    for line in text.split("\n"):
+        key = _squash(line)
+        if not key:
+            out.append(line)
+            continue
+        if key in seen_lines:
+            continue
+        seen_lines.add(key)
+        sentences = _SENTENCE_BREAK.split(line)
+        kept: List[str] = []
+        seen_sentences: Set[str] = set()
+        for sentence in sentences:
+            sentence_key = _squash(sentence)
+            if sentence_key not in seen_sentences:
+                seen_sentences.add(sentence_key)
+                kept.append(sentence)
+        out.append(line if len(kept) == len(sentences) else " ".join(kept))
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip("\n")
+
+
 def clean_result(text: str) -> str:
     bare = split_thinking(text)
     bare = _PREAMBLE_LINE.sub("", bare, count=1)
-    return clean_output(bare)
+    return drop_repeats(clean_output(bare))
