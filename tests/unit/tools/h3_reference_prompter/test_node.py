@@ -107,12 +107,9 @@ def test_input_types_and_metadata(monkeypatch):
     required, optional = types["required"], types["optional"]
     assert required["prompt"][1]["multiline"] is True
     assert required["model"][0] == ["hf: a"]
-    assert [required[f"role_{n}"][1]["default"] for n in (1, 2, 3)] == [
-        "character",
-        "outfit",
-        "pose",
-    ]
-    assert required["role_1"][0] == ["character", "outfit", "pose", "other"]
+    assert [required[f"role_{n}"][1]["default"] for n in (1, 2, 3)] == ["auto"] * 3
+    assert required["role_1"][0] == ["auto", "character", "outfit", "pose", "other"]
+    assert "auto" in required["role_2"][1]["tooltip"]
     assert required["seed"][1]["control_after_generate"] is True
     assert all(optional[f"image_{n}"][0] == "IMAGE" for n in (1, 2, 3))
     assert optional["temperature"][1] == {
@@ -721,3 +718,85 @@ def test_multi_line_draft_keeps_all_its_lines(monkeypatch):
     assert out["result"][0] == [
         "<Picture 1> is her.\nSoft light.\n<Picture 2> is the coat.\n\nShe stands."
     ]
+
+
+NUDE_DRAFT = (
+    "<Picture 1> is the character. <Picture 2> is the pose. Draw the character "
+    "from <Picture 1> in the pose and camera angle of <Picture 2>; the mannequin "
+    "is only a pose guide, not an appearance reference. The character's outfit: "
+    "completely nude, wearing no clothing and no footwear. The pose: Front view, "
+    "pose: Standing contrapposto, hand on hip (Standing). Photorealistic studio "
+    "photograph, real person, natural skin texture, soft even lighting. Full "
+    "body from head to toe, plain light grey studio background."
+)
+AUTO_ROLES = dict(role_1=["auto"], role_2=["auto"], role_3=["auto"])
+
+
+def note_labels(out, index=0):
+    return [n.split(":")[0] for n in out["result"][1][index].split("\n\n")]
+
+
+def test_auto_roles_follow_the_drafts_picture_sentences(monkeypatch):
+    h = Harness(monkeypatch)
+    out = run(
+        prompt=[NUDE_DRAFT],
+        images={"image_1": [img(1)], "image_2": [img(2)]},
+        **AUTO_ROLES,
+    )
+    assert [c["system"] for c in h.describes] == [
+        describe_system("character"),
+        describe_system("pose"),
+    ]
+    assert note_labels(out) == ["<Picture 1> (character)", "<Picture 2> (pose)"]
+    assert "<Picture 2> (pose)" in h.writers[0]["prompt"]
+
+
+def test_auto_roles_fall_back_to_slot_defaults(monkeypatch):
+    h = Harness(monkeypatch)
+    out = run(
+        images={"image_1": [img(1)], "image_2": [img(2)], "image_3": [img(3)]},
+        **AUTO_ROLES,
+    )
+    assert [c["system"] for c in h.describes] == [
+        describe_system("character"),
+        describe_system("outfit"),
+        describe_system("pose"),
+    ]
+    assert note_labels(out) == [
+        "<Picture 1> (character)",
+        "<Picture 2> (outfit)",
+        "<Picture 3> (pose)",
+    ]
+
+
+def test_explicit_role_wins_over_the_drafts_sentence(monkeypatch):
+    h = Harness(monkeypatch)
+    out = run(
+        prompt=[NUDE_DRAFT],
+        images={"image_2": [img(2)]},
+        role_1=["auto"],
+        role_2=["other"],
+        role_3=["auto"],
+    )
+    assert [c["system"] for c in h.describes] == [describe_system("other")]
+    assert note_labels(out) == ["<Picture 2> (other)"]
+
+
+def test_auto_roles_resolve_per_item_and_cache_by_resolved_role(monkeypatch):
+    h = Harness(monkeypatch)
+    three = "<Picture 1> is the character. <Picture 2> is the outfit."
+    out = run(
+        prompt=[NUDE_DRAFT, three],
+        images={"image_2": [img(2)]},
+        **AUTO_ROLES,
+    )
+    assert sorted(c["system"] for c in h.describes) == sorted(
+        [describe_system("pose"), describe_system("outfit")]
+    )
+    assert note_labels(out, 0) == ["<Picture 2> (pose)"]
+    assert note_labels(out, 1) == ["<Picture 2> (outfit)"]
+    keys = {
+        node_module.image_key(img(2), role, "hf: demo", 512)
+        for role in ("pose", "outfit")
+    }
+    assert set(node_module._NOTES_CACHE) == keys

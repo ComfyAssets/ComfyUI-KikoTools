@@ -2,7 +2,9 @@ import pytest
 import torch
 
 from kikotools.tools.h3_reference_prompter.logic import (
+    AUTO,
     DEFAULT_ROLES,
+    ROLE_CHOICES,
     ROLES,
     SLOTS,
     clean_result,
@@ -13,6 +15,7 @@ from kikotools.tools.h3_reference_prompter.logic import (
     image_key,
     item_seed,
     pair_items,
+    resolve_roles,
     tag_problems,
 )
 
@@ -21,6 +24,8 @@ def test_roles_and_slots_constants():
     assert ROLES == ("character", "outfit", "pose", "other")
     assert DEFAULT_ROLES == ("character", "outfit", "pose")
     assert SLOTS == 3
+    assert AUTO == "auto"
+    assert ROLE_CHOICES == ("auto", "character", "outfit", "pose", "other")
 
 
 def test_find_tags_reads_numbers_with_spaces_inside_brackets():
@@ -238,3 +243,53 @@ def test_drop_echoes_ignores_end_punctuation():
     lead = "Side view\nAnime style, full body"
     written = "Side view. The girl stands. Anime style, full body"
     assert drop_echoes(written, lead) == "The girl stands."
+
+
+NUDE_DRAFT = (
+    "<Picture 1> is the character. <Picture 2> is the pose. Draw the character "
+    "from <Picture 1> in the pose and camera angle of <Picture 2>; the mannequin "
+    "is only a pose guide, not an appearance reference. The character's outfit: "
+    "completely nude, wearing no clothing and no footwear. The pose: Front view, "
+    "pose: Standing contrapposto, hand on hip (Standing). Photorealistic studio "
+    "photograph, real person, natural skin texture, soft even lighting. Full "
+    "body from head to toe, plain light grey studio background."
+)
+THREE_DRAFT = (
+    "<Picture 1> is the character. <Picture 2> is the outfit. <Picture 3> is "
+    "the pose. Draw the character from <Picture 1> in the pose and camera angle "
+    "of <Picture 3>."
+)
+ALL_AUTO = ("auto", "auto", "auto")
+
+
+def test_resolve_roles_nude_draft_makes_slot_2_the_pose():
+    assert resolve_roles(NUDE_DRAFT, ALL_AUTO) == ("character", "pose", "pose")
+
+
+def test_resolve_roles_usual_three_picture_draft():
+    assert resolve_roles(THREE_DRAFT, ALL_AUTO) == ("character", "outfit", "pose")
+
+
+def test_resolve_roles_explicit_role_overrides_auto():
+    roles = ("auto", "outfit", "other")
+    assert resolve_roles(NUDE_DRAFT, roles) == ("character", "outfit", "other")
+
+
+def test_resolve_roles_without_picture_sentences_falls_back_to_defaults():
+    assert resolve_roles("a woman in <Picture 2> standing", ALL_AUTO) == DEFAULT_ROLES
+    assert resolve_roles("", ALL_AUTO) == DEFAULT_ROLES
+
+
+def test_resolve_roles_is_case_insensitive_and_allows_spacing():
+    draft = "< picture 3 >  IS THE Outfit . <PICTURE 1> is the pose."
+    assert resolve_roles(draft, ALL_AUTO) == ("pose", "outfit", "outfit")
+
+
+def test_resolve_roles_reads_the_chinese_picture_sentences():
+    draft = "<Picture 1>是人物。<Picture 2>是姿势。"
+    assert resolve_roles(draft, ALL_AUTO) == ("character", "pose", "pose")
+
+
+def test_resolve_roles_ignores_slots_beyond_three():
+    draft = "<Picture 4> is the outfit. <Picture 2> is the pose."
+    assert resolve_roles(draft, ALL_AUTO) == ("character", "pose", "pose")

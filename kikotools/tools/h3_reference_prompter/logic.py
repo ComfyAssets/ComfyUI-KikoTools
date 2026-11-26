@@ -3,7 +3,7 @@
 import hashlib
 import json
 import re
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Sequence, Set, Tuple
 
 import torch
 
@@ -12,6 +12,17 @@ from ..prompt_enhancer.logic import clean_output, split_thinking
 ROLES: Tuple[str, ...] = ("character", "outfit", "pose", "other")
 DEFAULT_ROLES: Tuple[str, ...] = ("character", "outfit", "pose")
 SLOTS = 3
+# "auto" reads a slot's role from the draft; it is a choice, not a role.
+AUTO = "auto"
+ROLE_CHOICES: Tuple[str, ...] = (AUTO,) + ROLES
+
+# KikoCharSheet's "<Picture N> is the character." sentences, English and Chinese.
+_ROLE_SENTENCE = re.compile(
+    r"<\s*Picture\s+(\d+)\s*>\s*(?:is\s+the\s+(character|outfit|pose)\s*\."
+    r"|是\s*(人物|服装|姿势)\s*。)",
+    re.IGNORECASE,
+)
+_ZH_ROLES = {"人物": "character", "服装": "outfit", "姿势": "pose"}
 
 _TAG = re.compile(r"<\s*Picture\s+(\d+)\s*>")
 _PREAMBLE_LINE = re.compile(
@@ -33,6 +44,23 @@ def tag_problems(draft: str, result: str) -> Tuple[List[int], List[int]]:
     wanted = find_tags(draft)
     produced = find_tags(result)
     return sorted(wanted - produced), sorted(produced - wanted)
+
+
+def _draft_roles(draft: str) -> Dict[int, str]:
+    """Slot number to role for every picture sentence in the draft."""
+    named: Dict[int, str] = {}
+    for number, english, chinese in _ROLE_SENTENCE.findall(draft or ""):
+        named[int(number)] = english.lower() if english else _ZH_ROLES[chinese]
+    return named
+
+
+def resolve_roles(draft: str, roles: Sequence[str]) -> Tuple[str, ...]:
+    """Each slot's role: an explicit choice, else the draft's, else the default."""
+    named = _draft_roles(draft)
+    return tuple(
+        role if role != AUTO else named.get(slot, DEFAULT_ROLES[slot - 1])
+        for slot, role in enumerate(roles, start=1)
+    )
 
 
 def _sentences(line: str) -> List[str]:

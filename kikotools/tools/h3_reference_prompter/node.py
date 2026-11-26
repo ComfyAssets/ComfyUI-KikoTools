@@ -18,8 +18,8 @@ from .instructions import (
     writer_user,
 )
 from .logic import (
-    DEFAULT_ROLES,
-    ROLES,
+    AUTO,
+    ROLE_CHOICES,
     SLOTS,
     clean_result,
     draft_lead,
@@ -27,6 +27,7 @@ from .logic import (
     image_key,
     item_seed,
     pair_items,
+    resolve_roles,
     tag_problems,
 )
 from .models import (
@@ -160,18 +161,23 @@ class _Run:
 
 Pending = Tuple[int, str, Any, str]  # (slot, role, image, draft)
 Note = Tuple[int, str, Optional[str]]  # (slot, role, notes or None)
-Item = Dict[str, Any]  # one prompt with its image_1..image_3
+Item = Dict[str, Any]  # one prompt, its image_1..image_3 and resolved roles
 Roles = Tuple[str, str, str]
 Settings = Tuple[str, int, int, int]  # (model, seed, describe_max, write_max)
 
 
-def _pending_pictures(
-    items: List[Item], roles: Roles, model: str, tokens: int
-) -> Dict[str, Pending]:
+def _with_roles(items: List[Item], roles: Roles) -> List[Item]:
+    """Each item with its own roles, read from its draft where a role is auto."""
+    return [
+        {**item, "roles": resolve_roles(item["prompt"] or "", roles)} for item in items
+    ]
+
+
+def _pending_pictures(items: List[Item], model: str, tokens: int) -> Dict[str, Pending]:
     """Uncached pictures across all items, keyed by image_key; first item wins."""
     pending: Dict[str, Pending] = {}
     for item in items:
-        for slot, role in enumerate(roles, start=1):
+        for slot, role in enumerate(item["roles"], start=1):
             image = item.get(f"image_{slot}")
             if image is None:
                 continue
@@ -182,10 +188,10 @@ def _pending_pictures(
 
 
 def _describe_all(
-    run: _Run, items: List[Item], roles: Roles, model: str, seed: int, tokens: int
+    run: _Run, items: List[Item], model: str, seed: int, tokens: int
 ) -> None:
     """Fill _NOTES_CACHE for every picture of every item."""
-    pending = _pending_pictures(items, roles, model, tokens)
+    pending = _pending_pictures(items, model, tokens)
     requests = [
         (describe_system(role), describe_user(role, draft), image)
         for slot, role, image, draft in pending.values()
@@ -204,9 +210,9 @@ def _describe_all(
         _NOTES_CACHE[key] = text
 
 
-def _item_notes(item: Item, roles: Roles, model: str, tokens: int) -> List[Note]:
+def _item_notes(item: Item, model: str, tokens: int) -> List[Note]:
     notes: List[Note] = []
-    for slot, role in enumerate(roles, start=1):
+    for slot, role in enumerate(item["roles"], start=1):
         image = item.get(f"image_{slot}")
         key = None if image is None else image_key(image, role, model, tokens)
         text = None if key is None else _NOTES_CACHE[key]
@@ -330,12 +336,12 @@ def _write_all(
 
 
 def _run_items(
-    run: _Run, items: List[Item], roles: Roles, settings: Settings
+    run: _Run, items: List[Item], settings: Settings
 ) -> List[Tuple[str, str]]:
     """Describe every picture first, then write every prompt: (prompt, notes)."""
     model_name, base_seed, describe_max, write_max = settings
-    _describe_all(run, items, roles, model_name, base_seed, describe_max)
-    notes = [_item_notes(item, roles, model_name, describe_max) for item in items]
+    _describe_all(run, items, model_name, base_seed, describe_max)
+    notes = [_item_notes(item, model_name, describe_max) for item in items]
     written = _write_all(run, items, notes, base_seed, write_max)
     return [(text, _notes_text(n)) for text, n in zip(written, notes)]
 
@@ -358,14 +364,14 @@ def _free_other_backends(kind: str) -> None:
 
 
 def _execute(
-    run: _Run, items: List[Item], roles: Roles, settings: Settings, keep: bool
+    run: _Run, items: List[Item], settings: Settings, keep: bool
 ) -> List[Tuple[str, str]]:
     _free_other_backends(run.entry.kind)
     unloaded = False
     try:
         unload_models_safely()
         unloaded = True
-        return _run_items(run, items, roles, settings)
+        return _run_items(run, items, settings)
     except Exception:
         if unloaded:
             _repair_quietly()
@@ -407,10 +413,14 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
                 },
             ),
         }
-        for slot, role in enumerate(DEFAULT_ROLES, start=1):
+        for slot in range(1, SLOTS + 1):
             required[f"role_{slot}"] = (
-                list(ROLES),
-                {"default": role, "tooltip": f"What image_{slot} shows"},
+                list(ROLE_CHOICES),
+                {
+                    "default": AUTO,
+                    "tooltip": f"What image_{slot} shows; auto reads the draft's "
+                    f"'<Picture {slot}> is the ...' sentence",
+                },
             )
         required["seed"] = (
             "INT",
@@ -489,7 +499,7 @@ class H3ReferencePrompterNode(ComfyAssetsBaseNode):
         _check_batches(items)
         run = _Run(entry, temperature[0] if temperature else 0.7)
         roles: Roles = (role_1[0], role_2[0], role_3[0])
-        pairs = _execute(run, items, roles, settings, keep)
+        pairs = _execute(run, _with_roles(items, roles), settings, keep)
         if entry.kind == "native" and not keep:
             # ComfyUI manages the native clip; dropping our reference frees nothing.
             unload_models_safely()
