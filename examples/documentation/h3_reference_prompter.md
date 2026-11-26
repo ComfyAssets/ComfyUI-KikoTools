@@ -33,6 +33,8 @@ A picture slot must hold one image. A batch of more than one image in a slot sto
 
 The traits in the hint win over the character picture's notes. The picture fills in what the hint leaves unset. The writer works the traits into the subject sentences instead of copying the list. The hint is a list like the other inputs, so each item of a one-per-pose run can have its own.
 
+The hint is written into the final prompt word for word after the draft (picture tags removed), then the writer's detail follows. So every selected trait reaches the image model, and the writer adds detail around it without repeating it. The "No ..." options (no tattoos, no freckles, no bangs, no glasses, clean shaven) drop a trait the picture has, and a "Pose:" part wins over the pose notes for the head and eyes only.
+
 The "Unclothed detail:" sentence of the hint is removed unless the item is in nude mode (the draft says nude or naked and no outfit picture is connected). See [Age check](#nude-mode) for how the hint's age is used.
 
 ## Roles

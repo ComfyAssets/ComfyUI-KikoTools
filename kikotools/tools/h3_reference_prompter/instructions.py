@@ -6,7 +6,14 @@ long MiniMax H3 Image prompt from the user's draft and those notes.
 
 from typing import List, Optional, Tuple
 
-from .logic import ROLES, YOUTH_WORDS, find_tags, is_nude, strip_unclothed
+from .logic import (
+    ROLES,
+    YOUTH_WORDS,
+    body_is_nude,
+    find_tags,
+    hint_lead,
+    strip_unclothed,
+)
 
 AgeRange = Tuple[int, int]
 
@@ -194,6 +201,13 @@ def hint_block(hint: str) -> str:
     )
 
 
+HINT_WRITTEN = (
+    "The character details above are already written word for word after "
+    "the draft. Do not repeat them as a list. Never contradict them: where "
+    "the picture notes disagree, the details win."
+)
+
+
 def nude_block(age: AgeRange) -> str:
     """Extra writer instructions for a nude item whose character passed the
     adult check with the (low, high) estimated age."""
@@ -243,8 +257,7 @@ def writer_user(
     ``hint`` is character hint text; blank adds nothing. Its "Unclothed
     detail:" sentence stays only when the item is in nude mode.
     """
-    connected = [role for _, role, text in notes if text is not None]
-    body = is_nude(lead, connected)
+    body = body_is_nude(lead, notes)
     in_draft = find_tags(lead)
     lines = []
     for slot, role, text in sorted(notes, key=lambda note: note[0]):
@@ -276,6 +289,8 @@ def writer_user(
     shown = shown if body else strip_unclothed(shown)
     if shown:
         blocks.append(hint_block(shown))
+    if hint_lead(shown, True):
+        blocks.append(HINT_WRITTEN)
     if adult is not None:
         blocks.append(nude_block(adult) if body else adult_block(adult))
     blocks.append("Write the final prompt now.")

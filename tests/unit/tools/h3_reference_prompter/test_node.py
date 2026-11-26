@@ -1099,3 +1099,85 @@ def test_gguf_path_carries_the_hint_into_the_writer_message(monkeypatch):
     (writer,) = h.writers
     assert "The character is an adult woman aged 25." in writer["prompt"]
     assert "Unclothed detail" not in writer["prompt"]
+
+
+HINT_GLASSES = (
+    "The character is an adult woman aged 28. Eyewear: round glasses with "
+    "clear lenses. Unclothed detail: pierced nipples."
+)
+CLOTHED_HINT = (
+    "The character is an adult woman aged 28. Eyewear: round glasses with "
+    "clear lenses."
+)
+
+
+def hint_gguf(monkeypatch, writes=None):
+    h = Harness(monkeypatch, kind="gguf", writes=writes)
+    h.entry = entry("gguf", "gguf: m")
+    return h
+
+
+def test_hint_is_written_after_the_draft_before_the_written_part_gguf(monkeypatch):
+    hint_gguf(monkeypatch)
+    out = run(
+        prompt=["A woman in a coat."], model=["gguf: m"], character_hint=[HINT_GLASSES]
+    )
+    assert out["result"][0] == ["A woman in a coat.\n\n" + CLOTHED_HINT + "\n\n" + BODY]
+
+
+def test_hint_is_written_after_the_draft_before_the_written_part_batched(
+    monkeypatch,
+):
+    Harness(monkeypatch)
+    out = run(
+        prompt=["A woman in a coat.", "A man in a hat."],
+        character_hint=[HINT_GLASSES],
+    )
+    for prompt, draft in zip(
+        out["result"][0], ["A woman in a coat.", "A man in a hat."]
+    ):
+        assert prompt == draft + "\n\n" + CLOTHED_HINT + "\n\n" + BODY
+        assert "Unclothed detail" not in prompt
+
+
+def test_nude_item_keeps_the_unclothed_detail_in_the_prompt(monkeypatch):
+    Harness(monkeypatch)
+    hint = "The character is an adult woman aged 25. Unclothed detail: pierced nipples."
+    out = run(prompt=[PLAIN_NUDE], character_hint=[hint])
+    assert out["result"][0] == [PLAIN_NUDE + "\n\n" + hint + "\n\n" + BODY]
+
+
+def test_retry_keeps_the_hint_lead_exactly_once(monkeypatch):
+    hint_gguf(monkeypatch, writes=["   ", BODY])
+    out = run(
+        prompt=["A woman in a coat."], model=["gguf: m"], character_hint=[CLOTHED_HINT]
+    )
+    prompt = out["result"][0][0]
+    assert prompt.count("round glasses") == 1
+    assert prompt == "A woman in a coat.\n\n" + CLOTHED_HINT + "\n\n" + BODY
+
+
+def test_written_part_repeating_a_hint_sentence_loses_it(monkeypatch):
+    Harness(
+        monkeypatch, writes=["Eyewear: round glasses with clear lenses. She waits."]
+    )
+    out = run(prompt=["A woman in a coat."], character_hint=[CLOTHED_HINT])
+    prompt = out["result"][0][0]
+    assert prompt.count("round glasses") == 1
+    assert prompt.endswith("\n\nShe waits.")
+
+
+def test_a_picture_tag_in_the_hint_is_no_extra_tag_failure(monkeypatch):
+    Harness(monkeypatch)
+    out = run(
+        prompt=["A woman in a coat."],
+        character_hint=["Eyewear: glasses like <Picture 2>."],
+    )
+    prompt = out["result"][0][0]
+    assert "<Picture" not in prompt and "glasses like ." in prompt
+
+
+def test_no_hint_prompt_is_unchanged(monkeypatch):
+    Harness(monkeypatch)
+    out = run(prompt=["A woman in a coat."])
+    assert out["result"][0] == ["A woman in a coat.\n\n" + BODY]

@@ -23,16 +23,18 @@ from .logic import (
     ROLE_CHOICES,
     SLOTS,
     check_adult,
+    body_is_nude,
     clean_result,
     draft_lead,
     drop_echoes,
     find_youth_word,
+    hint_lead,
     image_key,
-    says_nude,
     is_placeholder,
     item_seed,
     pair_items,
     resolve_roles,
+    says_nude,
     tag_problems,
 )
 from .models import (
@@ -260,10 +262,14 @@ def _adult_range(item: Item, notes: List[Note]) -> Optional[AgeRange]:
 Problems = Tuple[List[int], List[int], bool, Optional[str]]
 
 
-def _combine(lead: str, raw: str) -> Tuple[str, str]:
-    """(written, combined): the cleaned model text, and the full prompt."""
-    written = drop_echoes(clean_result(raw), lead)
-    parts = [part for part in (lead, written) if part]
+def _combine(lead: str, details: str, raw: str) -> Tuple[str, str]:
+    """(written, combined): the cleaned model text, and the full prompt.
+
+    The prompt is the draft lead, the hint lead and the model text, each
+    only when not empty.
+    """
+    written = drop_echoes(clean_result(raw), f"{lead}\n{details}")
+    parts = [part for part in (lead, details, written) if part]
     return written, "\n\n".join(parts).rstrip()
 
 
@@ -326,11 +332,13 @@ def _write_one(
     tokens: int,
 ) -> str:
     lead = draft_lead(draft)
+    details = hint_lead(hint, body_is_nude(lead, notes))
     message = writer_user(lead, notes, adult, hint)
     nude = adult is not None
 
     def attempt(text: str) -> Tuple[str, str]:
-        return _combine(lead, run.generate(writer_system(), text, None, seed, tokens))
+        raw = run.generate(writer_system(), text, None, seed, tokens)
+        return _combine(lead, details, raw)
 
     written, combined = attempt(message)
     problems = _problems(draft, written, combined, nude)
@@ -352,13 +360,17 @@ def _write_batch(
 ) -> List[str]:
     """Write every draft in one batch, then retry the failing ones in one more."""
     leads = [draft_lead(draft) for draft in drafts]
+    details = [
+        hint_lead(hint, body_is_nude(lead, item_notes))
+        for lead, item_notes, hint in zip(leads, notes, hints)
+    ]
     messages = [writer_user(*args) for args in zip(leads, notes, adults, hints)]
 
     def attempt(indices: List[int], texts: List[str]) -> List[Tuple[str, str]]:
         raws = run.generate_batch(
             [(writer_system(), t, None) for t in texts], seed, tokens
         )
-        return [_combine(leads[i], raw) for i, raw in zip(indices, raws)]
+        return [_combine(leads[i], details[i], raw) for i, raw in zip(indices, raws)]
 
     def problems_of(index: int, result: Tuple[str, str]) -> Problems:
         return _problems(drafts[index], *result, adults[index] is not None)

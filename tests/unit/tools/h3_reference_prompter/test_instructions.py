@@ -487,3 +487,14 @@ def test_nude_block_with_one_age_says_aged_n_only():
 def test_adult_block_with_one_age_says_aged_n_only():
     assert "25 to 25" not in adult_block((25, 25))
     assert "aged 25" in adult_block((25, 25))
+
+
+def test_writer_user_says_the_hint_is_already_written_after_the_draft():
+    text = writer_user("Draft.", [], hint="Eyewear: round glasses.")
+    assert "already written word for word after the draft" in text
+    assert "the details win" in text
+
+
+def test_writer_user_without_hint_lead_has_no_written_hint_block():
+    assert "the details win" not in writer_user("Draft.", [])
+    assert "the details win" not in writer_user("Draft.", [], hint="<Picture 1>")

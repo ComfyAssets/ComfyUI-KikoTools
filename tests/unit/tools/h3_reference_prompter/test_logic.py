@@ -15,6 +15,7 @@ from kikotools.tools.h3_reference_prompter.logic import (
     draft_lead,
     cap_negatives,
     drop_echoes,
+    hint_lead,
     says_nude,
     drop_repeats,
     find_tags,
@@ -668,3 +669,37 @@ def test_check_adult_refuses_a_stated_minor_age_with_a_picture():
 
 def test_a_clothed_draft_with_a_stated_age_is_not_nude_mode():
     assert not says_nude("a 12 year old in a coat")
+
+
+HINT_FULL = (
+    "The character is an adult woman aged 28. Eyewear: round glasses. "
+    "Unclothed detail: pierced nipples."
+)
+
+
+@pytest.mark.parametrize("blank", [None, "", "  \n "])
+def test_hint_lead_of_a_blank_hint_is_empty(blank):
+    assert hint_lead(blank, True) == "" and hint_lead(blank, False) == ""
+
+
+def test_hint_lead_strips_the_unclothed_detail_when_clothed():
+    out = hint_lead(HINT_FULL, False)
+    assert "Unclothed" not in out and "round glasses." in out
+
+
+def test_hint_lead_keeps_the_unclothed_detail_when_nude():
+    assert hint_lead(HINT_FULL, True) == HINT_FULL
+
+
+def test_hint_lead_removes_picture_tags():
+    out = hint_lead("Like <Picture 2> here. < Picture 3 > Extra: x.", True)
+    assert "Picture" not in out and "<" not in out
+
+
+def test_hint_lead_collapses_whitespace():
+    assert hint_lead("  A.\n\n  B.\t C.  ", True) == "A. B. C."
+
+
+def test_hint_lead_that_becomes_empty_is_empty():
+    assert hint_lead("<Picture 1>", True) == ""
+    assert hint_lead("Unclothed detail: x.", False) == ""

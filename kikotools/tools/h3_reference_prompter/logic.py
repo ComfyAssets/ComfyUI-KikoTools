@@ -371,6 +371,22 @@ def strip_unclothed(hint: str) -> str:
     return _UNCLOTHED.sub("", hint).strip()
 
 
+def hint_lead(hint: Optional[str], nude: bool) -> str:
+    """The character hint as one line to write word for word after the draft.
+
+    "Unclothed detail:" stays only in nude mode; picture tags are removed.
+    """
+    text = (hint or "").strip()
+    text = text if nude else strip_unclothed(text)
+    return " ".join(_TAG.sub(" ", text).split())
+
+
+def body_is_nude(lead: str, notes: Iterable[Tuple[int, str, Optional[str]]]) -> bool:
+    """Body mode of an item: the draft says nude and no connected picture
+    (one with notes) is the outfit."""
+    return is_nude(lead, [role for _, role, text in notes if text is not None])
+
+
 def find_minor_age(text: Optional[str]) -> Optional[int]:
     """The first stated age under HINT_MIN_AGE in ``text``, or None."""
     for match in _STATED_AGE.finditer(text or ""):
