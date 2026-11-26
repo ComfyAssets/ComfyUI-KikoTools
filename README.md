@@ -19,6 +19,14 @@ I tried forking, patching, and submitting merge requests, but eventually decided
 
 I’m sharing them here with the community, and I hope you find them as useful as I do.
 
+## 1.10.0: H3 Reference Prompter
+
+The new [H3 Reference Prompter](#-h3-reference-prompter) looks at your character,
+outfit and pose pictures with a local vision model and turns a short draft into a
+long, detailed MiniMax H3 Image prompt that keeps your `<Picture N>` tags.
+[Kiko Purge VRAM](#-kiko-purge-vram) now frees memory the way Free VRAM Pixaroma
+does. See the [release notes](CHANGELOG.md).
+
 ## 1.9.0: MiniMax H3 Image sizes
 
 The [Model Resolution Picker](#-model-resolution-picker) has a new
