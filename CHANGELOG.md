@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Added
+
+- Character Hint (Female) and Character Hint (Male) nodes in 🫶 ComfyAssets/🧠
+  Prompts. They build a plain-text character description from dropdowns (age,
+  heritage, body, face, makeup, hair, skin, tattoo, expression and free text).
+  Every option was tested against MiniMax H3 Image.
+- H3 Reference Prompter: optional `character_hint` input. Traits in the hint
+  win over the character picture's notes. With no character picture, the
+  hint's age is what a nude draft is checked against; with one, the picture's
+  estimate still decides.
+
 ### Fixed
 
 - H3 Reference Prompter: the prompt box no longer squashes to one line after a

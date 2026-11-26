@@ -1,0 +1,121 @@
+# Character Hint (Female / Male)
+
+Two nodes that build a short text description of a character from dropdowns: **Character Hint (Female)** and **Character Hint (Male)**. The output is plain text. Use it to state traits a reference picture cannot show, or to change traits it does show.
+
+**Category:** 🫶 ComfyAssets/🧠 Prompts
+
+## What it does
+
+Every field starts at `-`, which means unset. Only the fields you set are written. The node has one output, `hint` (STRING).
+
+The hint is written in a fixed order: who the character is, then Body, Face, Makeup, Hair, Skin, Tattoos, Expression, Unclothed detail and Extra. The lead sentence is always there. It names the age and, if you set one, the heritage.
+
+## How to wire it
+
+- Connect `hint` to the `character_hint` input of the [H3 Reference Prompter](h3_reference_prompter.md#character-hint). See [How the hint and the picture combine](#how-the-hint-and-the-picture-combine).
+- The hint is plain text, so you can also send it to a text preview node, or type a hint by hand and connect that instead. The prompter reads only the age ("aged N") and the "Unclothed detail:" sentence from the text. The rest goes to the writer as written.
+
+## Fields
+
+The female and male nodes share most fields. Fields that only one of them has are marked.
+
+### Body
+
+| Field | Notes |
+|-------|-------|
+| `age` | Slider from 18 to 90, default 25. Always written |
+| `heritage` | 64 choices, such as Japanese, Brazilian, Nigerian, Polish. Written in the lead sentence |
+| `body_type` | Different lists. Female: Slim, Muscular, Curvy, Voluptuous, Chubby, Heavyset, Obese. Male: Lean, Ripped, Jacked, Powerlifter, Dad bod, Heavyset |
+| `breast_size` | Female only. Small, Large, Very large |
+| `butt_size` | Female only. Flat, Large, Very large |
+
+### Face
+
+| Field | Notes |
+|-------|-------|
+| `face_shape` | Round or Oblong |
+| `eye_color` | 12 colors, from Dark brown to Violet, Silver and Pink |
+| `eye_shape` | Monolid, Hooded, Deep-set |
+| `eye_detail` | Defined eyelashes, Fine lines, Gold flecks, Heterochromia, Bloodshot |
+| `nose` | Small, Button, Very large |
+| `lip_shape` | Female: Thin, Full, Wide, Cupid's bow. Male: Thin, Full |
+| `facial_hair` | Male only. 8 choices, such as Stubble, Goatee, Full beard |
+| `dimples` | Subtle or Deep |
+
+### Makeup
+
+Female only.
+
+| Field | Notes |
+|-------|-------|
+| `makeup` | 40 styles, such as No makeup, Natural, Soft glam, Gothic, 1950s pin-up, Soft Korean, Gyaru, Smokey eye, Cat eye, Glitter, Classic red lip. Each style has its own look and lips |
+| `lip_color` | 13 colors, such as Natural, Coral, Berry, Red, Burgundy, Black. With a makeup style, the color replaces that style's lips. Without one, "<color> lips" goes in the Face part |
+
+### Hair
+
+| Field | Notes |
+|-------|-------|
+| `hair_color` | 28 choices, such as Black, Chestnut, Auburn, Copper, Strawberry blonde |
+| `hair_length` | Female only. Buzzed, Chin length, Shoulder length, Long |
+| `hair_style` | Different lists. Female has 34, such as Bob, Pixie cut, Shag cut. Male has 19, such as Buzz cut, High fade, Pompadour |
+| `bangs` | Female only. Curtain, Side-swept, Wispy, Blunt |
+
+### Skin
+
+| Field | Notes |
+|-------|-------|
+| `skin_tone` | 12 choices, from Porcelain to deeper tones, including Olive |
+| `tan` | Light tan or Deep tan |
+| `freckles` | A few or Prominent |
+| `acne` | A few blemishes, Some acne, Pronounced acne |
+| `beauty_mark` | Left cheek or Right cheek |
+
+### Other
+
+| Field | Notes |
+|-------|-------|
+| `tattoo` | Small, Sleeve, Neck or Hand tattoo |
+| `expression` | 30 choices, such as Neutral, Smiling, Amused, Playful |
+| `nipples`, `areola` | Female only. Written as "Unclothed detail:", see [Unclothed detail](#unclothed-detail) |
+| `extra` | Free text. It is trimmed and a full stop is added unless it already ends with `.`, `!` or `?`. Text with no letter or digit adds nothing |
+
+## Example output
+
+Female, with a number of fields set:
+
+```
+The character is an adult Japanese woman aged 25. Body: a curvy body, large
+breasts, a large butt. Face: a round face, green eyes, hooded eyes, eyes
+framed by defined eyelashes, a button nose, full lips, deep dimples. Makeup:
+wearing soft glam makeup, ..., and berry lips. Hair: copper hair, chin length
+hair, her hair in a bob cut, curtain bangs. Skin: olive skin, a hint of a tan,
+a few freckles, a single beauty mark on the left cheek. Tattoos: a sleeve
+tattoo. Expression: a smirking expression. Unclothed detail: large areolas,
+pierced nipples. Extra: <free text>.
+```
+
+The output is one paragraph. The line breaks above are only for reading. The `...` stands for the rest of the soft glam look.
+
+## How the hint and the picture combine
+
+With the H3 Reference Prompter, the traits in the hint win over the character picture's notes. The picture fills in what the hint leaves unset. For example, a hint that sets only `eye_color` to Green changes the eyes and keeps everything else the picture shows.
+
+## Age rule
+
+The age slider starts at 18. The Prompter checks the age of the character before it writes a nude draft (a draft that says nude or naked, with no outfit picture).
+
+- With no character picture, the hint's age is what the draft is checked against. An age of 18 or more passes. A hint with no age is refused.
+- With a character picture, the picture's age estimate still decides. The hint cannot override it. A picture that may show someone under 20 is refused whatever the hint says. When the picture passes, the prompt uses the hint's age.
+- A youth word in the hint (teen, child, minor and the like) stops the run, as it does in the draft.
+
+See [Nude mode](h3_reference_prompter.md#nude-mode).
+
+## Unclothed detail
+
+`nipples` and `areola` are written as "Unclothed detail:". The prompter uses that sentence only when the draft says nude or naked and no outfit picture is connected. In any other case it removes the sentence before the writer sees the hint.
+
+## Tested options
+
+Every option was tested against MiniMax H3 Image, and only options the model draws are in the lists. Some choices were left out on purpose because the model ignores them: height, waist, breast shape, face shapes other than round and oblong, and pupils.
+
+Code: `kikotools/tools/character_hint/`.

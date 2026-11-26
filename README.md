@@ -113,6 +113,7 @@ switching, workflow persistence and cleanup. See the retained
 | [🌐 Model Downloader](#-model-downloader) | Download models from CivitAI, HuggingFace, and custom URLs | 🛠️ Utils |
 | [🧠 Kiko Prompt Enhancer](#-kiko-prompt-enhancer) | Rewrite a short prompt in a base model's style with the loaded text encoder | 🧠 Prompts |
 | [🫶 H3 Reference Prompter](#-h3-reference-prompter) | Write one long MiniMax H3 prompt from a short draft and up to three reference pictures | 🧠 Prompts |
+| [🫶 Character Hint (Female / Male)](#-character-hint-female--male) | Build a character description from dropdowns, for the H3 Reference Prompter | 🧠 Prompts |
 | [⏱️ Workflow Timer](#️-workflow-timer) | Real-time execution timer with customizable display | 🛠️ Utils |
 | [🗂️ Project File Path](#️-project-file-path) | Build safe, organized save prefixes like `MyProject/images/image` | 🛠️ Utils |
 
@@ -623,10 +624,10 @@ Example workflow: [prompt_enhancer_example.json](examples/workflows/prompt_enhan
 #### 🫶 H3 Reference Prompter
 Turns a short draft and up to three reference pictures (character, outfit, pose) into one long prompt for MiniMax H3 Image, using a local vision model. No network access. Full guide: [h3_reference_prompter.md](examples/documentation/h3_reference_prompter.md).
 
-- **Inputs**: `prompt` (the draft; an input socket, so connect a text node), `model`, `role_1` to `role_3`, `seed`, and optional `image_1` to `image_3`
+- **Inputs**: `prompt` (the draft; an input socket, so connect a text node), `model`, `role_1` to `role_3`, `seed`, and optional `image_1` to `image_3` and `character_hint` (text from a Character Hint node)
 - **Picture tags**: `image_N` is always `<Picture N>`, and slots are never renumbered. The whole draft is written at the start of the prompt word for word; the model adds the detail after it and never repeats the draft's sentences. The prompt keeps exactly the tags the draft has: if the model adds a tag the draft does not have, the node retries once, then stops with an error naming it
 - **Roles**: `auto` (default), `character`, `outfit`, `pose` or `other`. `auto` reads the draft's `<Picture N> is the character/outfit/pose.` sentences; a slot the draft does not name falls back to `image_1` character, `image_2` outfit, `image_3` pose. A role picked by hand wins
-- **Nude mode**: when the draft says `nude`, `naked` or `裸`, the adult age check runs whatever the roles are; with no outfit picture, the outfit part also becomes a plain, non-sexual description of the unclothed adult body. The run is refused unless a character picture is connected and its estimated age is 20 or older (a picture whose estimate could be under 20 is refused), and a youth word (teen, child, kid, minor, underage and the like) in the notes, the draft or the written part stops it. The word "girl" is never checked. Never use pictures of real people, and never combine an uploaded portrait with Nude. See [Nude mode](examples/documentation/h3_reference_prompter.md#nude-mode)
+- **Nude mode**: when the draft says `nude`, `naked` or `裸`, the adult age check runs whatever the roles are; with no outfit picture, the outfit part also becomes a plain, non-sexual description of the unclothed adult body. The run is refused unless a character picture is connected and its estimated age is 20 or older (a picture whose estimate could be under 20 is refused), and a youth word (teen, child, kid, minor, underage and the like) in the notes, the draft, the character hint or the written part stops it. The word "girl" is never checked. Never use pictures of real people, and never combine an uploaded portrait with Nude. See [Nude mode](examples/documentation/h3_reference_prompter.md#nude-mode)
 - **Two passes**: each picture is described once (cached for the ComfyUI session), then the prompt is written from the draft and those notes. Transformers models describe all the pictures of a run in one batch and write all the prompts in another. Batching needs transformers 5 or newer, and only Qwen3-VL and Qwen3.5 folders run batched; other cases run one request at a time. Pictures are scaled to about 1 MP for description
 - **model**: `hf: <folder>` (a transformers folder under `models/LLM` whose `config.json` lists a Qwen3-VL, Qwen3.5 or Gemma 4 vision architecture), `native: <file>` (the Prompt Enhancer's vision text encoders) or `gguf: <file>` (a GGUF model with an `mmproj`). A GGUF model loads twice per run (with and without its `mmproj`). A GGUF model that fails to load stops with a message to use a transformers folder instead
 - **Recommended model**: [Huihui-Qwen3-VL-8B-Instruct-abliterated](https://huggingface.co/huihui-ai/Huihui-Qwen3-VL-8B-Instruct-abliterated) in `models/LLM/Qwen-VL/<folder>/`. The picker defaults to it, then to any Qwen3-VL-8B, then to the first `hf:` folder. It uses about 17 GB of VRAM while it runs; ComfyUI's models are freed first. Qwen3.5-4B and Gemma 4 folders work too
@@ -638,6 +639,16 @@ Turns a short draft and up to three reference pictures (character, outfit, pose)
 - **Panel**: shows each prompt with its word count, previous and next buttons, a copy button and collapsible notes
 
 Example workflow: [h3_reference_prompter_charsheet_test.json](examples/workflows/h3_reference_prompter_charsheet_test.json). It uses the [KikoCharSheet](https://github.com/ComfyAssets/ComfyUI-KikoCharSheet) pickers and shows the draft, the prompt and the notes in Display Text nodes. It does not draw an image.
+
+#### 🫶 Character Hint (Female / Male)
+Two nodes that build a short character description from dropdowns. The output is plain text. Connect it to the H3 Reference Prompter's `character_hint` input to set traits a picture cannot show or to change ones it does. Full guide: [character_hint.md](examples/documentation/character_hint.md).
+
+- **Fields**: age (slider, 18 and up), heritage, body, face, eyes, makeup (female, 40 styles), hair, skin, tattoo, expression and a free `extra` text. Every dropdown starts at `-` (unset) and only set fields are written
+- **Output**: `hint`, a STRING. It also works with a text preview node, or you can type a hint by hand
+- **With the prompter**: traits in the hint win over the character picture's notes; the picture fills in the rest. See [Character hint](examples/documentation/h3_reference_prompter.md#character-hint)
+- **Age**: with no character picture, the hint's age is what a nude draft is checked against. With a character picture, the picture's estimate still decides and the hint cannot override it
+- **Unclothed detail**: the female nodes' `nipples` and `areola` fields are used only when the draft says nude and no outfit picture is connected
+- **Tested**: every option was tested against MiniMax H3 Image; options the model ignores were left out
 
 #### ⏱️ Workflow Timer
 Real-time execution timer that displays workflow duration with millisecond precision.
@@ -1056,6 +1067,7 @@ Example workflow available: [xyz_helpers_lora_testing.json](examples/workflows/x
 | **Workflow Timer** | Real-time execution timer with customizable display | ✅ Complete | [Docs](#️-workflow-timer) |
 | **Kiko Prompt Enhancer** | Rewrite a short prompt in a base model's preferred style with a local LLM | ✅ Complete | [Docs](#-kiko-prompt-enhancer) |
 | **H3 Reference Prompter** | Write one long MiniMax H3 prompt from a draft and reference pictures | ✅ Complete | [Docs](examples/documentation/h3_reference_prompter.md) |
+| **Character Hint (Female / Male)** | Build a character description from dropdowns | ✅ Complete | [Docs](examples/documentation/character_hint.md) |
 | **Model Recommended Settings** | Steps, CFG, sampler and scheduler from a model's Civitai info | ✅ Complete | [Docs](#-model-recommended-settings) |
 | **Checkpoint Folder Iterator** | One checkpoint or diffusion model per queued run, from a folder | ✅ Complete | [Docs](#-checkpoint-folder-iterator) |
 | **Model Compare Sheet** | Labeled grid of a model sweep, one tile per run | ✅ Complete | [Docs](#-model-compare-sheet) |
