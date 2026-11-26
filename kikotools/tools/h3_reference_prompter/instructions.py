@@ -6,7 +6,7 @@ long MiniMax H3 Image prompt from the user's draft and those notes.
 
 from typing import List, Optional, Tuple
 
-from kikotools.tools.h3_reference_prompter.logic import ROLES, find_tags
+from .logic import ROLES, find_tags
 
 _DESCRIBE_COMMON = (
     "You look at one reference picture and write factual notes about it. "

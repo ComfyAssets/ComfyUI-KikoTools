@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from kikotools.tools.prompt_enhancer.models import ModelEntry
+from ..prompt_enhancer.models import ModelEntry
 
 NO_TRANSFORMERS = "transformers is not installed; install transformers to use Hugging Face model folders"
 SEED_MASK = 0xFFFFFFFF

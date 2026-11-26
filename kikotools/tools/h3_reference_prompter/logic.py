@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Set, Tuple
 
 import torch
 
-from kikotools.tools.prompt_enhancer.logic import clean_output, split_thinking
+from ..prompt_enhancer.logic import clean_output, split_thinking
 
 ROLES: Tuple[str, ...] = ("character", "outfit", "pose", "other")
 DEFAULT_ROLES: Tuple[str, ...] = ("character", "outfit", "pose")
