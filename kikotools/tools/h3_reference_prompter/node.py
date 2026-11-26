@@ -28,7 +28,7 @@ from .logic import (
     drop_echoes,
     find_youth_word,
     image_key,
-    is_nude,
+    says_nude,
     item_seed,
     pair_items,
     resolve_roles,
@@ -233,12 +233,12 @@ def _notes_text(notes: List[Note]) -> str:
 
 
 def _adult_range(item: Item, notes: List[Note]) -> Optional[AgeRange]:
-    """The checked age range of a nude item; None when the item is not nude.
+    """The checked age range of an item whose draft says nude; else None.
 
-    Raises ValueError when a nude item has no adult character picture.
+    Raises ValueError when such an item has no adult character picture. The
+    check runs whatever the roles are, even with an outfit picture connected.
     """
-    connected = [role for _, role, text in notes if text is not None]
-    if not is_nude(item["prompt"], connected):
+    if not says_nude(item["prompt"]):
         return None
     characters = [
         (slot, text)

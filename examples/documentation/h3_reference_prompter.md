@@ -61,7 +61,10 @@ The pose description never describes the mannequin's own look (surface, colour, 
 
 KikoCharSheet's 18+ mode has a costume with no picture, Nude. It writes "The character's outfit: completely nude, wearing no clothing and no footwear." into the draft and sends no outfit picture.
 
-**Detection.** An item is in nude mode when its draft contains the word `nude` or `naked` (whole word, any case) and no connected picture has the outfit role. Any draft that uses one of these words without an outfit picture is treated this way, including "nude lipstick".
+**Detection.** Two checks look at each item's draft:
+
+- **Age check and word check:** they run whenever the draft contains `nude` or `naked` (whole word, any case) or the Chinese `裸`, whatever the roles and pictures are. The draft is copied into the prompt, so its nude wording reaches the image model either way. A workflow with fixed roles, or a draft such as "nude lipstick" with an outfit picture, is checked too.
+- **Body section:** it is written only when, in addition, no connected picture has the outfit role. With an outfit picture, the outfit is described as usual and the writer is only told the person is an adult.
 
 **Body section.** In nude mode the writer gets one more instruction block. In place of the outfit part, it describes the unclothed adult body plainly: build, proportions, skin tone and skin texture following the character notes, and natural adult anatomy, in the register of a figure-drawing or photography reference. It writes no sexual acts, no sexual poses and no arousal or explicit-focus language, and adds no clothing, footwear or accessories unless the draft names them. The person is called an adult woman aged N to M (or "in her twenties" when the range lies there), or an adult man when the character notes describe a man. All other writer rules still apply.
 
@@ -79,7 +82,7 @@ The error says that nude prompts need an adult character picture whose estimated
 
 The age estimate comes from the vision model and can be wrong. The check refuses doubtful pictures; it does not prove anyone's age.
 
-**Real people.** Never use pictures of real people for nude prompts. KikoCharSheet does not allow Nude with an uploaded portrait: its gallery portraits are AI-generated, while an upload may show a real person.
+**Real people.** Never use pictures of real people for nude prompts. KikoCharSheet's gallery portraits are AI-generated; an uploaded portrait may show a real person, so never combine an upload with Nude.
 
 ## One prompt per pose
 

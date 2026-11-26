@@ -39,7 +39,7 @@ YOUTH_WORDS: Tuple[str, ...] = (
     "underage",
     "loli",
 )
-_NUDE = re.compile(r"\b(?:nude|naked)\b", re.IGNORECASE)
+_NUDE = re.compile(r"\b(?:nude|naked)\b|裸", re.IGNORECASE)
 _AGE_LINE = re.compile(
     r"estimated\s+age\s*:\s*(\d+)\s*(?:to|-|–)\s*(\d+)\s*years?", re.IGNORECASE
 )
@@ -231,9 +231,19 @@ def clean_result(text: str) -> str:
     return drop_repeats(clean_output(bare))
 
 
+def says_nude(draft: Optional[str]) -> bool:
+    """The draft says nude, naked or 裸, whatever pictures are connected.
+
+    This alone turns on the adult age check: the draft is copied into the
+    prompt, so its nude wording reaches the image model either way.
+    """
+    return bool(_NUDE.search(draft or ""))
+
+
 def is_nude(draft: Optional[str], connected_roles: Iterable[str]) -> bool:
-    """The draft says nude or naked and no connected picture is the outfit."""
-    return bool(_NUDE.search(draft or "")) and "outfit" not in connected_roles
+    """The draft says nude and no connected picture is the outfit: the writer
+    describes the unclothed body in place of an outfit."""
+    return says_nude(draft) and "outfit" not in connected_roles
 
 
 def parse_age_estimate(notes: Optional[str]) -> Optional[Tuple[int, int]]:

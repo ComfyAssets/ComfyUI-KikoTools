@@ -6,6 +6,7 @@ from kikotools.tools.h3_reference_prompter import node as node_module
 from kikotools.tools.h3_reference_prompter.instructions import (
     describe_system,
     describe_user,
+    adult_block,
     nude_block,
     retry_user,
     writer_user,
@@ -911,16 +912,37 @@ def test_one_refused_item_fails_the_whole_run(monkeypatch):
     assert h.writers == []
 
 
-def test_outfit_picture_turns_nude_mode_off(monkeypatch):
+THREE = {"image_1": [img(1)], "image_2": [img(2)], "image_3": [img(3)]}
+
+
+def test_outfit_picture_keeps_the_outfit_but_still_checks_the_age(monkeypatch):
     draft = DRAFT + " Nude lipstick."
-    h = Harness(monkeypatch, writes=["A girl in a coat."])
-    out = run(
-        prompt=[draft],
-        images={"image_1": [img(1)], "image_2": [img(2)], "image_3": [img(3)]},
-        **AUTO_ROLES,
-    )
-    assert out["result"][0] == [draft + "\n\nA girl in a coat."]
-    assert nude_block((22, 28)) not in h.writers[0]["prompt"]
+    h = nude_harness(monkeypatch, writes=["An adult woman in a coat."])
+    out = run(prompt=[draft], images=THREE, **AUTO_ROLES)
+    assert out["result"][0] == [draft + "\n\nAn adult woman in a coat."]
+    (writer,) = h.writers
+    assert nude_block((22, 28)) not in writer["prompt"]
+    assert adult_block((22, 28)) in writer["prompt"]
+
+
+def test_nude_draft_with_an_outfit_picture_still_refuses_a_young_estimate(
+    monkeypatch,
+):
+    h = nude_harness(monkeypatch, character="A woman.\nEstimated age: 16 to 19 years.")
+    with pytest.raises(ValueError, match="16 to 19 years"):
+        run(prompt=[DRAFT + " Completely nude."], images=THREE, **AUTO_ROLES)
+    assert h.writers == []
+
+
+def test_explicit_outfit_role_does_not_skip_the_age_check(monkeypatch):
+    h = nude_harness(monkeypatch, character="A woman.\nEstimated age: 17 to 21 years.")
+    with pytest.raises(ValueError, match="17 to 21 years"):
+        run(
+            prompt=[NUDE_DRAFT],
+            model=[h.entry.name],
+            images={"image_1": [img(1)], "image_2": [img(2)]},
+        )
+    assert h.writers == []
 
 
 def test_batch_checks_youth_words_only_for_the_nude_item(monkeypatch):

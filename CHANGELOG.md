@@ -40,8 +40,9 @@
   character/outfit/pose.` sentences and falls back to character, outfit, pose;
   a role picked by hand wins. A KikoCharSheet Nude run no longer describes the
   pose mannequin as an outfit.
-- Nude mode: a draft that says nude or naked with no outfit picture gets a
-  plain, non-sexual description of the unclothed adult body. The run is
+- Nude mode: a draft that says nude, naked or 裸 always gets the adult age
+  check, whatever the roles; with no outfit picture it also gets a plain,
+  non-sexual description of the unclothed adult body. The run is
   refused unless the character picture's estimated age is 20 or older and no
   youth word appears in the notes, the draft or the written part. Never use
   pictures of real people.

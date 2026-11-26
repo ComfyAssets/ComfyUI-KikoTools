@@ -7,6 +7,7 @@ import pytest
 from kikotools.tools.h3_reference_prompter.instructions import (
     describe_system,
     describe_user,
+    adult_block,
     nude_block,
     retry_user,
     writer_system,
@@ -379,12 +380,25 @@ def test_nude_block_offers_in_her_twenties_only_for_a_twenties_range():
     assert "an adult woman aged 31 to 38" in nude_block((31, 38))
 
 
+NUDE_LEAD = LEAD + " The character's outfit: completely nude."
+
+
 def test_writer_user_adds_the_nude_block_before_the_closing_line():
-    plain = writer_user(LEAD, [(1, "character", "Dark hair.")])
-    nude = writer_user(LEAD, [(1, "character", "Dark hair.")], adult=(22, 28))
+    notes = [(1, "character", "Dark hair.")]
+    plain = writer_user(NUDE_LEAD, notes)
+    nude = writer_user(NUDE_LEAD, notes, adult=(22, 28))
     assert nude_block((22, 28)) not in plain
     assert nude.endswith(nude_block((22, 28)) + "\n\nWrite the final prompt now.")
     assert nude.replace(nude_block((22, 28)) + "\n\n", "") == plain
+
+
+def test_writer_user_keeps_the_outfit_when_an_outfit_picture_is_connected():
+    notes = [(1, "character", "Dark hair."), (2, "outfit", "A red coat.")]
+    text = writer_user(NUDE_LEAD, notes, adult=(22, 28))
+    assert nude_block((22, 28)) not in text
+    assert text.endswith(adult_block((22, 28)) + "\n\nWrite the final prompt now.")
+    for word in ("teen", "girl"):
+        assert f'"{word}"' in adult_block((22, 28))
 
 
 def test_retry_user_names_a_banned_word():

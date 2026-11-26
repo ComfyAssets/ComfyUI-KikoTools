@@ -6,7 +6,7 @@ long MiniMax H3 Image prompt from the user's draft and those notes.
 
 from typing import List, Optional, Tuple
 
-from .logic import ROLES, YOUTH_WORDS, find_tags
+from .logic import ROLES, YOUTH_WORDS, find_tags, is_nude
 
 AgeRange = Tuple[int, int]
 
@@ -195,6 +195,18 @@ def nude_block(age: AgeRange) -> str:
     )
 
 
+def adult_block(age: AgeRange) -> str:
+    """Writer instructions for a draft that says nude while an outfit picture
+    is connected: the outfit stays, the person is named as an adult."""
+    low, high = age
+    banned = ", ".join(f'"{word}"' for word in YOUTH_WORDS + ("girl",))
+    return (
+        "The draft mentions nudity. The person is an adult: call them "
+        f'"an adult woman aged {low} to {high}", or "an adult man" if the '
+        f"character notes say so. Never use these words: {banned}."
+    )
+
+
 def writer_user(
     lead: str,
     notes: List[Tuple[int, str, Optional[str]]],
@@ -232,7 +244,9 @@ def writer_user(
         )
     blocks.append(notes_block)
     if adult is not None:
-        blocks.append(nude_block(adult))
+        connected = [role for _, role, text in notes if text is not None]
+        body = is_nude(lead, connected)
+        blocks.append(nude_block(adult) if body else adult_block(adult))
     blocks.append("Write the final prompt now.")
     return "\n\n".join(blocks)
 

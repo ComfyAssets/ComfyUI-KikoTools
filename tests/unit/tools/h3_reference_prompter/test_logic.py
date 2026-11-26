@@ -13,6 +13,7 @@ from kikotools.tools.h3_reference_prompter.logic import (
     clean_result,
     draft_lead,
     drop_echoes,
+    says_nude,
     drop_repeats,
     find_tags,
     find_youth_word,
@@ -443,3 +444,16 @@ def test_check_adult_refuses_a_youth_word_or_girl_in_the_draft():
 def test_check_adult_does_not_check_girl_in_the_notes():
     notes = [(1, "A girl-next-door look.\nEstimated age: 24 to 30 years.")]
     assert check_adult(notes, NUDE_DRAFT) == (24, 30)
+
+
+@pytest.mark.parametrize(
+    "draft, expected",
+    [
+        ("完全裸体，不穿衣服。", True),
+        ("Completely NAKED.", True),
+        ("A red coat.", False),
+        (None, False),
+    ],
+)
+def test_says_nude_matches_english_and_chinese(draft, expected):
+    assert says_nude(draft) is expected
