@@ -204,7 +204,7 @@ def hint_block(hint: str) -> str:
 
 
 HINT_WRITTEN = (
-    "The character details above are already written word for word after "
+    "The character details above are already written in the prompt after "
     "the draft. Do not repeat them as a list. Never contradict them: where "
     "the picture notes disagree, the details win."
 )

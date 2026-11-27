@@ -121,7 +121,7 @@ The output is one paragraph. The line breaks above are only for reading. The `..
 
 With the H3 Reference Prompter, the traits in the hint win over the character picture's notes. The picture fills in what the hint leaves unset. For example, a hint that sets only `eye_color` to Green changes the eyes and keeps everything else the picture shows.
 
-The prompter also writes the hint into the final prompt word for word, right after the draft, so every selected trait reaches the image model. The writer adds detail around it and does not repeat it.
+The prompter also writes the hint into the final prompt, right after the draft, so every selected trait reaches the image model. With a character picture it writes one sentence that says what is kept from the picture and what changes ("... is partially preserved; her identity and facial features remain, while ... her appearance changes to: ..."); with no picture it writes the hint as it is. The writer adds detail around it and does not repeat it.
 
 ## Age rule
 

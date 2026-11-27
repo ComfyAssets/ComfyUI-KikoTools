@@ -28,7 +28,7 @@ from .logic import (
     draft_lead,
     drop_echoes,
     find_youth_word,
-    hint_lead,
+    hint_sentence,
     image_key,
     is_placeholder,
     item_seed,
@@ -335,7 +335,7 @@ def _write_one(
     tokens: int,
 ) -> str:
     lead = draft_lead(draft)
-    details = hint_lead(hint, body_is_nude(lead, notes, hint))
+    details = hint_sentence(hint, body_is_nude(lead, notes, hint), lead, notes)
     message = writer_user(lead, notes, adult, hint)
     nude = adult is not None
 
@@ -364,7 +364,7 @@ def _write_batch(
     """Write every draft in one batch, then retry the failing ones in one more."""
     leads = [draft_lead(draft) for draft in drafts]
     details = [
-        hint_lead(hint, body_is_nude(lead, item_notes, hint))
+        hint_sentence(hint, body_is_nude(lead, item_notes, hint), lead, item_notes)
         for lead, item_notes, hint in zip(leads, notes, hints)
     ]
     messages = [writer_user(*args) for args in zip(leads, notes, adults, hints)]

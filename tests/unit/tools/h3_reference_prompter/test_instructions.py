@@ -493,7 +493,7 @@ def test_adult_block_with_one_age_says_aged_n_only():
 
 def test_writer_user_says_the_hint_is_already_written_after_the_draft():
     text = writer_user("Draft.", [], hint="Eyewear: round glasses.")
-    assert "already written word for word after the draft" in text
+    assert "already written in the prompt after the draft" in text
     assert "the details win" in text
 
 
