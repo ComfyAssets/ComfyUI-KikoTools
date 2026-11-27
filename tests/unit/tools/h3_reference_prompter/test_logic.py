@@ -2,6 +2,7 @@ import pytest
 import torch
 
 from kikotools.tools.h3_reference_prompter.logic import (
+    hint_sentence,
     hint_says_nude,
     AUTO,
     DEFAULT_ROLES,
@@ -736,3 +737,89 @@ def test_hint_says_nude_ignores_lip_colours(hint):
 )
 def test_hint_says_nude_still_sees_real_nude_wording(hint):
     assert hint_says_nude(hint) is True
+
+
+SENTENCE_HINT = (
+    "The character is an adult woman aged 28. Face: green eyes. Makeup: wearing "
+    "soft romantic makeup, delicate pink eyeshadow, softly smudged brown "
+    "eyeliner, fluttery lashes, rose blush, and satin rose-pink lips. Hair: "
+    "copper hair, chin length hair, her hair in a bob cut, curtain bangs. "
+    "Skin: a few freckles."
+)
+SENTENCE_LEAD = "<Picture 1> is the character. <Picture 3> is the pose. Draw her."
+SENTENCE_NOTES = [(1, "character", "A woman."), (3, "pose", "Standing.")]
+
+
+def test_hint_sentence_is_the_tested_preserved_wording():
+    # The exact sentence that won the format test (hint-tests-sheets/notes.md).
+    assert hint_sentence(SENTENCE_HINT, False, SENTENCE_LEAD, SENTENCE_NOTES) == (
+        "The character from <Picture 1> is partially preserved; her identity and "
+        "facial features remain, while she is shown as an adult woman aged 28 and "
+        "her appearance changes to: green eyes; wearing soft romantic makeup, "
+        "delicate pink eyeshadow, softly smudged brown eyeliner, fluttery lashes, "
+        "rose blush, and satin rose-pink lips; copper hair, chin length hair, her "
+        "hair in a bob cut, curtain bangs; a few freckles."
+    )
+
+
+def test_hint_sentence_uses_the_character_slot_and_male_wording():
+    hint = "The character is an adult Japanese man aged 40. Face: a goatee."
+    lead = "<Picture 2> is the character."
+    assert hint_sentence(hint, False, lead, [(2, "character", "A man.")]) == (
+        "The character from <Picture 2> is partially preserved; his identity and "
+        "facial features remain, while he is shown as an adult Japanese man aged "
+        "40 and his appearance changes to: a goatee."
+    )
+
+
+def test_hint_sentence_with_only_an_age():
+    hint = "The character is an adult woman aged 31."
+    assert hint_sentence(hint, False, SENTENCE_LEAD, SENTENCE_NOTES) == (
+        "The character from <Picture 1> is partially preserved; her identity and "
+        "facial features remain, while she is shown as an adult woman aged 31."
+    )
+
+
+def test_hint_sentence_keeps_extra_text_and_unclothed_detail_only_when_nude():
+    hint = (
+        "The character is an adult woman aged 30. Body: a slim body. Unclothed "
+        "detail: pierced nipples. Extra: has a scar on the chin."
+    )
+    clothed = hint_sentence(hint, False, SENTENCE_LEAD, SENTENCE_NOTES)
+    nude = hint_sentence(hint, True, SENTENCE_LEAD, SENTENCE_NOTES)
+    assert clothed.endswith("changes to: a slim body; has a scar on the chin.")
+    assert nude.endswith(
+        "changes to: a slim body; pierced nipples; has a scar on the chin."
+    )
+
+
+@pytest.mark.parametrize(
+    "lead, notes",
+    [
+        ("A woman, standing.", []),
+        ("A woman, standing.", [(1, "character", "A woman.")]),
+        ("<Picture 1> is the pose.", [(1, "pose", "Standing.")]),
+        ("<Picture 1> is the character.", [(1, "character", None)]),
+    ],
+)
+def test_hint_sentence_without_a_tagged_character_picture_is_the_plain_hint(
+    lead, notes
+):
+    assert hint_sentence(SENTENCE_HINT, False, lead, notes) == hint_lead(
+        SENTENCE_HINT, False
+    )
+
+
+@pytest.mark.parametrize(
+    "hint",
+    [
+        "She has green eyes and red hair.",
+        "The character is an adult woman aged 28. She loves hats. Face: green eyes.",
+        "",
+        None,
+    ],
+)
+def test_hint_sentence_leaves_a_typed_hint_alone(hint):
+    assert hint_sentence(hint, False, SENTENCE_LEAD, SENTENCE_NOTES) == hint_lead(
+        hint, False
+    )

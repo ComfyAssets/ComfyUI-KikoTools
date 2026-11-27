@@ -1243,3 +1243,33 @@ def test_nude_lips_keep_the_unclothed_detail_out(monkeypatch):
     hint = SOFT_GLAM + " Unclothed detail: pierced nipples."
     run(prompt=[CLOTHED_DRAFT], character_hint=[hint])
     assert "Unclothed detail" not in h.writers[0]["prompt"]
+
+
+def test_hint_with_a_tagged_character_picture_is_written_as_what_changes(
+    monkeypatch,
+):
+    h = nude_harness(monkeypatch)
+    draft = "<Picture 1> is the character. Draw her in a coat."
+    hint = "The character is an adult woman aged 28. Face: green eyes."
+    out = run(
+        prompt=[draft],
+        model=[h.entry.name],
+        images={"image_1": [img(1)]},
+        character_hint=[hint],
+        **AUTO_ROLES,
+    )
+    sentence = (
+        "The character from <Picture 1> is partially preserved; her identity and "
+        "facial features remain, while she is shown as an adult woman aged 28 and "
+        "her appearance changes to: green eyes."
+    )
+    (prompt,) = out["result"][0]
+    assert prompt.startswith(draft + "\n\n" + sentence + "\n\n")
+    assert "Face:" not in prompt
+
+
+def test_hint_without_a_character_picture_stays_the_labelled_hint(monkeypatch):
+    Harness(monkeypatch)
+    hint = "The character is an adult woman aged 28. Face: green eyes."
+    out = run(prompt=["A woman in a coat."], character_hint=[hint])
+    assert out["result"][0] == ["A woman in a coat." + "\n\n" + hint + "\n\n" + BODY]

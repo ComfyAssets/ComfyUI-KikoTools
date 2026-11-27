@@ -398,6 +398,59 @@ def hint_lead(hint: Optional[str], nude: bool) -> str:
     return " ".join(_TAG.sub(" ", text).split())
 
 
+# The lead sentence and part labels the Character Hint nodes write.
+_HINT_LEAD = re.compile(
+    r"The character is an adult (?:(?P<heritage>.+?) )?(?P<gender>woman|man) "
+    r"aged (?P<age>\d{1,3})\.\s*(?P<rest>.*)",
+    re.DOTALL,
+)
+_HINT_LABEL = re.compile(
+    r"(?:^|(?<=[.!?])\s+)(?:Body|Face|Makeup|Eyewear|Hair|Skin|Tattoos|"
+    r"Expression|Pose|Unclothed detail|Extra): "
+)
+_PRONOUNS = {"woman": ("her", "she"), "man": ("his", "he")}
+
+
+def hint_sentence(
+    hint: Optional[str],
+    nude: bool,
+    lead: str,
+    notes: Iterable[Tuple[int, str, Optional[str]]],
+) -> str:
+    """The character hint as the line written after the draft.
+
+    With a character picture whose tag is in the draft, a hint from a
+    Character Hint node becomes one sentence that says what is kept from the
+    picture and what changes. In testing the image model followed that
+    wording better than the labelled list. Any other hint, or no tagged
+    character picture, gives the plain hint_lead text.
+    """
+    plain = hint_lead(hint, nude)
+    tags = find_tags(lead)
+    slots = [
+        slot
+        for slot, role, text in notes
+        if role == "character" and text is not None and slot in tags
+    ]
+    match = _HINT_LEAD.fullmatch(plain)
+    if not slots or match is None:
+        return plain
+    pieces = _HINT_LABEL.split(match["rest"])
+    if pieces[0].strip():
+        return plain
+    parts = [piece.strip().rstrip(".") for piece in pieces[1:] if piece.strip()]
+    his, he = _PRONOUNS[match["gender"]]
+    who = " ".join(filter(None, [match["heritage"], match["gender"]]))
+    sentence = (
+        f"The character from <Picture {min(slots)}> is partially preserved; "
+        f"{his} identity and facial features remain, while {he} is shown as an "
+        f"adult {who} aged {match['age']}"
+    )
+    if parts:
+        sentence += f" and {his} appearance changes to: {'; '.join(parts)}"
+    return sentence + "."
+
+
 def body_is_nude(
     lead: str, notes: Iterable[Tuple[int, str, Optional[str]]], hint: str = ""
 ) -> bool:

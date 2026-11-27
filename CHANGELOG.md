@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- H3 Reference Prompter: with a character picture, a hint from a Character
+  Hint node is now written into the prompt as one sentence that says what is
+  kept from the picture and what changes ("The character from <Picture 1> is
+  partially preserved; her identity and facial features remain, while ... her
+  appearance changes to: ..."). In a test of 16 scenes, MiniMax H3 Image
+  followed this wording better than the labelled list in 31 of 32 rows. A
+  hint typed by hand, or a run with no character picture, is written as before.
+
 ## 1.11.1
 
 ### Fixed
